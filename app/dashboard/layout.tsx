@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/Sidebar';
 
+export const dynamic = 'force-dynamic';
+
 // Menu items per role. Add more roles here as we build them out.
 const MENUS: Record<string, { label: string; href: string }[]> = {
   bhw_head: [
@@ -11,6 +13,13 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
     { label: 'Risk Map', href: '/dashboard/risk-map' },
     { label: 'Reports', href: '/dashboard/reports' },
+  ],
+  midwife: [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Manage Users', href: '/dashboard/users' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Reports', href: '/dashboard/reports' },
+    { label: 'Activity Log', href: '/dashboard/activity-log' },
   ],
 };
 
