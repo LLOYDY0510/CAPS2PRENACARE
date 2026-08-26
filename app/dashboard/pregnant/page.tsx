@@ -1,19 +1,16 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
+import DeleteRecordButton from '@/components/DeleteRecordButton';
 
 export default async function PregnantRecordsPage() {
   const supabase = await createClient();
 
   const { data: records, error } = await supabase
     .from('pregnant_mothers')
-    .select('id, full_name, age, purok, contact_number, edd, risk_level')
-    .order('created_at', { ascending: false });
-
-  const RISK_STYLES: Record<string, string> = {
-    high: 'bg-red-100 text-red-700',
-    medium: 'bg-amber-100 text-amber-700',
-    low: 'bg-green-100 text-green-700',
-  };
+    .select(
+      'id, serial_no, date_registered, first_name, middle_name, last_name, address, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg'
+    )
+    .order('serial_no', { ascending: true });
 
   return (
     <div>
@@ -39,50 +36,55 @@ export default async function PregnantRecordsPage() {
         </p>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+        <table className="w-full text-sm whitespace-nowrap">
           <thead className="bg-gray-50 border-b text-left text-gray-500">
             <tr>
+              <th className="px-4 py-3">Serial No.</th>
+              <th className="px-4 py-3">Date Registered</th>
               <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Address</th>
               <th className="px-4 py-3">Age</th>
-              <th className="px-4 py-3">Purok</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Due Date</th>
-              <th className="px-4 py-3">Risk</th>
+              <th className="px-4 py-3">LMP</th>
+              <th className="px-4 py-3">G-P</th>
+              <th className="px-4 py-3">EDC</th>
+              <th className="px-4 py-3">BP</th>
+              <th className="px-4 py-3">Height (cm)</th>
+              <th className="px-4 py-3">Weight (kg)</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {(!records || records.length === 0) && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
                   No pregnant mothers registered yet.
                 </td>
               </tr>
             )}
             {records?.map((r) => (
               <tr key={r.id} className="border-b last:border-0">
-                <td className="px-4 py-3 font-medium">{r.full_name}</td>
-                <td className="px-4 py-3">{r.age ?? '—'}</td>
-                <td className="px-4 py-3">{r.purok ?? '—'}</td>
-                <td className="px-4 py-3">{r.contact_number ?? '—'}</td>
-                <td className="px-4 py-3">{r.edd ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                      RISK_STYLES[r.risk_level] ?? 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {r.risk_level}
-                  </span>
+                <td className="px-4 py-3 text-gray-500 font-mono text-xs">{r.serial_no ?? '—'}</td>
+                <td className="px-4 py-3">{r.date_registered ?? '—'}</td>
+                <td className="px-4 py-3 font-medium">
+                  {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3">{r.address ?? '—'}</td>
+                <td className="px-4 py-3">{r.age ?? '—'}</td>
+                <td className="px-4 py-3">{r.lmp ?? '—'}</td>
+                <td className="px-4 py-3">{r.gravida_para ?? '—'}</td>
+                <td className="px-4 py-3">{r.edd ?? '—'}</td>
+                <td className="px-4 py-3">{r.blood_pressure ?? '—'}</td>
+                <td className="px-4 py-3">{r.height_cm ?? '—'}</td>
+                <td className="px-4 py-3">{r.weight_kg ?? '—'}</td>
+                <td className="px-4 py-3 text-right space-x-3">
                   <Link
                     href={`/dashboard/pregnant/${r.id}`}
                     className="text-blue-600 hover:underline"
                   >
                     View
                   </Link>
+                  <DeleteRecordButton id={r.id} />
                 </td>
               </tr>
             ))}

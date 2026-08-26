@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+
   try {
     const { numbers, message } = await req.json();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!numbers || !Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json(
@@ -39,14 +46,49 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      // Semaphore returned plain text/HTML instead of JSON (e.g. account issue)
+      await supabase.from('sms_logs').insert({
+        recipient_count: numbers.length,
+        recipient_numbers: numbers,
+        message,
+        status: 'failed',
+        error_message: rawText || 'Semaphore returned an unexpected response.',
+        sent_by: user?.id ?? null,
+      });
+      return NextResponse.json(
+        { error: rawText || 'Semaphore returned an unexpected response.' },
+        { status: 500 }
+      );
+    }
 
     if (!response.ok) {
+      await supabase.from('sms_logs').insert({
+        recipient_count: numbers.length,
+        recipient_numbers: numbers,
+        message,
+        status: 'failed',
+        error_message: data?.message || 'Failed to send SMS.',
+        sent_by: user?.id ?? null,
+      });
       return NextResponse.json(
         { error: data?.message || 'Failed to send SMS.' },
         { status: 500 }
       );
     }
+
+    // Success — log it
+    await supabase.from('sms_logs').insert({
+      recipient_count: numbers.length,
+      recipient_numbers: numbers,
+      message,
+      status: 'success',
+      sent_by: user?.id ?? null,
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (err) {

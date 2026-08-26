@@ -11,6 +11,8 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Risk Map', href: '/dashboard/risk-map' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
     { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
+    { label: 'SMS Log', href: '/dashboard/sms-log' },
     { label: 'Manage BHW (Purok)', href: '/dashboard/bhw' },
     { label: 'Reports', href: '/dashboard/reports' },
   ],
@@ -26,7 +28,7 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: any;
 }) {
   const supabase = await createClient();
 
@@ -36,6 +38,7 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect('/login');
+    return null;
   }
 
   const { data: profile } = await supabase
@@ -50,7 +53,6 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar role={role} menuItems={menuItems} />
-      {/* Main content */}
       <main className="p-8">{children}</main>
     </div>
   );

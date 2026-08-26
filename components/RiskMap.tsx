@@ -1,41 +1,46 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 type RiskPoint = {
   id: string;
-  name: string;
-  purok: string;
-  risk_level: 'low' | 'medium' | 'high';
-  lat: number;
-  lng: number;
+  full_name: string;
+  purok: string | null;
+  risk_level: 'low' | 'high';
+  latitude: number;
+  longitude: number;
 };
-
-// Sample/placeholder data — replace with real data from pregnant_mothers table later
-const SAMPLE_DATA: RiskPoint[] = [
-  { id: '1', name: 'Purok 1 area', purok: '1', risk_level: 'high', lat: 8.4822, lng: 124.6472 },
-  { id: '2', name: 'Purok 2 area', purok: '2', risk_level: 'medium', lat: 8.4842, lng: 124.6502 },
-  { id: '3', name: 'Purok 3 area', purok: '3', risk_level: 'low', lat: 8.4802, lng: 124.6442 },
-  { id: '4', name: 'Purok 4 area', purok: '4', risk_level: 'high', lat: 8.4862, lng: 124.6412 },
-  { id: '5', name: 'Purok 5 area', purok: '5', risk_level: 'low', lat: 8.4792, lng: 124.6522 },
-];
 
 const RISK_COLORS: Record<string, string> = {
-  high: '#dc2626',    // red
-  medium: '#f59e0b',  // amber
-  low: '#16a34a',     // green
+  high: '#dc2626',
+  low: '#16a34a',
 };
 
-export default function RiskMap() {
-  // Center roughly on the average of sample points (Cagayan de Oro area as placeholder)
-  const center: [number, number] = [8.4822, 124.6472];
+// Sankanan, Manolo Fortich, Bukidnon
+const DEFAULT_CENTER: [number, number] = [8.315242, 124.860898];
 
+function ClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onClick?.(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+export default function RiskMap({
+  records,
+  pendingClick,
+}: {
+  records: RiskPoint[];
+  pendingClick?: (lat: number, lng: number) => void;
+}) {
   return (
     <div className="rounded-lg overflow-hidden border" style={{ height: '600px' }}>
       <MapContainer
-        center={center}
-        zoom={14}
+        center={DEFAULT_CENTER}
+        zoom={16}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
@@ -43,10 +48,12 @@ export default function RiskMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {SAMPLE_DATA.map((point) => (
+        <ClickHandler onClick={pendingClick} />
+
+        {records.map((point) => (
           <CircleMarker
             key={point.id}
-            center={[point.lat, point.lng]}
+            center={[point.latitude, point.longitude]}
             radius={12}
             pathOptions={{
               color: RISK_COLORS[point.risk_level],
@@ -56,8 +63,8 @@ export default function RiskMap() {
           >
             <Popup>
               <div className="text-sm">
-                <p className="font-semibold">{point.name}</p>
-                <p>Purok: {point.purok}</p>
+                <p className="font-semibold">{point.full_name}</p>
+                <p>Purok: {point.purok ?? '—'}</p>
                 <p className="capitalize">
                   Risk level:{' '}
                   <span
