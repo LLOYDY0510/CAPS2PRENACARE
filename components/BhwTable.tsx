@@ -83,13 +83,13 @@ export default function BhwTable({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, email, or purok..."
-          className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b text-left text-gray-500">
+          <thead className="bg-gray-50 border-b text-left text-muted">
             <tr>
               <th className="px-4 py-3">Name / Email</th>
               <th className="px-4 py-3">Role</th>
@@ -101,7 +101,7 @@ export default function BhwTable({
           <tbody>
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted-2">
                   No matching users found.
                 </td>
               </tr>
@@ -110,7 +110,7 @@ export default function BhwTable({
               <tr key={user.id} className="border-b last:border-0">
                 <td className="px-4 py-3">
                   <p className="font-medium">{user.full_name || 'No name set'}</p>
-                  <p className="text-gray-500 text-xs">{user.email}</p>
+                  <p className="text-muted text-xs">{user.email}</p>
                 </td>
                 <td className="px-4 py-3">
                   <span
@@ -128,15 +128,15 @@ export default function BhwTable({
                     type="text"
                     defaultValue={user.purok ?? ''}
                     placeholder="e.g. 1"
-                    className="border rounded-lg px-2 py-1 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border rounded-lg px-2 py-1 w-20 focus:outline-none focus:ring-2 focus:ring-brand"
                     onBlur={(e) => saveAssignment(user.id, e.target.value)}
                   />
                 </td>
-                <td className="px-4 py-3 text-gray-600">
+                <td className="px-4 py-3 text-muted">
                   {user.purok ? (
                     <span>
                       {countsByPurok[user.purok] ?? 0}{' '}
-                      <span className="text-gray-400 text-xs">mothers</span>
+                      <span className="text-muted-2 text-xs">mothers</span>
                     </span>
                   ) : (
                     <span className="text-gray-300">—</span>
@@ -147,7 +147,7 @@ export default function BhwTable({
                     <button
                       onClick={() => promoteToBhw(user.id)}
                       disabled={savingId === user.id}
-                      className="text-blue-600 hover:underline text-sm disabled:opacity-50"
+                      className="text-brand hover:underline text-sm disabled:opacity-50"
                     >
                       {savingId === user.id ? 'Saving...' : 'Make BHW'}
                     </button>

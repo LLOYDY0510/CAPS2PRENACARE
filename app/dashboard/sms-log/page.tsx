@@ -13,11 +13,11 @@ export default async function SmsLogPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">SMS Log</h1>
-      <p className="text-gray-600 mb-6">History of prenatal schedule reminders sent.</p>
+      <p className="text-muted mb-6">History of prenatal schedule reminders sent.</p>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b text-left text-gray-500">
+          <thead className="bg-gray-50 border-b text-left text-muted">
             <tr>
               <th className="px-4 py-3">Date &amp; Time</th>
               <th className="px-4 py-3">Sent By</th>
@@ -29,25 +29,28 @@ export default async function SmsLogPage() {
           <tbody>
             {(!logs || logs.length === 0) && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-2">
                   No SMS sent yet.
                 </td>
               </tr>
             )}
-            {logs?.map((log: any) => (
+            {logs?.map((log) => (
               <tr key={log.id} className="border-b last:border-0 align-top">
-                <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                <td className="px-4 py-3 whitespace-nowrap text-muted">
                   {new Date(log.created_at).toLocaleString('en-PH', {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {log.profiles?.full_name || log.profiles?.email || '—'}
+                  {(() => {
+                    const sender = Array.isArray(log.profiles) ? log.profiles[0] : log.profiles;
+                    return sender?.full_name || sender?.email || '—';
+                  })()}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">{log.recipient_count}</td>
                 <td className="px-4 py-3 max-w-xs">
-                  <p className="line-clamp-2 text-gray-700">{log.message}</p>
+                  <p className="line-clamp-2 text-ink">{log.message}</p>
                   {log.status === 'failed' && log.error_message && (
                     <p className="text-xs text-red-500 mt-1">{log.error_message}</p>
                   )}

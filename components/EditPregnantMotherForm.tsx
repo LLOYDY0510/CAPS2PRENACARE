@@ -122,7 +122,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 space-y-5">
+    <form onSubmit={handleSubmit} className="card p-6 space-y-5">
       {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
       {saved && (
         <p className="text-sm text-green-700 bg-green-50 p-2 rounded">
@@ -136,7 +136,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           type="date"
           value={form.date_registered}
           onChange={(e) => updateField('date_registered', e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 
@@ -149,14 +149,14 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             onChange={(e) => updateField('first_name', e.target.value)}
             placeholder="First name"
             required
-            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
           <input
             type="text"
             value={form.middle_name}
             onChange={(e) => updateField('middle_name', e.target.value)}
             placeholder="Middle name"
-            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
           <input
             type="text"
@@ -164,7 +164,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             onChange={(e) => updateField('last_name', e.target.value)}
             placeholder="Last name"
             required
-            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           type="text"
           value={form.address}
           onChange={(e) => updateField('address', e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 
@@ -186,7 +186,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             type="text"
             value={form.purok}
             onChange={(e) => updateField('purok', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
         <div>
@@ -195,7 +195,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             type="number"
             value={form.age}
             onChange={(e) => updateField('age', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           type="text"
           value={form.contact_number}
           onChange={(e) => updateField('contact_number', e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 
@@ -217,7 +217,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             type="date"
             value={form.lmp}
             onChange={(e) => updateField('lmp', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
         <div>
@@ -226,7 +226,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
             type="date"
             value={form.edd}
             readOnly
-            className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-600 cursor-not-allowed"
+            className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-muted cursor-not-allowed"
           />
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           <select
             value={form.gravida}
             onChange={(e) => updateField('gravida', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="">Select...</option>
             {Array.from({ length: 11 }, (_, i) => (
@@ -252,7 +252,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           <select
             value={form.para}
             onChange={(e) => updateField('para', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="">Select...</option>
             {Array.from({ length: 11 }, (_, i) => (
@@ -270,7 +270,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           <select
             value={form.blood_pressure}
             onChange={(e) => updateField('blood_pressure', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="">Select...</option>
             {[
@@ -289,7 +289,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           <select
             value={form.height_cm}
             onChange={(e) => updateField('height_cm', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="">Select...</option>
             {Array.from({ length: 61 }, (_, i) => 130 + i).map((cm) => (
@@ -304,7 +304,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           <select
             value={form.weight_kg}
             onChange={(e) => updateField('weight_kg', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="">Select...</option>
             {Array.from({ length: 91 }, (_, i) => 30 + i).map((kg) => (
@@ -320,7 +320,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition"
+          className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
         >
           {loading ? 'Saving...' : 'Save Changes'}
         </button>

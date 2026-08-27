@@ -28,7 +28,7 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
 export default async function DashboardLayout({
   children,
 }: {
-  children: any;
+  children: React.ReactNode;
 }) {
   const supabase = await createClient();
 
@@ -38,7 +38,6 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect('/login');
-    return null;
   }
 
   const { data: profile } = await supabase
@@ -51,8 +50,9 @@ export default async function DashboardLayout({
   const menuItems = MENUS[role] ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Sidebar role={role} menuItems={menuItems} />
+      {/* Main content */}
       <main className="p-8">{children}</main>
     </div>
   );

@@ -15,7 +15,7 @@ export default async function RiskMapPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">Risk Map</h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-muted mb-6">
         Overview of pregnant mothers by risk level per purok.
       </p>
 

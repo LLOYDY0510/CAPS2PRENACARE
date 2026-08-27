@@ -13,7 +13,7 @@ const LocationPicker = dynamic<{
   ssr: false,
   loading: () => (
     <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-lg border">
-      <p className="text-gray-500 text-sm">Loading map...</p>
+      <p className="text-muted text-sm">Loading map...</p>
     </div>
   ),
 });
@@ -141,11 +141,11 @@ export default function RegisterPregnantMotherPage() {
     return (
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold mb-1">Data Privacy Notice</h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted mb-6">
           Please read and agree before proceeding to the registration form.
         </p>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="card p-6">
           <div className="prose prose-sm max-w-none text-gray-700 space-y-3 mb-6">
             <p>
               In compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>,
@@ -187,7 +187,7 @@ export default function RegisterPregnantMotherPage() {
               type="button"
               disabled={!agreed}
               onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               Agree &amp; Proceed
             </button>
@@ -207,13 +207,13 @@ export default function RegisterPregnantMotherPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold mb-1">Register Pregnant Mother</h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-muted mb-6">
         Fill in the details below to add a new record.
       </p>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-lg shadow-sm p-6 space-y-5"
+        className="card p-6 space-y-5"
       >
         {error && (
           <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
@@ -226,7 +226,7 @@ export default function RegisterPregnantMotherPage() {
             value={form.date_registered}
             onChange={(e) => updateField('date_registered', e.target.value)}
             required
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
@@ -240,14 +240,14 @@ export default function RegisterPregnantMotherPage() {
               onChange={(e) => updateField('first_name', e.target.value)}
               placeholder="First name"
               required
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <input
               type="text"
               value={form.middle_name}
               onChange={(e) => updateField('middle_name', e.target.value)}
               placeholder="Middle name"
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <input
               type="text"
@@ -255,7 +255,7 @@ export default function RegisterPregnantMotherPage() {
               onChange={(e) => updateField('last_name', e.target.value)}
               placeholder="Last name"
               required
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
         </div>
@@ -266,7 +266,7 @@ export default function RegisterPregnantMotherPage() {
             type="text"
             value={form.address}
             onChange={(e) => updateField('address', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
@@ -278,7 +278,7 @@ export default function RegisterPregnantMotherPage() {
               value={form.purok}
               onChange={(e) => updateField('purok', e.target.value)}
               placeholder="e.g. 1"
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
           <div>
@@ -287,7 +287,7 @@ export default function RegisterPregnantMotherPage() {
               type="number"
               value={form.age}
               onChange={(e) => updateField('age', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function RegisterPregnantMotherPage() {
             type="text"
             value={form.contact_number}
             onChange={(e) => updateField('contact_number', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
@@ -310,7 +310,7 @@ export default function RegisterPregnantMotherPage() {
               type="date"
               value={form.lmp}
               onChange={(e) => updateField('lmp', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
           <div>
@@ -321,9 +321,9 @@ export default function RegisterPregnantMotherPage() {
               type="date"
               value={form.edd}
               readOnly
-              className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-600 cursor-not-allowed"
+              className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-muted cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">Auto-computed from LMP</p>
+            <p className="text-xs text-muted-2 mt-1">Auto-computed from LMP</p>
           </div>
         </div>
 
@@ -333,7 +333,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.gravida}
               onChange={(e) => updateField('gravida', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
               {Array.from({ length: 11 }, (_, i) => (
@@ -348,7 +348,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.para}
               onChange={(e) => updateField('para', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
               {Array.from({ length: 11 }, (_, i) => (
@@ -367,7 +367,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.blood_pressure}
               onChange={(e) => updateField('blood_pressure', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
               {[
@@ -386,7 +386,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.height_cm}
               onChange={(e) => updateField('height_cm', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
               {Array.from({ length: 61 }, (_, i) => 130 + i).map((cm) => (
@@ -401,7 +401,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.weight_kg}
               onChange={(e) => updateField('weight_kg', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
               {Array.from({ length: 91 }, (_, i) => 30 + i).map((kg) => (
@@ -414,7 +414,7 @@ export default function RegisterPregnantMotherPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Location (pin the mother's home)</label>
+          <label className="block text-sm font-medium mb-1">Location (pin the mother&apos;s home)</label>
           <LocationPicker
             latitude={location.lat}
             longitude={location.lng}
@@ -427,7 +427,7 @@ export default function RegisterPregnantMotherPage() {
           <select
             value={riskLevel}
             onChange={(e) => setRiskLevel(e.target.value as 'low' | 'high')}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="low">Low risk</option>
             <option value="high">High risk</option>
@@ -438,7 +438,7 @@ export default function RegisterPregnantMotherPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition"
+            className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
           >
             {loading ? 'Saving...' : 'Save Record'}
           </button>

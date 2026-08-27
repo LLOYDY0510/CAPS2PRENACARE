@@ -14,7 +14,7 @@ export default async function PrenatalSchedulePage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">Prenatal Schedule</h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-muted mb-6">
         Select pregnant mothers and send a prenatal checkup reminder via SMS.
       </p>
 

@@ -37,12 +37,12 @@ export default async function ViewPregnantMotherPage({
         <h1 className="text-2xl font-semibold mb-1">
           {record.serial_no ?? 'Record'} — {fullName}
         </h1>
-        <p className="text-gray-600">Pregnant mother record details.</p>
+        <p className="text-muted">Pregnant mother record details.</p>
       </div>
 
       {/* Read-only info summary — hidden for now */}
       {/*
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="card p-6">
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <InfoRow label="Date Registered" value={record.date_registered} />
           <InfoRow label="Address" value={record.address} />
@@ -65,10 +65,12 @@ export default async function ViewPregnantMotherPage({
   );
 }
 
+// Kept for when the summary card above is re-enabled.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function InfoRow({ label, value }: { label: string; value: string | number | null }) {
   return (
     <div>
-      <p className="text-gray-400 text-xs mb-0.5">{label}</p>
+      <p className="text-muted-2 text-xs mb-0.5">{label}</p>
       <p className="text-gray-800">{value ?? '—'}</p>
     </div>
   );

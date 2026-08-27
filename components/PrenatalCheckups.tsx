@@ -91,7 +91,7 @@ export default function PrenatalCheckups({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="card p-6">
       <h2 className="text-lg font-semibold mb-4">Prenatal Checkups</h2>
 
       {/* Trimester tabs */}
@@ -105,12 +105,12 @@ export default function PrenatalCheckups({
             }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
               activeTrimester === tri
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-muted hover:text-gray-700'
             }`}
           >
             {tri} Trimester
-            <span className="ml-1.5 text-xs text-gray-400">
+            <span className="ml-1.5 text-xs text-muted-2">
               ({grouped[tri]?.length ?? 0})
             </span>
           </button>
@@ -120,7 +120,7 @@ export default function PrenatalCheckups({
       {/* Checkup list for active trimester */}
       <div className="space-y-2 mb-4">
         {grouped[activeTrimester].length === 0 && (
-          <p className="text-sm text-gray-400 py-4 text-center">
+          <p className="text-sm text-muted-2 py-4 text-center">
             No checkups recorded for the {activeTrimester} trimester yet.
           </p>
         )}
@@ -131,11 +131,11 @@ export default function PrenatalCheckups({
           >
             <div>
               <p className="text-sm font-medium">{c.checkup_date}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                 {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
               </p>
-              {c.notes && <p className="text-xs text-gray-600 mt-1">{c.notes}</p>}
+              {c.notes && <p className="text-xs text-muted mt-1">{c.notes}</p>}
             </div>
             <button
               onClick={() => handleDelete(c.id)}
@@ -151,7 +151,7 @@ export default function PrenatalCheckups({
       {!showForm ? (
         <button
           onClick={() => setShowForm(true)}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-brand hover:underline"
         >
           + Add {activeTrimester} trimester checkup
         </button>
@@ -166,7 +166,7 @@ export default function PrenatalCheckups({
                 type="date"
                 value={form.checkup_date}
                 onChange={(e) => setForm((p) => ({ ...p, checkup_date: e.target.value }))}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -176,7 +176,7 @@ export default function PrenatalCheckups({
                 value={form.blood_pressure}
                 onChange={(e) => setForm((p) => ({ ...p, blood_pressure: e.target.value }))}
                 placeholder="e.g. 120/80"
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function PrenatalCheckups({
               step="0.1"
               value={form.weight_kg}
               onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
 
@@ -198,7 +198,7 @@ export default function PrenatalCheckups({
               value={form.notes}
               onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
               rows={2}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
             />
           </div>
 
@@ -206,7 +206,7 @@ export default function PrenatalCheckups({
             <button
               type="submit"
               disabled={saving}
-              className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+              className="bg-brand text-white px-4 py-1.5 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Checkup'}
             </button>

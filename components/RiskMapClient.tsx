@@ -8,7 +8,7 @@ const RiskMap = dynamic<{ records: RiskPoint[] }>(
     ssr: false,
     loading: () => (
       <div className="h-[600px] flex items-center justify-center bg-gray-100 rounded-lg border">
-        <p className="text-gray-500">Loading map...</p>
+        <p className="text-muted">Loading map...</p>
       </div>
     ),
   }

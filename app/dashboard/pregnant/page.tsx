@@ -17,14 +17,14 @@ export default async function PregnantRecordsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold mb-1">Pregnant Records</h1>
-          <p className="text-gray-600">
+          <p className="text-muted">
             {records?.length ?? 0} registered pregnant mother
             {records?.length === 1 ? '' : 's'}
           </p>
         </div>
         <Link
           href="/dashboard/pregnant/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
+          className="bg-brand text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-dark transition"
         >
           + Register Pregnant Mother
         </Link>
@@ -36,9 +36,9 @@ export default async function PregnantRecordsPage() {
         </p>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+      <div className="card overflow-x-auto">
         <table className="w-full text-sm whitespace-nowrap">
-          <thead className="bg-gray-50 border-b text-left text-gray-500">
+          <thead className="bg-gray-50 border-b text-left text-muted">
             <tr>
               <th className="px-4 py-3">Serial No.</th>
               <th className="px-4 py-3">Date Registered</th>
@@ -57,14 +57,14 @@ export default async function PregnantRecordsPage() {
           <tbody>
             {(!records || records.length === 0) && (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={12} className="px-4 py-8 text-center text-muted-2">
                   No pregnant mothers registered yet.
                 </td>
               </tr>
             )}
             {records?.map((r) => (
               <tr key={r.id} className="border-b last:border-0">
-                <td className="px-4 py-3 text-gray-500 font-mono text-xs">{r.serial_no ?? '—'}</td>
+                <td className="px-4 py-3 text-muted font-mono text-xs">{r.serial_no ?? '—'}</td>
                 <td className="px-4 py-3">{r.date_registered ?? '—'}</td>
                 <td className="px-4 py-3 font-medium">
                   {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
@@ -80,7 +80,7 @@ export default async function PregnantRecordsPage() {
                 <td className="px-4 py-3 text-right space-x-3">
                   <Link
                     href={`/dashboard/pregnant/${r.id}`}
-                    className="text-blue-600 hover:underline"
+                    className="text-brand hover:underline"
                   >
                     View
                   </Link>

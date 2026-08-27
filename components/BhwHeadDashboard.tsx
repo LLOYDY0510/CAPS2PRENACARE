@@ -39,8 +39,8 @@ export default async function BhwHeadDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">BHW Head Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{today}</p>
+          <h1 className="text-2xl font-semibold text-ink">BHW Head Dashboard</h1>
+          <p className="text-sm text-muted mt-0.5">{today}</p>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export default async function BhwHeadDashboard() {
           label="Total Registered"
           value={total}
           icon="👥"
-          iconBg="bg-blue-50"
+          iconBg="bg-brand-light"
         />
         <KpiCard
           label="High Risk"
@@ -78,14 +78,14 @@ export default async function BhwHeadDashboard() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Bar chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-sm font-semibold text-gray-700">Records per Purok</h2>
-            <span className="text-xs text-gray-400">{total} total</span>
+            <span className="text-xs text-muted-2">{total} total</span>
           </div>
 
           {purokEntries.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-sm text-gray-400">
+            <div className="h-48 flex items-center justify-center text-sm text-muted-2">
               No records yet.
             </div>
           ) : (
@@ -102,7 +102,7 @@ export default async function BhwHeadDashboard() {
                       className="w-full max-w-[44px] rounded-t-md bg-gradient-to-t from-[#0B4F4A] to-[#5EA8A0]"
                       style={{ height: `${barHeight}px` }}
                     />
-                    <span className="text-xs text-gray-500">P{purok}</span>
+                    <span className="text-xs text-muted">P{purok}</span>
                   </div>
                 );
               })}
@@ -111,11 +111,11 @@ export default async function BhwHeadDashboard() {
         </div>
 
         {/* Donut chart */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col">
+        <div className="card p-6 flex flex-col">
           <h2 className="text-sm font-semibold text-gray-700 mb-6">Risk Distribution</h2>
 
           {total === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-2">
               No data yet.
             </div>
           ) : (
@@ -147,11 +147,11 @@ export default async function BhwHeadDashboard() {
                 )}
               </svg>
               <div className="flex gap-5 mt-5 text-xs">
-                <span className="flex items-center gap-1.5 text-gray-600">
+                <span className="flex items-center gap-1.5 text-muted">
                   <span className="w-2.5 h-2.5 rounded-full bg-green-600 inline-block" />
                   Low {lowPct}%
                 </span>
-                <span className="flex items-center gap-1.5 text-gray-600">
+                <span className="flex items-center gap-1.5 text-muted">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block" />
                   High {highPct}%
                 </span>
@@ -169,7 +169,7 @@ function KpiCard({
   value,
   icon,
   iconBg,
-  valueColor = 'text-gray-900',
+  valueColor = 'text-ink',
 }: {
   label: string;
   value: number;
@@ -178,9 +178,9 @@ function KpiCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+    <div className="card p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-gray-500">{label}</span>
+        <span className="text-xs font-medium text-muted">{label}</span>
         <span className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center text-sm`}>
           {icon}
         </span>

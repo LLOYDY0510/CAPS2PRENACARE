@@ -67,7 +67,7 @@ export default function LocationPicker({
           {position && <Marker position={position} icon={defaultIcon} />}
         </MapContainer>
       </div>
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-muted mt-2">
         {position
           ? `Selected: ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`
           : 'Click on the map to set this mother\'s location.'}

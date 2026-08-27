@@ -91,14 +91,14 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Recipient list */}
-      <div className="lg:col-span-2 bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="lg:col-span-2 card overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
           <p className="text-sm font-medium">
             Select recipients ({selected.size}/{withContact.length})
           </p>
           <button
             onClick={toggleAll}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-brand hover:underline"
           >
             {selected.size === withContact.length ? 'Deselect all' : 'Select all'}
           </button>
@@ -106,7 +106,7 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
 
         <div className="max-h-[500px] overflow-y-auto">
           {withContact.length === 0 && (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">
+            <p className="px-4 py-8 text-center text-muted-2 text-sm">
               No pregnant mothers with a contact number found.
             </p>
           )}
@@ -123,7 +123,7 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
               />
               <div className="flex-1 text-sm">
                 <p className="font-medium">{r.full_name}</p>
-                <p className="text-gray-500 text-xs">
+                <p className="text-muted text-xs">
                   Purok {r.purok ?? '—'} · {r.contact_number}
                   {r.edd ? ` · Due ${r.edd}` : ''}
                 </p>
@@ -134,15 +134,15 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
       </div>
 
       {/* Message composer */}
-      <div className="bg-white rounded-lg shadow-sm p-5 h-fit">
+      <div className="card p-5 h-fit">
         <label className="block text-sm font-medium mb-2">Message</label>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={6}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
         />
-        <p className="text-xs text-gray-400 mt-1">{message.length} characters</p>
+        <p className="text-xs text-muted-2 mt-1">{message.length} characters</p>
 
         {result && (
           <p
@@ -159,7 +159,7 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
         <button
           onClick={handleSend}
           disabled={sending}
-          className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition"
+          className="w-full mt-4 bg-brand text-white py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
         >
           {sending ? 'Sending...' : `Send SMS (${selected.size})`}
         </button>

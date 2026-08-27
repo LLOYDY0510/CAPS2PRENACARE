@@ -28,7 +28,7 @@ export default async function ManageBhwPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">Manage BHW (Purok)</h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-muted mb-6">
         Assign puroks to BHW members and promote pending accounts.
       </p>
 
