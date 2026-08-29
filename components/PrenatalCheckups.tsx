@@ -17,9 +17,11 @@ const TRIMESTERS: ('1st' | '2nd' | '3rd')[] = ['1st', '2nd', '3rd'];
 export default function PrenatalCheckups({
   motherId,
   initialCheckups,
+  canEdit = true,
 }: {
   motherId: string;
   initialCheckups: Checkup[];
+  canEdit?: boolean;
 }) {
   const supabase = createClient();
   const [checkups, setCheckups] = useState(initialCheckups);
@@ -137,18 +139,21 @@ export default function PrenatalCheckups({
               </p>
               {c.notes && <p className="text-xs text-muted mt-1">{c.notes}</p>}
             </div>
-            <button
-              onClick={() => handleDelete(c.id)}
-              className="text-red-500 hover:underline text-xs"
-            >
-              Delete
-            </button>
+                      {canEdit && (
+              <button
+                onClick={() => handleDelete(c.id)}
+                className="text-red-500 hover:underline text-xs"
+              >
+                Delete
+              </button>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Add checkup form */}
-      {!showForm ? (
+      {/* Add checkup form */}  
+            {/* Add checkup form */}
+      {canEdit && (!showForm ? (
         <button
           onClick={() => setShowForm(true)}
           className="text-sm text-brand hover:underline"
@@ -219,7 +224,7 @@ export default function PrenatalCheckups({
             </button>
           </div>
         </form>
-      )}
+      ))}
     </div>
   );
 }

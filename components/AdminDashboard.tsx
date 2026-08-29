@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
  
-export default async function BhwHeadDashboard() {
+export default async function AdminDashboard() {
   const supabase = await createClient();
  
   const { data: records } = await supabase
@@ -30,10 +30,21 @@ export default async function BhwHeadDashboard() {
   });
   const maxAgeCount = Math.max(1, ...Object.values(byAgeGroup));
  
-  const { count: bhwCount } = await supabase
+  const { data: profiles } = await supabase
     .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('role', 'bhw_purok');
+    .select('role');
+ 
+  const byRole: Record<string, number> = {};
+  profiles?.forEach((p) => {
+    const r = p.role || 'pending';
+    byRole[r] = (byRole[r] || 0) + 1;
+  });
+ 
+  const totalStaff =
+    (byRole['bhw_head'] ?? 0) +
+    (byRole['bhw_purok'] ?? 0) +
+    (byRole['nurse'] ?? 0) +
+    (byRole['admin'] ?? 0);
  
   const highPct = total > 0 ? Math.round((highRisk / total) * 100) : 0;
   const lowPct = total > 0 ? 100 - highPct : 0;
@@ -45,12 +56,21 @@ export default async function BhwHeadDashboard() {
     day: 'numeric',
   });
  
+  const roleLabels: Record<string, string> = {
+    bhw_head: 'BHW Head',
+    bhw_purok: 'BHW (Purok)',
+    nurse: 'Nurse',
+    admin: 'Admin',
+    pregnant_mother: 'Pregnant Mother',
+    pending: 'Pending',
+  };
+ 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">BHW Head Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-ink">Admin Dashboard</h1>
           <p className="text-sm text-muted mt-0.5">{today}</p>
         </div>
       </div>
@@ -78,9 +98,9 @@ export default async function BhwHeadDashboard() {
           valueColor="text-green-600"
         />
         <KpiCard
-          label="BHW Members"
-          value={bhwCount ?? 0}
-          icon="📋"
+          label="Staff Accounts"
+          value={totalStaff}
+          icon="🩺"
           iconBg="bg-amber-50"
           valueColor="text-amber-600"
         />
@@ -173,7 +193,7 @@ export default async function BhwHeadDashboard() {
       </div>
  
       {/* Age group chart */}
-      <div className="card p-6">
+      <div className="card p-6 mb-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-sm font-semibold text-gray-700">Pregnant Mothers by Age Group</h2>
           <span className="text-xs text-muted-2">{total} total</span>
@@ -203,6 +223,31 @@ export default async function BhwHeadDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+ 
+      {/* Staff by role */}
+      <div className="card p-6">
+        <h2 className="text-sm font-semibold text-gray-700 mb-4">Staff by Role</h2>
+        {Object.keys(byRole).length === 0 ? (
+          <div className="text-sm text-muted-2">No accounts yet.</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(byRole)
+              .filter(([role]) => role !== 'pregnant_mother')
+              .sort((a, b) => b[1] - a[1])
+              .map(([role, count]) => (
+                <div
+                  key={role}
+                  className="flex items-center justify-between border rounded-lg px-4 py-3"
+                >
+                  <span className="text-sm text-muted">
+                    {roleLabels[role] ?? role}
+                  </span>
+                  <span className="text-lg font-semibold text-ink">{count}</span>
+                </div>
+              ))}
           </div>
         )}
       </div>

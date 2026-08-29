@@ -21,6 +21,17 @@ export default async function ViewPregnantMotherPage({
   if (!record) {
     notFound();
   }
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user?.id)
+  .single();
+const canEdit = profile?.role !== 'admin' && profile?.role !== 'nurse';
+
 
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
@@ -60,7 +71,7 @@ export default async function ViewPregnantMotherPage({
       </div>
       */}
 
-      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} />
+      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} canEdit={canEdit} />
     </div>
   );
 }

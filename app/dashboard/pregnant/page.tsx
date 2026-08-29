@@ -1,17 +1,29 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import DeleteRecordButton from '@/components/DeleteRecordButton';
-
+ 
 export default async function PregnantRecordsPage() {
   const supabase = await createClient();
-
+  const {
+  data: { user },
+} = await supabase.auth.getUser();
+ 
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('role')
+  .eq('id', user?.id)
+  .single();
+ 
+const role = profile?.role ?? 'pending';
+const canEdit = role !== 'admin' && role !== 'nurse';
+ 
   const { data: records, error } = await supabase
     .from('pregnant_mothers')
     .select(
-      'id, serial_no, date_registered, first_name, middle_name, last_name, address, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg'
+      'id, serial_no, date_registered, first_name, middle_name, last_name, address, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level'
     )
     .order('serial_no', { ascending: true });
-
+ 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -22,20 +34,22 @@ export default async function PregnantRecordsPage() {
             {records?.length === 1 ? '' : 's'}
           </p>
         </div>
-        <Link
-          href="/dashboard/pregnant/new"
-          className="bg-brand text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-dark transition"
-        >
-          + Register Pregnant Mother
-        </Link>
+         {canEdit && (
+    <Link
+    href="/dashboard/pregnant/new"
+    className="bg-brand text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-dark transition"
+  >
+    + Register Pregnant Mother
+  </Link>
+)}
       </div>
-
+ 
       {error && (
         <p className="text-sm text-red-600 bg-red-50 p-3 rounded mb-4">
           Failed to load records: {error.message}
         </p>
       )}
-
+ 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm whitespace-nowrap">
           <thead className="bg-gray-50 border-b text-left text-muted">
@@ -51,13 +65,14 @@ export default async function PregnantRecordsPage() {
               <th className="px-4 py-3">BP</th>
               <th className="px-4 py-3">Height (cm)</th>
               <th className="px-4 py-3">Weight (kg)</th>
+              <th className="px-4 py-3">Risk Level</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {(!records || records.length === 0) && (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-muted-2">
+                <td colSpan={13} className="px-4 py-8 text-center text-muted-2">
                   No pregnant mothers registered yet.
                 </td>
               </tr>
@@ -77,6 +92,17 @@ export default async function PregnantRecordsPage() {
                 <td className="px-4 py-3">{r.blood_pressure ?? '—'}</td>
                 <td className="px-4 py-3">{r.height_cm ?? '—'}</td>
                 <td className="px-4 py-3">{r.weight_kg ?? '—'}</td>
+                <td className="px-4 py-3">
+                  {r.risk_level === 'high' ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                       High Risk
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                       Low Risk
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right space-x-3">
                   <Link
                     href={`/dashboard/pregnant/${r.id}`}
@@ -84,7 +110,7 @@ export default async function PregnantRecordsPage() {
                   >
                     View
                   </Link>
-                  <DeleteRecordButton id={r.id} />
+                  {canEdit && <DeleteRecordButton id={r.id} />}
                 </td>
               </tr>
             ))}
@@ -94,3 +120,4 @@ export default async function PregnantRecordsPage() {
     </div>
   );
 }
+ 
