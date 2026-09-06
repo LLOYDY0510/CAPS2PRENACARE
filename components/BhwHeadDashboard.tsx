@@ -2,21 +2,21 @@ import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
  
 const ZONE_COLORS: Record<string, string> = {
-  '1': '#0B4F4A',
-  '2': '#2563EB',
-  '3': '#D97706',
-  '4': '#7C3AED',
-  '5': '#DC2626',
-  '6': '#0EA5E9',
-  '7': '#DB2777',
-  '8': '#059669',
+  '1': '#00ffee',
+  '2': '#3977ff',
+  '3': '#63f80d',
+  '4': '#fbff20',
+  '5': '#ff0404',
+  '6': '#c700da',
+  '7': '#ff6aad',
+  '8': '#ff8a03',
 };
 const UNASSIGNED_COLOR = '#9CA3AF';
  
 const AGE_GROUP_COLORS: Record<string, string> = {
-  '10-14': '#DC2626',
-  '15-19': '#D97706',
-  '20-49': '#0B4F4A',
+  '10-14': '#ffef0a',
+  '15-19': '#4bfc28',
+  '20-49': '#2237f1',
 };
  
 export default async function BhwHeadDashboard() {
@@ -168,7 +168,7 @@ export default async function BhwHeadDashboard() {
                   cy="50"
                   r="40"
                   fill="none"
-                  stroke="#16a34a"
+                  stroke="#04db53"
                   strokeWidth="14"
                   strokeDasharray={`${(lowPct / 100) * 251.2} 251.2`}
                   strokeLinecap={lowPct === 100 ? 'butt' : 'round'}
@@ -179,7 +179,7 @@ export default async function BhwHeadDashboard() {
                     cy="50"
                     r="40"
                     fill="none"
-                    stroke="#dc2626"
+                    stroke="#fc0a0a"
                     strokeWidth="14"
                     strokeDasharray={`${(highPct / 100) * 251.2} 251.2`}
                     strokeDashoffset={`${-(lowPct / 100) * 251.2}`}
@@ -290,12 +290,6 @@ export default async function BhwHeadDashboard() {
                 </td>
                 <td className="px-4 py-3">{r.date_registered ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/dashboard/pregnant/${r.id}`}
-                    className="text-brand hover:underline text-xs"
-                  >
-                    View
-                  </Link>
                 </td>
               </tr>
             ))}

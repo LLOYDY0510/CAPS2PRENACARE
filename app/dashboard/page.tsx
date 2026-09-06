@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const role = profile?.role ?? 'pending';
  
   return (
-    <div className="max-w-5xl">
+        <div className="max-w-6xl mx-auto">
       <p className="text-sm text-muted mb-6">
         Logged in as {user.email} · Role: <span className="font-medium text-ink capitalize">{role.replace('_', ' ')}</span>
       </p>

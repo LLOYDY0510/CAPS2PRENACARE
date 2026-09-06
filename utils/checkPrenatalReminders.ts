@@ -20,12 +20,22 @@ export async function checkAndSendPrenatalReminders() {
  
     if (!schedule) return;
  
-    const { data: mothers } = await supabase
-      .from('pregnant_mothers')
-      .select('id, full_name, contact_number')
-      .not('contact_number', 'is', null);
+    const { data: recipientLinks } = await supabase
+      .from('prenatal_schedule_recipients')
+      .select('pregnant_mother_id')
+      .eq('schedule_id', schedule.id);
  
-    const recipients = (mothers ?? []).filter((m) => m.contact_number);
+    const motherIds = (recipientLinks ?? []).map((r) => r.pregnant_mother_id);
+ 
+    let recipients: { id: string; full_name: string; contact_number: string | null }[] = [];
+    if (motherIds.length > 0) {
+      const { data: mothers } = await supabase
+        .from('pregnant_mothers')
+        .select('id, full_name, contact_number')
+        .in('id', motherIds)
+        .not('contact_number', 'is', null);
+      recipients = (mothers ?? []).filter((m) => m.contact_number);
+    }
  
     const message = `Paalala: Bukas (${schedule.visit_date}) po ang inyong prenatal checkup sa Barangay Health Center. Mangyaring pumunta sa nakatakdang oras. Salamat!`;
  
@@ -93,3 +103,4 @@ export async function checkAndSendPrenatalReminders() {
     console.error('checkAndSendPrenatalReminders error:', err);
   }
 }
+ 

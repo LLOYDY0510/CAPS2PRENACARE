@@ -216,7 +216,7 @@ export default function RegisterPregnantMotherPage() {
  
   if (!showForm) {
     return (
-      <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-semibold mb-1">Data Privacy Notice</h1>
         <p className="text-muted mb-6">
           Please read and agree before proceeding to the registration form.
@@ -282,8 +282,8 @@ export default function RegisterPregnantMotherPage() {
   }
  
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-1">Register Pregnant Mother</h1>
+        <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-1">Register Pregnant Women</h1>
       <p className="text-muted mb-6">
         Fill in the details below to add a new record.
       </p>

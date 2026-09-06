@@ -13,14 +13,20 @@ export default async function PrenatalSchedulePage() {
     .limit(1)
     .maybeSingle();
  
+  const { data: mothers } = await supabase
+    .from('pregnant_mothers')
+    .select('id, full_name, purok, contact_number')
+    .order('full_name', { ascending: true });
+ 
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">Prenatal Schedule</h1>
       <p className="text-muted mb-6">
-        Set the next barangay-wide prenatal checkup date. Reminders are sent automatically.
+        Set the next prenatal checkup date and choose who should receive the reminder.
       </p>
  
-      <ScheduleSetter currentSchedule={currentSchedule ?? null} />
+      <ScheduleSetter currentSchedule={currentSchedule ?? null} mothers={mothers ?? []} />
     </div>
   );
 }
+ 
