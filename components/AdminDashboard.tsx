@@ -263,7 +263,7 @@ export default async function AdminDashboard() {
       {/* Recent registered pregnant women */}
       <div className="card overflow-x-auto mb-4">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-sm font-semibold text-gray-700">Recent Pregnant Women</h2>
+          <h2 className="text-sm font-semibold text-gray-700">Recent Pregnant Women's</h2>
           <Link href="/dashboard/pregnant" className="text-xs text-brand hover:underline">
             View all records
           </Link>
@@ -279,7 +279,6 @@ export default async function AdminDashboard() {
               <th className="px-4 py-3">G-P</th>
               <th className="px-4 py-3">Risk Level</th>
               <th className="px-4 py-3">Date Registered</th>
-              <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>

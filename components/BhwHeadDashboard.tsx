@@ -1,11 +1,33 @@
 import { createClient } from '@/utils/supabase/server';
+import Link from 'next/link';
+ 
+const ZONE_COLORS: Record<string, string> = {
+  '1': '#0B4F4A',
+  '2': '#2563EB',
+  '3': '#D97706',
+  '4': '#7C3AED',
+  '5': '#DC2626',
+  '6': '#0EA5E9',
+  '7': '#DB2777',
+  '8': '#059669',
+};
+const UNASSIGNED_COLOR = '#9CA3AF';
+ 
+const AGE_GROUP_COLORS: Record<string, string> = {
+  '10-14': '#DC2626',
+  '15-19': '#D97706',
+  '20-49': '#0B4F4A',
+};
  
 export default async function BhwHeadDashboard() {
   const supabase = await createClient();
  
   const { data: records } = await supabase
     .from('pregnant_mothers')
-    .select('id, purok, risk_level, age');
+    .select(
+      'id, serial_no, full_name, purok, risk_level, age, lmp, gravida_para, date_registered'
+    )
+    .order('date_registered', { ascending: false });
  
   const total = records?.length ?? 0;
   const highRisk = records?.filter((r) => r.risk_level === 'high').length ?? 0;
@@ -29,6 +51,8 @@ export default async function BhwHeadDashboard() {
     else if (age >= 20 && age <= 49) byAgeGroup['20-49']++;
   });
   const maxAgeCount = Math.max(1, ...Object.values(byAgeGroup));
+ 
+  const recentRecords = (records ?? []).slice(0, 5);
  
   const { count: bhwCount } = await supabase
     .from('profiles')
@@ -69,6 +93,7 @@ export default async function BhwHeadDashboard() {
           icon="⚠️"
           iconBg="bg-red-50"
           valueColor="text-red-600"
+          href="/dashboard/risk-list/high"
         />
         <KpiCard
           label="Low Risk"
@@ -76,6 +101,7 @@ export default async function BhwHeadDashboard() {
           icon="✅"
           iconBg="bg-green-50"
           valueColor="text-green-600"
+          href="/dashboard/risk-list/low"
         />
         <KpiCard
           label="BHW Members"
@@ -83,6 +109,7 @@ export default async function BhwHeadDashboard() {
           icon="📋"
           iconBg="bg-amber-50"
           valueColor="text-amber-600"
+          href="/dashboard/bhw"
         />
       </div>
  
@@ -110,8 +137,11 @@ export default async function BhwHeadDashboard() {
                   >
                     <span className="text-xs font-medium text-gray-700">{count}</span>
                     <div
-                      className="w-full max-w-[44px] rounded-t-md bg-gradient-to-t from-[#0B4F4A] to-[#5EA8A0]"
-                      style={{ height: `${barHeight}px` }}
+                      className="w-full max-w-[44px] rounded-t-md"
+                      style={{
+                        height: `${barHeight}px`,
+                        backgroundColor: ZONE_COLORS[purok] ?? UNASSIGNED_COLOR,
+                      }}
                     />
                     <span className="text-xs text-muted">P{purok}</span>
                   </div>
@@ -173,7 +203,7 @@ export default async function BhwHeadDashboard() {
       </div>
  
       {/* Age group chart */}
-      <div className="card p-6">
+      <div className="card p-6 mb-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-sm font-semibold text-gray-700">Pregnant Women by Age Group</h2>
           <span className="text-xs text-muted-2">{total} total</span>
@@ -196,8 +226,11 @@ export default async function BhwHeadDashboard() {
                 >
                   <span className="text-xs font-medium text-gray-700">{count}</span>
                   <div
-                    className="w-full max-w-[56px] rounded-t-md bg-gradient-to-t from-[#0B4F4A] to-[#5EA8A0]"
-                    style={{ height: `${barHeight}px` }}
+                    className="w-full max-w-[56px] rounded-t-md"
+                    style={{
+                      height: `${barHeight}px`,
+                      backgroundColor: AGE_GROUP_COLORS[group],
+                    }}
                   />
                   <span className="text-xs text-muted">{group}</span>
                 </div>
@@ -205,6 +238,69 @@ export default async function BhwHeadDashboard() {
             })}
           </div>
         )}
+      </div>
+ 
+      {/* Recent registered pregnant women */}
+      <div className="card overflow-x-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-sm font-semibold text-gray-700">Recent Pregnant Women's</h2>
+          <Link href="/dashboard/pregnant" className="text-xs text-brand hover:underline">
+            View all records
+          </Link>
+        </div>
+        <table className="w-full text-sm whitespace-nowrap">
+          <thead className="bg-gray-50 border-b text-left text-muted">
+            <tr>
+              <th className="px-4 py-3">Serial No.</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Zone</th>
+              <th className="px-4 py-3">Age</th>
+              <th className="px-4 py-3">LMP</th>
+              <th className="px-4 py-3">G-P</th>
+              <th className="px-4 py-3">Risk Level</th>
+              <th className="px-4 py-3">Date Registered</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentRecords.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-4 py-8 text-center text-muted-2">
+                  No pregnant mothers registered yet.
+                </td>
+              </tr>
+            )}
+            {recentRecords.map((r) => (
+              <tr key={r.id} className="border-b last:border-0">
+                <td className="px-4 py-3 text-muted font-mono text-xs">{r.serial_no ?? '—'}</td>
+                <td className="px-4 py-3 font-medium">{r.full_name ?? '—'}</td>
+                <td className="px-4 py-3">{r.purok ?? '—'}</td>
+                <td className="px-4 py-3">{r.age ?? '—'}</td>
+                <td className="px-4 py-3">{r.lmp ?? '—'}</td>
+                <td className="px-4 py-3">{r.gravida_para ?? '—'}</td>
+                <td className="px-4 py-3">
+                  {r.risk_level === 'high' ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                      High Risk
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      Low Risk
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">{r.date_registered ?? '—'}</td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/dashboard/pregnant/${r.id}`}
+                    className="text-brand hover:underline text-xs"
+                  >
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -216,15 +312,17 @@ function KpiCard({
   icon,
   iconBg,
   valueColor = 'text-ink',
+  href,
 }: {
   label: string;
   value: number;
   icon: string;
   iconBg: string;
   valueColor?: string;
+  href?: string;
 }) {
-  return (
-    <div className="card p-5">
+  const content = (
+    <div className="card p-5 h-full">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-muted">{label}</span>
         <span className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center text-sm`}>
@@ -232,6 +330,21 @@ function KpiCard({
         </span>
       </div>
       <p className={`text-3xl font-semibold ${valueColor}`}>{value}</p>
+      {href && (
+        <p className="text-xs text-brand mt-3 flex items-center gap-1">
+          View details <span aria-hidden>→</span>
+        </p>
+      )}
     </div>
   );
+ 
+  if (href) {
+    return (
+      <Link href={href} className="block hover:opacity-90 transition">
+        {content}
+      </Link>
+    );
+  }
+ 
+  return content;
 }
