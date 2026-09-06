@@ -7,11 +7,22 @@ export default async function PregnantMotherDashboard({
 }) {
   const supabase = await createClient();
  
-  const { data: record } = await supabase
+    const { data: record } = await supabase
     .from('pregnant_mothers')
     .select('*')
     .eq('id', pregnantMotherId)
     .single();
+
+  const { data: matchedIndicators } = await supabase
+    .from('pregnant_mother_indicators')
+    .select('risk_indicators(label)')
+    .eq('pregnant_mother_id', pregnantMotherId);
+
+  const riskReasons = (matchedIndicators ?? [])
+    .map((m: any) =>
+      Array.isArray(m.risk_indicators) ? m.risk_indicators[0]?.label : m.risk_indicators?.label
+    )
+    .filter((label): label is string => !!label);
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
@@ -76,7 +87,7 @@ export default async function PregnantMotherDashboard({
       <div className="card p-5">
         <h1 className="text-xl font-semibold text-ink">{fullName}</h1>
         <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>
-        <div className="mt-3">
+               <div className="mt-3">
           {record.risk_level === 'high' ? (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
               ⚠️ High Risk
@@ -87,6 +98,14 @@ export default async function PregnantMotherDashboard({
             </span>
           )}
         </div>
+
+        {record.risk_level === 'high' && riskReasons.length > 0 && (
+          <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
+            {riskReasons.map((reason, i) => (
+              <li key={i}>{reason}</li>
+            ))}
+          </ul>
+        )}
       </div>
  
       {/* Messages */}

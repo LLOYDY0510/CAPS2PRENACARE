@@ -27,9 +27,6 @@ export default async function DashboardPage() {
  
   return (
         <div className="max-w-6xl mx-auto">
-      <p className="text-sm text-muted mb-6">
-        Logged in as {user.email} · Role: <span className="font-medium text-ink capitalize">{role.replace('_', ' ')}</span>
-      </p>
  
       {role === 'pending' && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">

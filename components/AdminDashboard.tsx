@@ -101,11 +101,13 @@ export default async function AdminDashboard() {
  
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <KpiCard
+               <KpiCard
           label="Total Registered"
           value={total}
           icon="👥"
           iconBg="bg-brand-light"
+          href="/dashboard/pregnant"
+          footerLabel="View all records"
         />
         <KpiCard
           label="High Risk"
@@ -350,8 +352,9 @@ function KpiCard({
   value,
   icon,
   iconBg,
-  valueColor = 'text-ink',
+   valueColor = 'text-ink',
   href,
+  footerLabel = 'View details',
 }: {
   label: string;
   value: number;
@@ -359,6 +362,7 @@ function KpiCard({
   iconBg: string;
   valueColor?: string;
   href?: string;
+  footerLabel?: string;
 }) {
   const content = (
     <div className="card p-5 h-full">
@@ -370,8 +374,8 @@ function KpiCard({
       </div>
       <p className={`text-3xl font-semibold ${valueColor}`}>{value}</p>
       {href && (
-        <p className="text-xs text-brand mt-3 flex items-center gap-1">
-          View details <span aria-hidden>→</span>
+        <p className="text-xs text-ink mt-3 pt-3 border-t border-gray-100 flex items-center gap-1">
+          {footerLabel} <span aria-hidden>→</span>
         </p>
       )}
     </div>

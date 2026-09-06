@@ -2,9 +2,10 @@
  
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
- 
+
 export default function CreateAccountPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -86,96 +87,132 @@ export default function CreateAccountPage() {
     router.push('/dashboard');
   }
  
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <h1 className="font-display text-2xl text-ink">Prenatrack</h1>
-          <p className="text-muted text-sm mt-1">Create your account</p>
-        </div>
- 
-        <form onSubmit={handleSubmit} className="card p-6 space-y-4">
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
-          )}
- 
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+    return (
+    <div className="min-h-screen flex items-center justify-center bg-[#1E2228] px-6">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
+        .font-display { font-family: 'Fraunces', serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+      `}</style>
+
+      <div className="flex flex-col md:flex-row items-center gap-16 md:gap-20 max-w-4xl w-full py-10">
+        {/* Left — logo */}
+        <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
+          <div className="w-44 h-44 md:w-52 md:h-52 rounded-full overflow-hidden bg-[#1E2228] mb-5 relative ring-1 ring-white/10">
+            <Image
+              src="/logo.jpg"
+              alt="Prenatrack logo"
+              fill
+              className="object-contain"
+              priority
             />
           </div>
- 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Confirm Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-          </div>
- 
-          <div className="border-t pt-4">
-            <p className="text-xs text-muted-2 mb-3">
-              Enter the details from your registration slip to link your account to your record.
-            </p>
-            <div>
-              <label className="block text-sm font-medium mb-1">Serial Number</label>
-              <input
-                type="text"
-                value={serialNo}
-                onChange={(e) => setSerialNo(e.target.value)}
-                placeholder="e.g. SPM-2026-0001"
-                required
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div className="mt-3">
-              <label className="block text-sm font-medium mb-1">Contact Number</label>
-              <input
-                type="text"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-                placeholder="The number you gave during registration"
-                required
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-          </div>
- 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand text-white py-2 rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 transition"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
- 
-          <p className="text-center text-sm text-muted">
-            Already have an account?{' '}
-            <Link href="/login" className="text-brand hover:underline">
-              Log in
-            </Link>
+          <p className="font-body text-sm text-[#8A9099]">
+            Care for mothers &amp; babies
           </p>
-        </form>
+        </div>
+
+        {/* Right — create account card */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10 w-full max-w-sm">
+          <h2 className="font-display text-2xl font-semibold text-[#1B3A4B] text-center mb-7">
+            Create Account
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <p className="font-body text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-md mb-4">
+                {error}
+              </p>
+            )}
+
+            <div className="mb-4">
+              <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                />
+              </div>
+              <div>
+                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                  Confirm
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <p className="font-body text-xs text-[#8A9099] mb-3">
+                Enter the details from your registration slip to link your account to your record.
+              </p>
+              <div className="mb-3">
+                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                  Serial Number
+                </label>
+                <input
+                  type="text"
+                  value={serialNo}
+                  onChange={(e) => setSerialNo(e.target.value)}
+                  placeholder="e.g. SPM-2026-0001"
+                  required
+                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                />
+              </div>
+              <div>
+                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                  Contact Number
+                </label>
+                <input
+                  type="text"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="The number you gave during registration"
+                  required
+                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="font-body w-full bg-[#5EA8A0] text-white font-semibold py-2.5 rounded-lg hover:bg-[#4C948C] disabled:opacity-50 transition"
+            >
+              {loading ? 'Creating account…' : 'Create Account'}
+            </button>
+
+            <p className="font-body text-center text-sm text-[#6B7280] mt-5">
+              Already have an account?{' '}
+              <Link href="/login" className="text-[#5EA8A0] hover:underline font-medium">
+                Log in
+              </Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

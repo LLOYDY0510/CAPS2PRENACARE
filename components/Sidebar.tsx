@@ -1,12 +1,18 @@
 'use client';
  
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
  
 type MenuItem = { label: string; href: string };
  
+const ROLE_LABELS: Record<string, { title: string; subtitle: string }> = {
+  admin: { title: 'Admin', subtitle: 'Midwife' },
+  bhw_head: { title: 'Manager', subtitle: 'BHW' },
+};
+
 const ICONS: Record<string, string> = {
   Dashboard: '',
   'Risk Map': '',
@@ -52,16 +58,9 @@ export default function Sidebar({
           <span className="font-display text-lg font-semibold">Prenatrack</span>
         </div>
  
-        <div className="flex items-center gap-4">
-          <span className="text-lg">🔔</span>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-semibold">
-              {(fullName ?? email ?? '?').charAt(0).toUpperCase()}
-            </div>
-            <div className="text-xs leading-tight hidden sm:block">
-              <p className="font-medium">{fullName || email}</p>
-              <p className="text-white/60 capitalize">{role.replace('_', ' ')}</p>
-            </div>
+                <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-semibold">
+            {(fullName ?? email ?? '?').charAt(0).toUpperCase()}
           </div>
         </div>
       </header>
@@ -77,13 +76,17 @@ export default function Sidebar({
         >
           <div className="w-64 h-full flex flex-col overflow-y-auto">
             <div className="p-5 border-b border-gray-100 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-9 h-9 rounded-full bg-brand-light flex items-center justify-center text-brand text-lg">
-                  🛡️
-                </span>
+                            <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full overflow-hidden relative shrink-0">
+                  <Image src="/logo.jpg" alt="Prenatrack logo" fill className="object-cover" />
+                </div>
                 <div>
-                  <p className="font-semibold text-ink text-sm">{fullName || email}</p>
-                  <p className="text-xs text-muted capitalize">{role.replace('_', ' ')}</p>
+                  <p className="font-semibold text-ink text-sm">
+                    {ROLE_LABELS[role]?.title ?? role.replace('_', ' ')}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {ROLE_LABELS[role]?.subtitle ?? ''}
+                  </p>
                 </div>
               </div>
             </div>
