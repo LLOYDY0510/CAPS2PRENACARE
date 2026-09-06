@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/Sidebar';
+import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
  
 export const dynamic = 'force-dynamic';
  
@@ -37,6 +38,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+    await checkAndSendPrenatalReminders()
   const supabase = await createClient();
  
   const {
@@ -56,12 +58,15 @@ export default async function DashboardLayout({
   const role = profile?.role ?? 'pending';
   const menuItems = MENUS[role] ?? [];
  
-  return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar role={role} menuItems={menuItems} />
-      {/* Main content */}
-      <main className="flex-1 p-8">{children}</main>
-    </div>
+    return (
+    <Sidebar
+      role={role}
+      menuItems={menuItems}
+      fullName={profile?.full_name}
+      email={user.email}
+    >
+      {children}
+    </Sidebar>
   );
 }
  

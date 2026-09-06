@@ -24,13 +24,36 @@ export default async function PregnantMotherDashboard({
     .select('id, tip_broadcasts(id, month, risk_level, title, content, status, sent_at)')
     .eq('pregnant_mother_id', pregnantMotherId);
  
-  const messages = (recipientRows ?? [])
+  const tipMessages = (recipientRows ?? [])
     .map((r) => {
       const b = Array.isArray(r.tip_broadcasts) ? r.tip_broadcasts[0] : r.tip_broadcasts;
-      return b;
+      if (!b || b.status !== 'sent') return null;
+      return { id: b.id, title: b.title, content: b.content, sent_at: b.sent_at };
     })
-    .filter((b) => b && b.status === 'sent')
-    .sort((a, b) => (b?.sent_at ?? '').localeCompare(a?.sent_at ?? ''));
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+ 
+  const { data: scheduleReminders } = await supabase
+    .from('prenatal_schedule_reminders')
+    .select('id, message, sent_at')
+    .eq('pregnant_mother_id', pregnantMotherId);
+ 
+  const reminderMessages = (scheduleReminders ?? []).map((r) => ({
+    id: r.id,
+    title: '📅 Prenatal Schedule Reminder',
+    content: r.message,
+    sent_at: r.sent_at,
+  }));
+ 
+  const messages = [...tipMessages, ...reminderMessages].sort((a, b) =>
+    (b.sent_at ?? '').localeCompare(a.sent_at ?? '')
+  );
+ 
+  const { data: upcomingSchedule } = await supabase
+    .from('prenatal_schedules')
+    .select('visit_date')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
  
   if (!record) {
     return (
@@ -87,12 +110,16 @@ export default async function PregnantMotherDashboard({
         )}
       </div>
  
-      {/* Prenatal Schedule (placeholder until schedule module is built) */}
+      {/* Prenatal Schedule */}
       <div className="card p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">📅 Prenatal Schedule</h2>
-        <p className="text-sm text-muted-2">
-          Your next prenatal visit will appear here once your BHW sets your schedule.
-        </p>
+        {upcomingSchedule ? (
+          <p className="text-lg font-semibold text-ink">{upcomingSchedule.visit_date}</p>
+        ) : (
+          <p className="text-sm text-muted-2">
+            No prenatal schedule has been set yet.
+          </p>
+        )}
       </div>
  
       {/* Personal Info */}
@@ -153,4 +180,3 @@ function InfoRow({ label, value }: { label: string; value: string | number | nul
     </div>
   );
 }
- 

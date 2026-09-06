@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginPage() {
@@ -107,13 +108,20 @@ export default function LoginPage() {
               Show password
             </label>
 
-            <button
+                        <button
               type="submit"
               disabled={loading}
               className="font-body w-full bg-[#5EA8A0] text-white font-semibold py-2.5 rounded-lg hover:bg-[#4C948C] disabled:opacity-50 transition"
             >
               {loading ? 'Logging in…' : 'Log in'}
             </button>
+
+            <p className="font-body text-center text-sm text-[#6B7280] mt-5">
+              Wala pang account?{' '}
+              <Link href="/create-account" className="text-[#5EA8A0] hover:underline font-medium">
+                Create Account
+              </Link>
+            </p>
           </form>
         </div>
       </div>

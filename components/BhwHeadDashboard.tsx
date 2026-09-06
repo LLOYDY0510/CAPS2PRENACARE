@@ -91,7 +91,7 @@ export default async function BhwHeadDashboard() {
         {/* Bar chart */}
         <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold text-gray-700">Records per Purok</h2>
+            <h2 className="text-sm font-semibold text-gray-700">Records per Zone</h2>
             <span className="text-xs text-muted-2">{total} total</span>
           </div>
  
@@ -175,7 +175,7 @@ export default async function BhwHeadDashboard() {
       {/* Age group chart */}
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-sm font-semibold text-gray-700">Pregnant Mothers by Age Group</h2>
+          <h2 className="text-sm font-semibold text-gray-700">Pregnant Women by Age Group</h2>
           <span className="text-xs text-muted-2">{total} total</span>
         </div>
  
