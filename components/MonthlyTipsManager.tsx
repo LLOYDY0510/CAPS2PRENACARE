@@ -38,7 +38,7 @@ type Recipient = {
   broadcast_id: string;
   pregnant_mother_id: string;
   sent: boolean;
-  pregnant_mothers: { full_name: string } | { full_name: string }[] | null;
+  pregnant_mothers: { full_name: string } | null;
 };
  
 function calcPregnancyMonth(lmp: string | null): number | null {
@@ -355,9 +355,7 @@ export default function MonthlyTipsManager({
                     <ul className="mt-1 list-disc list-inside">
                       {recs.map((r) => (
                         <li key={r.pregnant_mother_id}>
-                          {(Array.isArray(r.pregnant_mothers)
-                            ? r.pregnant_mothers[0]?.full_name
-                            : r.pregnant_mothers?.full_name) ?? 'Unknown'}
+                          {r.pregnant_mothers?.full_name ?? 'Unknown'}
                         </li>
                       ))}
                     </ul>
@@ -401,11 +399,8 @@ export default function MonthlyTipsManager({
             {approved.map((b) => {
               const recs = recipientsFor(b.id);
               return (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between border rounded-lg px-4 py-3"
-                >
-                  <div>
+                <div key={b.id} className="border rounded-lg px-4 py-3">
+                  <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">
                       Month {b.month} —{' '}
                       <span className={b.risk_level === 'high' ? 'text-red-600' : 'text-green-600'}>
@@ -413,13 +408,23 @@ export default function MonthlyTipsManager({
                       </span>{' '}
                       <span className="text-xs text-muted-2">({recs.length} recipients)</span>
                     </p>
+                    <button
+                      onClick={() => sendBroadcast(b)}
+                      className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg hover:bg-brand-dark"
+                    >
+                      Send Now (Simulated SMS)
+                    </button>
                   </div>
-                  <button
-                    onClick={() => sendBroadcast(b)}
-                    className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg hover:bg-brand-dark"
-                  >
-                    Send Now (Simulated SMS)
-                  </button>
+                  <p className="text-xs text-muted mt-2">
+                    {recs
+                      .map(
+                        (r) =>
+                          (Array.isArray(r.pregnant_mothers)
+                            ? r.pregnant_mothers[0]?.full_name
+                            : r.pregnant_mothers?.full_name) ?? 'Unknown'
+                      )
+                      .join(', ')}
+                  </p>
                 </div>
               );
             })}
@@ -435,23 +440,34 @@ export default function MonthlyTipsManager({
         {sent.length === 0 ? (
           <p className="text-sm text-muted-2">No messages sent yet.</p>
         ) : (
-          <div className="space-y-1">
-            {sent.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center justify-between text-xs text-muted border-b last:border-0 py-2"
-              >
-                <span>
-                  Month {b.month} — {b.risk_level === 'high' ? 'High Risk' : 'Low Risk'} (
-                  {recipientsFor(b.id).length} recipients)
-                </span>
-                <span>{b.sent_at ? new Date(b.sent_at).toLocaleString() : ''}</span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {sent.map((b) => {
+              const recs = recipientsFor(b.id);
+              return (
+                <div key={b.id} className="text-xs border-b last:border-0 py-2">
+                  <div className="flex items-center justify-between text-muted">
+                    <span>
+                      Month {b.month} — {b.risk_level === 'high' ? 'High Risk' : 'Low Risk'} (
+                      {recs.length} recipients)
+                    </span>
+                    <span>{b.sent_at ? new Date(b.sent_at).toLocaleString() : ''}</span>
+                  </div>
+                  <p className="text-muted-2 mt-1">
+                    {recs
+                      .map(
+                        (r) =>
+                          (Array.isArray(r.pregnant_mothers)
+                            ? r.pregnant_mothers[0]?.full_name
+                            : r.pregnant_mothers?.full_name) ?? 'Unknown'
+                      )
+                      .join(', ')}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
- 

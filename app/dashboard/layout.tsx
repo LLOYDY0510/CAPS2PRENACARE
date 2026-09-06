@@ -27,6 +27,9 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
   ],
+    pregnant_mother: [
+    { label: 'Dashboard', href: '/dashboard' },
+  ],
 };
  
 export default async function DashboardLayout({

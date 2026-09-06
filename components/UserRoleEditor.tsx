@@ -10,31 +10,60 @@ type Profile = {
   full_name: string | null;
   role: string | null;
   purok: string | null;
+  pregnant_mother_id: string | null;
   created_at: string;
 };
  
-const ROLES = ['pending', 'bhw_head', 'bhw_purok', 'nurse', 'admin'];
+type MotherOption = {
+  id: string;
+  full_name: string;
+  serial_no: string | null;
+};
  
-export default function UserRoleEditor({ profile }: { profile: Profile }) {
+const ROLES = ['pending', 'bhw_head', 'bhw_purok', 'nurse', 'admin', 'pregnant_mother'];
+ 
+export default function UserRoleEditor({
+  profile,
+  availableMothers,
+}: {
+  profile: Profile;
+  availableMothers: MotherOption[];
+}) {
   const supabase = createClient();
   const router = useRouter();
  
   const [role, setRole] = useState(profile.role ?? 'pending');
   const [purok, setPurok] = useState(profile.purok ?? '');
+  const [motherId, setMotherId] = useState(profile.pregnant_mother_id ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
  
-  const isDirty = role !== (profile.role ?? 'pending') || purok !== (profile.purok ?? '');
+  const isDirty =
+    role !== (profile.role ?? 'pending') ||
+    purok !== (profile.purok ?? '') ||
+    motherId !== (profile.pregnant_mother_id ?? '');
  
   async function handleSave() {
+    if (role === 'pregnant_mother' && !motherId) {
+      setError('Please select which record to link.');
+      return;
+    }
+ 
     setSaving(true);
     setError('');
+ 
+    const selectedMother = availableMothers.find((m) => m.id === motherId);
  
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
         role,
         purok: role === 'bhw_purok' ? purok || null : null,
+        pregnant_mother_id: role === 'pregnant_mother' ? motherId || null : null,
+        full_name:
+          role === 'pregnant_mother' && selectedMother
+            ? selectedMother.full_name
+            : profile.full_name,
       })
       .eq('id', profile.id);
  
@@ -55,7 +84,10 @@ export default function UserRoleEditor({ profile }: { profile: Profile }) {
       <td className="px-4 py-3">
         <select
           value={role}
-          onChange={(e) => setRole(e.target.value)}
+          onChange={(e) => {
+            setRole(e.target.value);
+            setError('');
+          }}
           className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         >
           {ROLES.map((r) => (
@@ -74,6 +106,19 @@ export default function UserRoleEditor({ profile }: { profile: Profile }) {
             placeholder="e.g. 4"
             className="w-16 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
+        ) : role === 'pregnant_mother' ? (
+          <select
+            value={motherId}
+            onChange={(e) => setMotherId(e.target.value)}
+            className="border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand max-w-[220px]"
+          >
+            <option value="">Select record...</option>
+            {availableMothers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.serial_no ?? '—'} · {m.full_name}
+              </option>
+            ))}
+          </select>
         ) : (
           <span className="text-muted-2">—</span>
         )}

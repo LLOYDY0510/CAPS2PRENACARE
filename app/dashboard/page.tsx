@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import BhwHeadDashboard from '@/components/BhwHeadDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
 import NurseDashboard from '@/components/NurseDashboard';
+import PregnantMotherDashboard from '@/components/PregnantMotherDashboard';
 export const dynamic = 'force-dynamic';
  
 export default async function DashboardPage() {
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
  
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, purok')
+    .select('role, full_name, purok, pregnant_mother_id')
     .eq('id', user.id)
     .single();
  
@@ -52,10 +53,16 @@ export default async function DashboardPage() {
         </div>
       )}
  
-      {role === 'pregnant_mother' && (
-        <div className="card p-6">
-          <h1 className="text-2xl font-semibold mb-2 text-ink">My Health Dashboard 🤰</h1>
-          <p className="text-muted">Your checkup schedule, records, and reminders.</p>
+      {role === 'pregnant_mother' && profile?.pregnant_mother_id && (
+        <PregnantMotherDashboard pregnantMotherId={profile.pregnant_mother_id} />
+      )}
+ 
+      {role === 'pregnant_mother' && !profile?.pregnant_mother_id && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+          <h1 className="text-xl font-semibold mb-2 text-ink">Account not linked</h1>
+          <p className="text-muted">
+            Your account isn&apos;t linked to a record yet. Please contact your BHW or admin.
+          </p>
         </div>
       )}
     </div>

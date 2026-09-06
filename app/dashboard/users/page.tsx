@@ -8,8 +8,21 @@ export default async function ManageUsersPage() {
  
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, role, purok, created_at')
+    .select('id, email, full_name, role, purok, pregnant_mother_id, created_at')
     .order('created_at', { ascending: false });
+ 
+  // Pregnant mother records not yet linked to any account
+  const linkedIds = (profiles ?? [])
+    .map((p) => p.pregnant_mother_id)
+    .filter((id): id is string => !!id);
+ 
+  let motherQuery = supabase
+    .from('pregnant_mothers')
+    .select('id, full_name, serial_no')
+    .order('serial_no', { ascending: true });
+ 
+  const { data: allMothers } = await motherQuery;
+  const availableMothers = (allMothers ?? []).filter((m) => !linkedIds.includes(m.id));
  
   return (
     <div>
@@ -33,7 +46,7 @@ export default async function ManageUsersPage() {
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Purok</th>
+              <th className="px-4 py-3">Purok / Linked Record</th>
               <th className="px-4 py-3">Joined</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -47,7 +60,18 @@ export default async function ManageUsersPage() {
               </tr>
             )}
             {profiles?.map((p) => (
-              <UserRoleEditor key={p.id} profile={p} />
+              <UserRoleEditor
+                key={p.id}
+                profile={p}
+                availableMothers={
+                  p.pregnant_mother_id
+                    ? [
+                        ...availableMothers,
+                        ...(allMothers?.filter((m) => m.id === p.pregnant_mother_id) ?? []),
+                      ]
+                    : availableMothers
+                }
+              />
             ))}
           </tbody>
         </table>
@@ -55,4 +79,3 @@ export default async function ManageUsersPage() {
     </div>
   );
 }
- 
