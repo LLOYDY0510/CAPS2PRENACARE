@@ -89,7 +89,12 @@ export default async function NurseDashboard() {
           monthlyTips={monthlyTips ?? []}
           pregnantMothers={records ?? []}
           broadcasts={broadcasts ?? []}
-          recipients={recipients ?? []}
+          recipients={(recipients ?? []).map((recipient) => ({
+            ...recipient,
+            pregnant_mothers: Array.isArray(recipient.pregnant_mothers)
+              ? recipient.pregnant_mothers[0] ?? { full_name: '' }
+              : recipient.pregnant_mothers ?? { full_name: '' },
+          }))}
         />
       </div>
  
