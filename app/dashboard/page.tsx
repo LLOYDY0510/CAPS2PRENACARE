@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import BhwHeadDashboard from '@/components/BhwHeadDashboard';
-import AdminDashboard from '@/components/AdminDashboard';
-import NurseDashboard from '@/components/NurseDashboard';
-import PregnantMotherDashboard from '@/components/PregnantMotherDashboard';
+import BhwHeadDashboard from '@/components/dashboard/BhwHeadDashboard';
+import AdminDashboard from '@/components/dashboard/AdminDashboard';
+import NurseDashboard from '@/components/dashboard/NurseDashboard';
+import PregnantMotherDashboard from '@/components/dashboard/PregnantMotherDashboard';
 export const dynamic = 'force-dynamic';
  
 export default async function DashboardPage() {

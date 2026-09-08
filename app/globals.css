@@ -1,49 +1,535 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────
+   PRENATRACK — Design Tokens
+   Clinical, neutral, readable. No decorative
+   display fonts. Pure system stack throughout.
+   ───────────────────────────────────────────── */
+
 :root {
-  /* Prenatrack brand palette — carried over from the login screen so the
-     whole app reads as one product, not a stitched-together prototype. */
-  --background: #F5F7F8;
-  --foreground: #1B3A4B;
+  --background:   #F4F6F8;
+  --foreground:   #1A2332;
+
+  /* Brand — muted teal, not neon */
+  --brand:        #2A7A74;
+  --brand-dark:   #1F5E59;
+  --brand-light:  #E8F3F2;
+  --brand-subtle: #D0E9E7;
+
+  /* Surface / panel */
+  --surface:      #FFFFFF;
+  --surface-alt:  #F8FAFB;
+
+  /* Text */
+  --ink:          #1A2332;
+  --ink-secondary:#374151;
+  --muted:        #6B7280;
+  --muted-2:      #9CA3AF;
+  --placeholder:  #B0B8C4;
+
+  /* Borders */
+  --border:       #E2E6EA;
+  --border-light: #EEF1F4;
+
+  /* Status */
+  --danger:        #B91C1C;
+  --danger-bg:     #FEF2F2;
+  --danger-border: #FECACA;
+  --success:       #15803D;
+  --success-bg:    #F0FDF4;
+  --success-border:#BBF7D0;
+  --warning:       #B45309;
+  --warning-bg:    #FFFBEB;
+  --warning-border:#FDE68A;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm:   0 1px 2px rgba(0,0,0,0.05);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* ─────────────────────────────────────────────
+   BASE
+   ───────────────────────────────────────────── */
 
-  /* Brand */
-  --color-brand: #5EA8A0;
-  --color-brand-dark: #4C948C;
-  --color-brand-light: #E4F0EE;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-  /* Ink / neutrals */
-  --color-ink: #1B3A4B;
-  --color-ink-dark: #1E2228;
-  --color-muted: #6B7280;
-  --color-muted-2: #8A9099;
-  --color-surface: #F3F4F6;
-
-  /* Fonts — variables are supplied by next/font in app/layout.tsx */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Every heading in the app inherits the display face automatically —
-   this alone unifies the visual identity across every page without
-   having to touch each component. */
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: 0;
 }
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.125rem; }
+h3 { font-size: 1rem; }
+h4 { font-size: 0.9375rem; }
+
+p { margin: 0; }
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ─────────────────────────────────────────────
+   TAILWIND THEME EXTENSION
+   ───────────────────────────────────────────── */
+
+@theme inline {
+  --color-background:  var(--background);
+  --color-foreground:  var(--foreground);
+  --color-brand:       var(--brand);
+  --color-brand-dark:  var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-surface:     var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-ink:         var(--ink);
+  --color-ink-dark:    #0F1823;
+  --color-muted:       var(--muted);
+  --color-muted-2:     var(--muted-2);
+  --color-border:      var(--border);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* ─────────────────────────────────────────────
+   COMPONENT LAYER
+   All rules use plain CSS only — no @apply of
+   custom classes (invalid in Tailwind v4).
+   ───────────────────────────────────────────── */
 
 @layer components {
+
+  /* ── Card ── */
   .card {
-    @apply bg-white rounded-2xl shadow-[0_1px_2px_rgba(27,58,75,0.06),0_8px_24px_-12px_rgba(27,58,75,0.12)] border border-black/[0.04];
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ─────────────────────────────
+     Buttons
+     Shared base properties are
+     duplicated into each variant
+     (no @apply of custom classes).
+     ───────────────────────────── */
+
+  /* Shared button shape — use as a mixin via cascade */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.8125rem;
+    font-family: inherit;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    white-space: nowrap;
+    text-decoration: none !important;
+  }
+
+  .btn:disabled,
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-danger:disabled,
+  .btn-ghost:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn:focus-visible,
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible,
+  .btn-danger:focus-visible,
+  .btn-ghost:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  /* Primary */
+  .btn-primary {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--brand-dark);
+    border-color: var(--brand-dark);
+  }
+
+  /* Secondary */
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink-secondary);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-alt);
+  }
+
+  /* Danger */
+  .btn-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-color: var(--danger-border);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: #FEE2E2;
+  }
+
+  /* Ghost */
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border-color: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-alt);
+    color: var(--ink);
+  }
+
+  /* ── Form controls ── */
+  .form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-secondary);
+    margin-bottom: 0.3125rem;
+    letter-spacing: 0.01em;
+  }
+
+  /* Shared input shape */
+  .form-input,
+  .form-textarea,
+  .form-select {
+    display: block;
+    width: 100%;
+    padding: 0.4375rem 0.6875rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    line-height: 1.5;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .form-input::placeholder,
+  .form-textarea::placeholder {
+    color: var(--placeholder);
+  }
+
+  .form-input:focus,
+  .form-textarea:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(42,122,116,0.12);
+  }
+
+  .form-input:disabled,
+  .form-textarea:disabled,
+  .form-select:disabled {
+    background: var(--surface-alt);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    padding-right: 2rem;
+    cursor: pointer;
+  }
+
+  /* ── Tables ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  .data-table thead {
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table thead th {
+    padding: 0.5625rem 0.875rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .data-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.1s;
+  }
+  .data-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .data-table tbody tr:hover {
+    background: #FAFBFC;
+  }
+  .data-table tbody td {
+    padding: 0.625rem 0.875rem;
+    color: var(--ink-secondary);
+    vertical-align: middle;
+  }
+  .data-table tbody td:first-child {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem;
+  }
+
+  /* ── Status badges ── */
+  .badge,
+  .badge-high,
+  .badge-low,
+  .badge-warning,
+  .badge-neutral {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1875rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .badge-high {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+  }
+  .badge-low {
+    color: var(--success);
+    background: var(--success-bg);
+    border-color: var(--success-border);
+  }
+  .badge-warning {
+    color: var(--warning);
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+  }
+  .badge-neutral {
+    color: var(--muted);
+    background: var(--surface-alt);
+    border-color: var(--border);
+  }
+
+  /* ── Section header ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-header h2 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ── KPI stat card ── */
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: 1.125rem 1.25rem;
+  }
+  .stat-card .stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .stat-card .stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .stat-card .stat-footer {
+    margin-top: 0.75rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+  .page-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .page-header .page-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.125rem;
+  }
+
+  /* ── Alerts ── */
+  .alert,
+  .alert-error,
+  .alert-success {
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .alert-error {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+  }
+  .alert-success {
+    color: var(--success);
+    background: var(--success-bg);
+    border-color: var(--success-border);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   PRINT STYLES
+   Optimised for clinical record printing.
+   ───────────────────────────────────────────── */
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 10pt;
+    font-family: "Times New Roman", Times, serif;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print,
+  button:not(.print-visible),
+  [data-noprint] {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  main {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+  th, td {
+    border: 1px solid #bbb;
+    padding: 4pt 6pt;
+    text-align: left;
+  }
+  thead {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: none !important;
   }
 }

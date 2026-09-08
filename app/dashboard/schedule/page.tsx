@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import ScheduleSetter from '@/components/ScheduleSetter';
+import ScheduleSetter from '@/components/schedule/ScheduleSetter';
  
 export const dynamic = 'force-dynamic';
  

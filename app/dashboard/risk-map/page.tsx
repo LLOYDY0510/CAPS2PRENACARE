@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import RiskMapClient from '@/components/RiskMapClient';
+import RiskMapClient from '@/components/maps/RiskMapClient';
 
 export const dynamic = 'force-dynamic';
 

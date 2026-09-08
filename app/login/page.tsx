@@ -7,14 +7,14 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router   = useRouter();
   const supabase = createClient();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError]               = useState('');
+  const [loading, setLoading]           = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,91 +35,129 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1E2228] px-6">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
-        .font-display { font-family: 'Fraunces', serif; }
-        .font-body { font-family: 'Inter', sans-serif; }
-      `}</style>
-
-      <div className="flex flex-col md:flex-row items-center gap-16 md:gap-20 max-w-4xl w-full">
-        {/* Left — logo */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
-          <div className="w-44 h-44 md:w-52 md:h-52 rounded-full overflow-hidden bg-[#1E2228] mb-5 relative ring-1 ring-white/10">
-            <Image
-              src="/logo.jpg"
-              alt="Prenatrack logo"
-              fill
-              className="object-contain"
-              priority
-            />
+    <div
+      className="min-h-screen flex"
+      style={{ background: '#F4F6F8' }}
+    >
+      {/* Left panel — branding */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-[380px] shrink-0 p-10"
+        style={{ background: '#1A2F3A', color: '#fff' }}
+      >
+        <div>
+          <div className="w-12 h-12 rounded-lg overflow-hidden relative mb-8">
+            <Image src="/logo.jpg" alt="Prenatrack" fill className="object-cover" priority />
           </div>
-          <p className="font-body text-sm text-[#8A9099]">
-            Care for mothers &amp; babies
+          <h1
+            className="text-2xl font-semibold mb-3 leading-snug"
+            style={{ color: '#fff' }}
+          >
+            Prenatrack
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+            Maternal health tracking for barangay health workers and midwives.
           </p>
         </div>
 
-        {/* Right — login card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10 w-full max-w-sm">
-          <h2 className="font-display text-2xl font-semibold text-[#1B3A4B] text-center mb-7">
-            Log in
+        <div>
+          <div
+            className="rounded-lg p-4 mb-6"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+              Register mothers, monitor prenatal checkups, flag high-risk cases,
+              and follow up by SMS — all from one shared record.
+            </p>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)' }}>
+            Prenatrack &copy; {new Date().getFullYear()} — Barangay Health System
+          </p>
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="w-9 h-9 rounded overflow-hidden relative shrink-0">
+              <Image src="/logo.jpg" alt="Prenatrack" fill className="object-cover" />
+            </div>
+            <span className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Prenatrack</span>
+          </div>
+
+          <h2 className="mb-1" style={{ fontSize: '1.25rem', color: 'var(--ink)' }}>
+            Sign in to your account
           </h2>
+          <p className="mb-7" style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
+            Enter your credentials to continue.
+          </p>
 
           <form onSubmit={handleLogin}>
             {error && (
-              <p className="font-body text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-md mb-4">
+              <div className="alert-error mb-5" role="alert">
                 {error}
-              </p>
+              </div>
             )}
 
             <div className="mb-4">
-              <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
-                Email
-              </label>
+              <label htmlFor="email" className="form-label">Email address</label>
               <input
+                id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                className="form-input"
+                placeholder="you@example.com"
               />
             </div>
 
-            <div className="mb-2">
-              <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
-                Password
-              </label>
+            <div className="mb-3">
+              <label htmlFor="password" className="form-label">Password</label>
               <input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
+                className="form-input"
               />
             </div>
 
-            <label className="font-body flex items-center gap-2 text-sm text-[#6B7280] mb-6 cursor-pointer select-none">
+            <label
+              className="flex items-center gap-2 mb-6 cursor-pointer select-none"
+              style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}
+            >
               <input
                 type="checkbox"
                 checked={showPassword}
                 onChange={(e) => setShowPassword(e.target.checked)}
-                className="rounded border-gray-300 text-[#5EA8A0] focus:ring-[#5EA8A0]"
+                className="rounded"
+                style={{ accentColor: 'var(--brand)' }}
               />
               Show password
             </label>
 
-                        <button
+            <button
               type="submit"
               disabled={loading}
-              className="font-body w-full bg-[#5EA8A0] text-white font-semibold py-2.5 rounded-lg hover:bg-[#4C948C] disabled:opacity-50 transition"
+              className="btn-primary w-full"
+              style={{ padding: '0.5625rem 1rem', fontSize: '0.9375rem' }}
             >
-              {loading ? 'Logging in…' : 'Log in'}
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
 
-            <p className="font-body text-center text-sm text-[#6B7280] mt-5">
-              Wala pang account?{' '}
-              <Link href="/create-account" className="text-[#5EA8A0] hover:underline font-medium">
-                Create Account
+            <p
+              className="text-center mt-5"
+              style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}
+            >
+              No account yet?{' '}
+              <Link href="/create-account" style={{ color: 'var(--brand)', fontWeight: 500 }}>
+                Create account
               </Link>
             </p>
           </form>

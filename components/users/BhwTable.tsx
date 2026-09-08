@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import SearchBar from '@/components/ui/SearchBar';
 
 type UserRow = {
   id: string;
@@ -76,88 +77,86 @@ export default function BhwTable({
 
   return (
     <div>
-      {/* Search bar */}
-      <div className="mb-4">
-        <input
-          type="text"
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        <SearchBar
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, or purok..."
-          className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+          onChange={setSearch}
+          placeholder="Search by name, email, or purok…"
         />
+        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--muted)' }}>
+          {filteredUsers.length} of {users.length} users
+        </span>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b text-left text-muted">
+      <div className="card overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Name / Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Purok</th>
-              <th className="px-4 py-3">Workload</th>
-              <th className="px-4 py-3">Action</th>
+              <th>Name / Email</th>
+              <th>Role</th>
+              <th>Purok</th>
+              <th>Workload</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-2">
+                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
                   No matching users found.
                 </td>
               </tr>
             )}
             {filteredUsers.map((user) => (
-              <tr key={user.id} className="border-b last:border-0">
-                <td className="px-4 py-3">
-                  <p className="font-medium">{user.full_name || 'No name set'}</p>
-                  <p className="text-muted text-xs">{user.email}</p>
+              <tr key={user.id}>
+                <td>
+                  <p style={{ fontWeight: 500, color: 'var(--ink)' }}>{user.full_name || 'No name set'}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{user.email}</p>
                 </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user.role === 'bhw_purok'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}
-                  >
+                <td>
+                  <span className={user.role === 'bhw_purok' ? 'badge-low' : 'badge-warning'}>
                     {user.role}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <input
                     type="text"
                     defaultValue={user.purok ?? ''}
                     placeholder="e.g. 1"
-                    className="border rounded-lg px-2 py-1 w-20 focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="form-input"
+                    style={{ width: '72px' }}
                     onBlur={(e) => saveAssignment(user.id, e.target.value)}
                   />
                 </td>
-                <td className="px-4 py-3 text-muted">
+                <td>
                   {user.purok ? (
-                    <span>
+                    <span style={{ color: 'var(--muted)' }}>
                       {countsByPurok[user.purok] ?? 0}{' '}
-                      <span className="text-muted-2 text-xs">mothers</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted-2)' }}>mothers</span>
                     </span>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span style={{ color: 'var(--muted-2)' }}>—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 space-x-3">
+                <td>
                   {user.role === 'pending' ? (
                     <button
                       onClick={() => promoteToBhw(user.id)}
                       disabled={savingId === user.id}
-                      className="text-brand hover:underline text-sm disabled:opacity-50"
+                      className="btn-primary"
+                      style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem' }}
                     >
-                      {savingId === user.id ? 'Saving...' : 'Make BHW'}
+                      {savingId === user.id ? 'Saving…' : 'Make BHW'}
                     </button>
                   ) : (
                     <button
                       onClick={() => demoteToPending(user.id)}
                       disabled={savingId === user.id}
-                      className="text-red-600 hover:underline text-sm disabled:opacity-50"
+                      className="btn-danger"
+                      style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem' }}
                     >
-                      {savingId === user.id ? 'Removing...' : 'Remove'}
+                      {savingId === user.id ? 'Removing…' : 'Remove'}
                     </button>
                   )}
                 </td>

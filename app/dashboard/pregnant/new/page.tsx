@@ -9,7 +9,7 @@ const LocationPicker = dynamic<{
   latitude: number | null;
   longitude: number | null;
   onChange: (lat: number, lng: number) => void;
-}>(() => import('@/components/LocationPicker'), {
+}>(() => import('@/components/maps/LocationPicker'), {
   ssr: false,
   loading: () => (
     <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-lg border">

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 
 const RiskMap = dynamic<{ records: RiskPoint[] }>(
-  () => import('@/components/RiskMap'),
+  () => import('@/components/maps/RiskMap'),
   {
     ssr: false,
     loading: () => (

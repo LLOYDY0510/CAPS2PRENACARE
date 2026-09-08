@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
-import BhwTable from '@/components/BhwTable';
+import BhwTable from '@/components/users/BhwTable';
 
 export const dynamic = 'force-dynamic';
 

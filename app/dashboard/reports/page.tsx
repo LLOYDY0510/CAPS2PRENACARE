@@ -1,11 +1,13 @@
 import { createClient } from '@/utils/supabase/server';
-import ReportExport, { type ReportRow } from '@/components/ReportExport';
+import ReportsTable from '@/components/reports/ReportsTable';
+import { type ReportRow } from '@/components/reports/ReportExport';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
   const supabase = await createClient();
 
+  // Main records
   const { data: records, error } = await supabase
     .from('pregnant_mothers')
     .select(
@@ -13,106 +15,73 @@ export default async function ReportsPage() {
     )
     .order('serial_no', { ascending: true });
 
+  // Checkup counts per mother
+  const { data: checkupRows } = await supabase
+    .from('prenatal_checkups')
+    .select('pregnant_mother_id');
+
+  const checkupCounts: Record<string, number> = {};
+  checkupRows?.forEach((c) => {
+    checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
+  });
+
+  // Next prenatal schedule per mother
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: scheduleRows } = await supabase
+    .from('prenatal_schedules')
+    .select('pregnant_mother_id, visit_date')
+    .gte('visit_date', today)
+    .order('visit_date', { ascending: true });
+
+  // Keep only the earliest upcoming visit per mother
+  const nextVisit: Record<string, string> = {};
+  scheduleRows?.forEach((s) => {
+    if (!nextVisit[s.pregnant_mother_id]) {
+      nextVisit[s.pregnant_mother_id] = s.visit_date;
+    }
+  });
+
   const rows: ReportRow[] = (records ?? []).map((r) => ({
-    serial_no: r.serial_no,
+    serial_no:       r.serial_no,
     date_registered: r.date_registered,
-    name: [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' '),
-    address: r.address,
-    purok: r.purok,
-    age: r.age,
-    contact_number: r.contact_number,
-    lmp: r.lmp,
-    edd: r.edd,
-    gravida_para: r.gravida_para,
-    blood_pressure: r.blood_pressure,
-    height_cm: r.height_cm,
-    weight_kg: r.weight_kg,
-    risk_level: r.risk_level,
+    name:            [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' '),
+    address:         r.address,
+    purok:           r.purok,
+    age:             r.age,
+    contact_number:  r.contact_number,
+    lmp:             r.lmp,
+    edd:             r.edd,
+    gravida_para:    r.gravida_para,
+    blood_pressure:  r.blood_pressure,
+    height_cm:       r.height_cm,
+    weight_kg:       r.weight_kg,
+    risk_level:      r.risk_level,
   }));
 
-  const total = rows.length;
-  const highRisk = rows.filter((r) => r.risk_level === 'high').length;
+  // Extra metadata passed to the client table (not part of ReportRow export type)
+  const meta: Record<string, { checkupCount: number; nextVisit: string | null }> = {};
+  (records ?? []).forEach((r) => {
+    meta[r.id] = {
+      checkupCount: checkupCounts[r.id] ?? 0,
+      nextVisit:    nextVisit[r.id] ?? null,
+    };
+  });
+
+  // Attach id to rows for meta lookup — passed separately so ReportRow stays unchanged
+  const rowsWithId = (records ?? []).map((r, i) => ({
+    ...rows[i],
+    _id: r.id,
+  }));
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold mb-1">Reports</h1>
-          <p className="text-muted">
-            Export the full pregnant mothers registry as a spreadsheet.
-          </p>
-        </div>
-        <ReportExport records={rows} />
-      </div>
-
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mb-4">
+        <div className="alert-error mb-4">
           Failed to load records: {error.message}
-        </p>
+        </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="card p-4">
-          <p className="text-sm text-muted mb-1">Total Records</p>
-          <p className="text-2xl font-semibold text-ink">{total}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-muted mb-1">High Risk</p>
-          <p className="text-2xl font-semibold text-red-600">{highRisk}</p>
-        </div>
-      </div>
-
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm whitespace-nowrap">
-          <thead className="bg-gray-50 border-b text-left text-muted">
-            <tr>
-              <th className="px-4 py-3">Serial No.</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Purok</th>
-              <th className="px-4 py-3">Age</th>
-              <th className="px-4 py-3">EDC</th>
-              <th className="px-4 py-3">Risk Level</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-2">
-                  No records to report yet.
-                </td>
-              </tr>
-            )}
-            {rows.map((r, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-3 font-mono text-xs text-muted">
-                  {r.serial_no ?? '—'}
-                </td>
-                <td className="px-4 py-3 font-medium">{r.name || '—'}</td>
-                <td className="px-4 py-3">{r.purok ?? '—'}</td>
-                <td className="px-4 py-3">{r.age ?? '—'}</td>
-                <td className="px-4 py-3">{r.edd ?? '—'}</td>
-                <td className="px-4 py-3">
-                  {r.risk_level ? (
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                        r.risk_level === 'high'
-                          ? 'bg-red-100 text-red-700'
-                          : r.risk_level === 'medium'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {r.risk_level}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ReportsTable rowsWithId={rowsWithId} meta={meta} />
     </div>
   );
 }

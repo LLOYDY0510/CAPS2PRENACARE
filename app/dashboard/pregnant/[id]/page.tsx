@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import PrenatalCheckups from '@/components/PrenatalCheckups';
+import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
  
 export const dynamic = 'force-dynamic';
  
