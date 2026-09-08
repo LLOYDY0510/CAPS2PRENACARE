@@ -98,7 +98,8 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
           </p>
           <button
             onClick={toggleAll}
-            className="text-sm text-brand hover:underline"
+            className="btn-ghost"
+            style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem' }}
           >
             {selected.size === withContact.length ? 'Deselect all' : 'Select all'}
           </button>
@@ -159,9 +160,9 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
         <button
           onClick={handleSend}
           disabled={sending}
-          className="w-full mt-4 bg-brand text-white py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
+          className="btn-primary w-full mt-4"
         >
-          {sending ? 'Sending...' : `Send SMS (${selected.size})`}
+          {sending ? 'Sending…' : `Send SMS (${selected.size})`}
         </button>
       </div>
     </div>

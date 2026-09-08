@@ -264,14 +264,14 @@ export default function RegisterPregnantMotherPage() {
               type="button"
               disabled={!agreed}
               onClick={() => setShowForm(true)}
-              className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="btn-primary"
             >
               Agree &amp; Proceed
             </button>
             <button
               type="button"
               onClick={() => router.push('/dashboard/pregnant')}
-              className="px-5 py-2 rounded-lg text-sm border hover:bg-gray-50 transition"
+              className="btn-secondary"
             >
               Cancel
             </button>
@@ -540,14 +540,14 @@ export default function RegisterPregnantMotherPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
+            className="btn-primary"
           >
-            {loading ? 'Saving...' : 'Save Record'}
+            {loading ? 'Saving…' : 'Save Record'}
           </button>
           <button
             type="button"
             onClick={() => router.push('/dashboard/pregnant')}
-            className="px-5 py-2 rounded-lg text-sm border hover:bg-gray-50 transition"
+            className="btn-secondary"
           >
             Cancel
           </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -16,7 +16,6 @@ const ROLE_DISPLAY: Record<string, { title: string; sub: string }> = {
   pregnant_mother: { title: 'Patient Portal',   sub: 'Pregnant Mother' },
 };
 
-/* Minimal SVG icons — 16×16 viewBox, stroke-based */
 const NAV_ICONS: Record<string, React.ReactElement> = {
   Dashboard: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
@@ -41,8 +40,7 @@ const NAV_ICONS: Record<string, React.ReactElement> = {
   'Prenatal Schedule': (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
       <rect x="1" y="3" width="14" height="12" rx="1.5"/>
-      <path d="M1 7h14"/>
-      <path d="M5 1v4M11 1v4"/>
+      <path d="M1 7h14M5 1v4M11 1v4"/>
     </svg>
   ),
   'Prenatal Checkups': (
@@ -112,8 +110,44 @@ export default function Sidebar({
   email?: string | null;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
+
+  /* Clear any pending close timer */
+  function cancelClose() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  /* Open immediately on mouse enter */
+  function handleMouseEnter() {
+    cancelClose();
+    setOpen(true);
+  }
+
+  /* Close with a tiny delay so accidental mouse-out doesn't flash */
+  function handleMouseLeave() {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  }
+
+  /* Close immediately after a nav link is clicked */
+  const handleNavClick = useCallback(() => {
+    cancelClose();
+    setOpen(false);
+  }, []);
+
+  /* Hamburger toggle still works for touch / keyboard */
+  function handleToggle() {
+    cancelClose();
+    setOpen((o) => !o);
+  }
+
+  /* Clean up timer on unmount */
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const display = ROLE_DISPLAY[role] ?? {
     title: role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -127,8 +161,10 @@ export default function Sidebar({
     .toUpperCase();
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--background)' }}>
-
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ background: 'var(--background)' }}
+    >
       {/* ── Top bar ── */}
       <header
         className="shrink-0 flex items-center justify-between px-4 z-30"
@@ -139,8 +175,9 @@ export default function Sidebar({
         }}
       >
         <div className="flex items-center gap-3">
+          {/* Hamburger — still works for touch */}
           <button
-            onClick={() => setOpen((o) => !o)}
+            onClick={handleToggle}
             aria-label={open ? 'Close sidebar' : 'Open sidebar'}
             style={{ color: 'rgba(255,255,255,0.6)' }}
             className="p-1.5 rounded hover:text-white transition-colors"
@@ -155,7 +192,7 @@ export default function Sidebar({
               <Image src="/logo.jpg" alt="" fill className="object-cover" />
             </div>
             <span
-              className="text-sm font-semibold tracking-tight"
+              className="text-sm font-semibold"
               style={{ color: '#fff', letterSpacing: '-0.01em' }}
             >
               Prenatrack
@@ -180,79 +217,106 @@ export default function Sidebar({
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
 
-        {/* ── Sidebar ── */}
-        <aside
-          className="shrink-0 flex flex-col overflow-hidden transition-all duration-200"
+        {/* ── Sidebar ──
+            Position: absolute so it overlays content when open.
+            z-index above main so it slides over without pushing layout.
+            Hover zone: the thin 8px rail is always present and triggers open. */}
+        <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           style={{
-            width: open ? '220px' : '0px',
-            background: '#fff',
-            borderRight: '1px solid var(--border)',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            /* Always occupy at least 8px so hover can trigger even when closed */
+            width: open ? '220px' : '8px',
+            zIndex: 20,
+            transition: 'width 0.18s ease',
           }}
         >
-          <div className="w-[220px] h-full flex flex-col overflow-y-auto">
+          <aside
+            style={{
+              width: '220px',
+              height: '100%',
+              background: '#fff',
+              borderRight: '1px solid var(--border)',
+              boxShadow: open ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              transform: open ? 'translateX(0)' : 'translateX(-220px)',
+              transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+            }}
+          >
+            <div className="h-full flex flex-col overflow-y-auto">
 
-            {/* Role identity */}
-            <div
-              className="px-4 py-3 shrink-0"
-              style={{ borderBottom: '1px solid var(--border-light)' }}
-            >
-              <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>
-                {display.title}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                {display.sub}
-              </p>
-            </div>
-
-            {/* Nav label */}
-            <p
-              className="px-4 pt-4 pb-1 text-xs font-semibold tracking-widest shrink-0"
-              style={{ color: 'var(--muted-2)', letterSpacing: '0.07em' }}
-            >
-              NAVIGATION
-            </p>
-
-            {/* Nav links */}
-            <nav className="px-2 pb-2 flex-1">
-              {menuItems.length === 0 && (
-                <p className="px-3 py-2 text-xs" style={{ color: 'var(--muted-2)' }}>
-                  No menu available.
+              {/* Role identity */}
+              <div
+                className="px-4 py-3 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-light)' }}
+              >
+                <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>
+                  {display.title}
                 </p>
-              )}
-              {menuItems.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors"
-                    style={{
-                      color: active ? 'var(--brand)' : 'var(--ink-secondary)',
-                      background: active ? 'var(--brand-light)' : 'transparent',
-                      fontWeight: active ? 500 : 400,
-                      marginBottom: '1px',
-                    }}
-                  >
-                    <MenuIcon label={item.label} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+                  {display.sub}
+                </p>
+              </div>
 
-            {/* Logout */}
-            <div
-              className="px-2 pb-3 pt-2 shrink-0"
-              style={{ borderTop: '1px solid var(--border-light)' }}
-            >
-              <LogoutButton />
+              {/* Nav label */}
+              <p
+                className="px-4 pt-4 pb-1 text-xs font-semibold shrink-0"
+                style={{ color: 'var(--muted-2)', letterSpacing: '0.07em' }}
+              >
+                NAVIGATION
+              </p>
+
+              {/* Nav links */}
+              <nav className="px-2 pb-2 flex-1">
+                {menuItems.length === 0 && (
+                  <p className="px-3 py-2 text-xs" style={{ color: 'var(--muted-2)' }}>
+                    No menu available.
+                  </p>
+                )}
+                {menuItems.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={handleNavClick}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors"
+                      style={{
+                        color: active ? 'var(--brand)' : 'var(--ink-secondary)',
+                        background: active ? 'var(--brand-light)' : 'transparent',
+                        fontWeight: active ? 500 : 400,
+                        marginBottom: '1px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <MenuIcon label={item.label} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Logout */}
+              <div
+                className="px-2 pb-3 pt-2 shrink-0"
+                style={{ borderTop: '1px solid var(--border-light)' }}
+              >
+                <LogoutButton />
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
 
-        {/* ── Page content ── */}
+        {/* ── Page content ──
+            Always full-width; sidebar overlays it rather than pushing it. */}
         <main
           className="flex-1 overflow-y-auto"
           style={{ padding: '1.5rem' }}

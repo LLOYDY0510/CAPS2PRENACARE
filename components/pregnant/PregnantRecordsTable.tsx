@@ -155,12 +155,13 @@ export default function PregnantRecordsTable({
                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <Link
                     href={`/dashboard/pregnant/${r.id}`}
-                    style={{ color: 'var(--brand)', fontSize: '0.8125rem' }}
+                    className="btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                   >
                     View
                   </Link>
                   {canEdit && (
-                    <span style={{ marginLeft: '0.75rem' }}>
+                    <span style={{ marginLeft: '0.5rem' }}>
                       <DeleteRecordButton id={r.id} />
                     </span>
                   )}

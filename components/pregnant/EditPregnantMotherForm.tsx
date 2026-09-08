@@ -320,14 +320,14 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
         <button
           type="submit"
           disabled={loading}
-          className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
+          className="btn-primary"
         >
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading ? 'Saving…' : 'Save Changes'}
         </button>
         <button
           type="button"
           onClick={() => router.push('/dashboard/pregnant')}
-          className="px-5 py-2 rounded-lg text-sm border hover:bg-gray-50 transition"
+          className="btn-secondary"
         >
           Back to Records
         </button>

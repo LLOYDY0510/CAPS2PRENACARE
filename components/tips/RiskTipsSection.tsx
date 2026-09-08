@@ -255,12 +255,12 @@ function MotherCard({
 
         <Link
           href={`/dashboard/pregnant/${mother.id}`}
+          className="btn-secondary"
           style={{
             fontSize: '0.75rem',
-            fontWeight: 500,
-            color: 'var(--brand)',
-            textDecoration: 'none',
+            padding: '0.25rem 0.625rem',
             whiteSpace: 'nowrap',
+            alignSelf: 'flex-start',
           }}
         >
           View Record →

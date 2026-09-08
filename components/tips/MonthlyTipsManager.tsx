@@ -212,7 +212,8 @@ export default function MonthlyTipsManager({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowTemplates((s) => !s)}
-            className="text-sm text-brand hover:underline"
+            className={showTemplates ? 'btn-ghost' : 'btn-secondary'}
+            style={{ fontSize: '0.8125rem', padding: '0.3125rem 0.75rem' }}
           >
             {showTemplates ? 'Hide Templates' : 'Manage Templates'}
           </button>
@@ -262,13 +263,15 @@ export default function MonthlyTipsManager({
                               <div className="flex gap-2 mt-2">
                                 <button
                                   onClick={() => saveTemplate(tip)}
-                                  className="text-xs bg-brand text-white px-3 py-1 rounded-lg hover:bg-brand-dark"
+                                  className="btn-primary"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={() => setEditingTemplateId(null)}
-                                  className="text-xs border px-3 py-1 rounded-lg hover:bg-gray-50"
+                                  className="btn-secondary"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                                 >
                                   Cancel
                                 </button>
@@ -282,7 +285,8 @@ export default function MonthlyTipsManager({
                                   setEditingTemplateId(tip.id);
                                   setTemplateDraft(tip.content);
                                 }}
-                                className="text-xs text-brand hover:underline mt-2"
+                                className="btn-ghost"
+                                style={{ fontSize: '0.75rem', padding: '0.1875rem 0.5rem', marginTop: '0.375rem' }}
                               >
                                 Edit
                               </button>
@@ -332,13 +336,15 @@ export default function MonthlyTipsManager({
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => saveBroadcastEdit(b)}
-                          className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg hover:bg-brand-dark"
+                          className="btn-primary"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         >
                           Save Edit
                         </button>
                         <button
                           onClick={() => setEditingBroadcastId(null)}
-                          className="text-xs border px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                          className="btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         >
                           Cancel
                         </button>
@@ -368,13 +374,15 @@ export default function MonthlyTipsManager({
                           setEditingBroadcastId(b.id);
                           setBroadcastDraft(b.content);
                         }}
-                        className="text-xs border px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                        className="btn-secondary"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                       >
                         Edit Message
                       </button>
                       <button
                         onClick={() => approveBroadcast(b)}
-                        className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700"
+                        className="btn-primary"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                       >
                         Approve
                       </button>
@@ -410,7 +418,8 @@ export default function MonthlyTipsManager({
                     </p>
                     <button
                       onClick={() => sendBroadcast(b)}
-                      className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg hover:bg-brand-dark"
+                      className="btn-primary"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
                     >
                       Send Now (Simulated SMS)
                     </button>

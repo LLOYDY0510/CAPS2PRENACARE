@@ -158,7 +158,8 @@ export default function ScheduleSetter({
             <button
               type="button"
               onClick={toggleAll}
-              className="text-sm text-brand hover:underline"
+              className="btn-ghost"
+              style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem' }}
             >
               {selected.size === withContact.length ? 'Deselect all' : 'Select all'}
             </button>
@@ -195,9 +196,9 @@ export default function ScheduleSetter({
         <button
           type="submit"
           disabled={saving}
-          className="bg-brand text-white px-5 py-2 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50 transition"
+          className="btn-primary"
         >
-          {saving ? 'Saving...' : `Set Schedule (${selected.size} recipients)`}
+          {saving ? 'Saving…' : `Set Schedule (${selected.size} recipients)`}
         </button>
       </form>
     </div>

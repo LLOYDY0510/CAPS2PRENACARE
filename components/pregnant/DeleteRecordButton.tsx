@@ -25,7 +25,8 @@ export default function DeleteRecordButton({ id }: { id: string }) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="text-red-600 hover:underline disabled:opacity-50"
+      className="btn-danger"
+      style={{ padding: '0.25rem 0.625rem', fontSize: '0.8125rem' }}
     >
       {deleting ? 'Deleting...' : 'Delete'}
     </button>

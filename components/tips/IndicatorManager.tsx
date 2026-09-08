@@ -95,7 +95,8 @@ export default function IndicatorManager({
         <h2 className="text-sm font-semibold text-gray-700">High-Risk Indicators</h2>
         <button
           onClick={() => setShowForm((s) => !s)}
-          className="text-sm text-brand hover:underline"
+          className={showForm ? 'btn-ghost' : 'btn-secondary'}
+          style={{ fontSize: '0.8125rem', padding: '0.3125rem 0.75rem' }}
         >
           {showForm ? 'Cancel' : '+ Add Indicator'}
         </button>
@@ -150,9 +151,10 @@ export default function IndicatorManager({
           <button
             type="submit"
             disabled={saving}
-            className="bg-brand text-white px-4 py-1.5 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50"
+            className="btn-primary"
+            style={{ fontSize: '0.8125rem' }}
           >
-            {saving ? 'Saving...' : 'Save Indicator'}
+            {saving ? 'Saving…' : 'Save Indicator'}
           </button>
         </form>
       )}
@@ -178,17 +180,15 @@ export default function IndicatorManager({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => toggleActive(ind)}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-                  ind.active
-                    ? 'text-amber-600 border-amber-200 hover:bg-amber-50'
-                    : 'text-green-600 border-green-200 hover:bg-green-50'
-                }`}
+                className={ind.active ? 'btn-danger' : 'btn-primary'}
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
               >
                 {ind.active ? 'Deactivate' : 'Activate'}
               </button>
               <button
                 onClick={() => handleDelete(ind.id)}
-                className="text-xs text-red-500 hover:underline"
+                className="btn-danger"
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
               >
                 Delete
               </button>
