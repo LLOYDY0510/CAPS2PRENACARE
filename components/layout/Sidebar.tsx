@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -110,44 +110,13 @@ export default function Sidebar({
   email?: string | null;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [open, setOpen] = useState(true);
   const pathname = usePathname();
 
-  /* Clear any pending close timer */
-  function cancelClose() {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  }
-
-  /* Open immediately on mouse enter */
-  function handleMouseEnter() {
-    cancelClose();
-    setOpen(true);
-  }
-
-  /* Close with a tiny delay so accidental mouse-out doesn't flash */
-  function handleMouseLeave() {
-    cancelClose();
-    closeTimer.current = setTimeout(() => setOpen(false), 120);
-  }
-
-  /* Close immediately after a nav link is clicked */
-  const handleNavClick = useCallback(() => {
-    cancelClose();
-    setOpen(false);
-  }, []);
-
-  /* Hamburger toggle still works for touch / keyboard */
+  /* Hamburger toggle */
   function handleToggle() {
-    cancelClose();
     setOpen((o) => !o);
   }
-
-  /* Clean up timer on unmount */
-  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const display = ROLE_DISPLAY[role] ?? {
     title: role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -217,23 +186,16 @@ export default function Sidebar({
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 relative">
+      <div className="flex flex-1 min-h-0">
 
         {/* ── Sidebar ──
-            Position: absolute so it overlays content when open.
-            z-index above main so it slides over without pushing layout.
-            Hover zone: the thin 8px rail is always present and triggers open. */}
+            Sits in normal flow (relative) so it pushes the main content
+            right. Collapses to 0 when closed; hamburger is the only toggle. */}
         <div
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            /* Always occupy at least 8px so hover can trigger even when closed */
-            width: open ? '220px' : '8px',
-            zIndex: 20,
+            width: open ? '220px' : '0px',
+            flexShrink: 0,
+            overflow: 'hidden',
             transition: 'width 0.18s ease',
           }}
         >
@@ -243,12 +205,11 @@ export default function Sidebar({
               height: '100%',
               background: '#fff',
               borderRight: '1px solid var(--border)',
-              boxShadow: open ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
+              boxShadow: open ? '2px 0 8px rgba(0,0,0,0.05)' : 'none',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              transform: open ? 'translateX(0)' : 'translateX(-220px)',
-              transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+              transition: 'box-shadow 0.18s ease',
             }}
           >
             <div className="h-full flex flex-col overflow-y-auto">
@@ -287,7 +248,6 @@ export default function Sidebar({
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={handleNavClick}
                       className="flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors"
                       style={{
                         color: active ? 'var(--brand)' : 'var(--ink-secondary)',
@@ -315,8 +275,7 @@ export default function Sidebar({
           </aside>
         </div>
 
-        {/* ── Page content ──
-            Always full-width; sidebar overlays it rather than pushing it. */}
+        {/* ── Page content ── */}
         <main
           className="flex-1 overflow-y-auto"
           style={{ padding: '1.5rem' }}

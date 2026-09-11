@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { divIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -55,6 +55,23 @@ function makePinIcon(riskLevel: string) {
 // Sankanan, Manolo Fortich, Bukidnon
 const DEFAULT_CENTER: [number, number] = [8.315242, 124.860898];
 
+/* ─── Invalidates Leaflet's size whenever the map container resizes ─── */
+function AutoResize() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    const observer = new ResizeObserver(() => {
+      // invalidateSize triggers Leaflet to recalculate and repaint the map
+      map.invalidateSize({ animate: false });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+
+  return null;
+}
+
 function ClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
@@ -90,6 +107,7 @@ export default function RiskMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        <AutoResize />
         <ClickHandler onClick={pendingClick} />
 
         {records.map((point) => (

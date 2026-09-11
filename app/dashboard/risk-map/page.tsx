@@ -8,7 +8,7 @@ export default async function RiskMapPage() {
 
   const { data: records } = await supabase
     .from('pregnant_mothers')
-    .select('id, full_name, purok, risk_level, latitude, longitude')
+    .select('id, serial_no, full_name, purok, risk_level, latitude, longitude')
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
 
