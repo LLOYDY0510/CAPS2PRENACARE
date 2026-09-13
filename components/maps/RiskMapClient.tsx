@@ -9,6 +9,12 @@ type RiskPoint = {
   serial_no: string | null;
   full_name: string;
   purok: string | null;
+  age: number | null;
+  address: string | null;
+  contact_number: string | null;
+  lmp: string | null;
+  edd: string | null;
+  gravida_para: string | null;
   risk_level: 'low' | 'high' | 'moderate' | string;
   latitude: number;
   longitude: number;

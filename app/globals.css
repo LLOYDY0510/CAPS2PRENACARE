@@ -96,23 +96,25 @@ h4 { font-size: 0.9375rem; }
 
 p { margin: 0; }
 
-a {
-  color: var(--brand);
-  text-decoration: none;
-}
-a:hover { text-decoration: underline; }
+@layer base {
+  a {
+    color: var(--brand);
+    text-decoration: none;
+  }
+  a:hover { text-decoration: underline; }
 
-a.btn:hover,
-a.btn-primary:hover,
-a.btn-secondary:hover,
-a.btn-danger:hover,
-a.btn-ghost:hover {
-  text-decoration: none !important;
+  a.btn:hover,
+  a.btn-primary:hover,
+  a.btn-secondary:hover,
+  a.btn-danger:hover,
+  a.btn-ghost:hover {
+    text-decoration: none !important;
+  }
+  a.btn-primary:hover:not(:disabled)   { color: #fff; }
+  a.btn-secondary:hover:not(:disabled) { color: var(--ink-secondary); }
+  a.btn-danger:hover:not(:disabled)    { color: var(--danger); }
+  a.btn-ghost:hover:not(:disabled)     { color: var(--ink); }
 }
-a.btn-primary:hover:not(:disabled)   { color: #fff; }
-a.btn-secondary:hover:not(:disabled) { color: var(--ink-secondary); }
-a.btn-danger:hover:not(:disabled)    { color: var(--danger); }
-a.btn-ghost:hover:not(:disabled)     { color: var(--ink); }
 
 /* ─────────────────────────────────────────────
    TAILWIND THEME EXTENSION

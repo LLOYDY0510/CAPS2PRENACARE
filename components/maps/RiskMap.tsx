@@ -7,8 +7,15 @@ import 'leaflet/dist/leaflet.css';
 
 type RiskPoint = {
   id: string;
+  serial_no: string | null;
   full_name: string;
   purok: string | null;
+  age: number | null;
+  address: string | null;
+  contact_number: string | null;
+  lmp: string | null;
+  edd: string | null;
+  gravida_para: string | null;
   risk_level: 'low' | 'high' | 'moderate' | string;
   latitude: number;
   longitude: number;
@@ -116,25 +123,36 @@ export default function RiskMap({
             position={[point.latitude, point.longitude]}
             icon={makePinIcon(point.risk_level)}
           >
-            <Popup>
-              <div style={{ fontSize: '13px', lineHeight: 1.5, minWidth: '140px' }}>
+                       <Popup>
+              <div style={{ fontSize: '13px', lineHeight: 1.5, minWidth: '200px' }}>
                 <p style={{ fontWeight: 600, marginBottom: '2px' }}>{point.full_name}</p>
-                <p style={{ color: '#6B7280' }}>Zone: {point.purok ?? '—'}</p>
-                <p style={{ marginTop: '4px' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '1px 7px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: '#fff',
-                      background: getRiskColor(point.risk_level).fill,
-                    }}
-                  >
-                    {getRiskColor(point.risk_level).label}
-                  </span>
-                </p>
+                {point.serial_no && (
+                  <p style={{ color: '#9CA3AF', fontSize: '11px', marginBottom: '6px' }}>
+                    {point.serial_no}
+                  </p>
+                )}
+                <div style={{ color: '#374151', marginBottom: '8px' }}>
+                  <p>Zone: {point.purok ?? '—'}</p>
+                  {point.age != null && <p>Age: {point.age}</p>}
+                  {point.address && <p>Address: {point.address}</p>}
+                  {point.contact_number && <p>Contact: {point.contact_number}</p>}
+                  {point.lmp && <p>LMP: {point.lmp}</p>}
+                  {point.edd && <p>EDC: {point.edd}</p>}
+                  {point.gravida_para && <p>G-P: {point.gravida_para}</p>}
+                </div>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '1px 7px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#fff',
+                    background: getRiskColor(point.risk_level).fill,
+                  }}
+                >
+                  {getRiskColor(point.risk_level).label}
+                </span>
               </div>
             </Popup>
           </Marker>
