@@ -214,6 +214,9 @@ function MotherCard({
   mother,
   copiedId,
   onCopy,
+  sendingId,
+  sentId,
+  onSend,
 }: {
   mother: AtRiskMother;
   copiedId: string | null;
@@ -328,6 +331,9 @@ function TipCard({
   item,
   isCopied,
   onCopy,
+  isSending,
+  isSent,
+  onSend,
 }: {
   item: MatchedIndicatorDetail;
   isCopied: boolean;
