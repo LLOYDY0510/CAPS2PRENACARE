@@ -29,6 +29,7 @@ export default async function SmsLogPage() {
     .select('id, full_name, contact_number, risk_level')
     .eq('risk_level', 'high')
     .not('contact_number', 'is', null);
+  (highRiskMothers ?? []).forEach((mother) => mothersById.set(mother.id, mother));
 
   const rows: SmsLogRow[] = (logs ?? []).map((log) => {
     const sender = Array.isArray(log.profiles) ? log.profiles[0] : log.profiles;
