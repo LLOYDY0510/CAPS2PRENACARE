@@ -5,12 +5,17 @@ import { createMaternalNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
 
 const PHONE_PATTERN = /^\+?[0-9][0-9\- ]{6,19}$/;
+const MESSAGE_TYPES = ['general', 'prenatal_reminder', 'missed_visit_follow_up', 'risk_alert', 'health_tip', 'nutrition_tip', 'care_message'] as const;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
 
   try {
     const { numbers, message, pregnantMotherIds, messageType = 'care_message' } = await req.json();
+
+    if (!MESSAGE_TYPES.includes(messageType)) {
+      return NextResponse.json({ error: 'Invalid message type.' }, { status: 400 });
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
