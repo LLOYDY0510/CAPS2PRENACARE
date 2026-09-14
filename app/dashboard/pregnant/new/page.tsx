@@ -210,6 +210,11 @@ export default function RegisterPregnantMotherPage() {
             message: 'Your record has been flagged for enhanced prenatal monitoring. Please review your care plan with your BHW or nurse at your next visit.',
           }),
         });
+        await Promise.all([
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'High-risk mother registered', message: `${full_name} was registered as high risk and needs enhanced prenatal monitoring.` }) }),
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'High-risk maternal alert', message: `${full_name} was registered as high risk.` }) }),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'High-risk mother in your purok', message: `${full_name} was registered as high risk in your assigned purok.` }) }) : Promise.resolve(),
+        ]);
       }
 
       window.location.href = '/dashboard/pregnant';

@@ -117,6 +117,12 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
       return;
     }
 
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Maternal record updated', message: `${full_name}'s maternal record was updated and is ready for review.` }),
+    });
+
     // Redirect back to the records list after saving
     window.location.href = '/dashboard/pregnant';
   }

@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { createMaternalNotification } from '@/utils/notifications';
+import { createRoleNotification } from '@/utils/notifications';
  
 function tomorrowDateString(): string {
   const d = new Date();
@@ -27,11 +28,11 @@ export async function checkAndSendPrenatalReminders() {
  
       const motherIds = (recipientLinks ?? []).map((r) => r.pregnant_mother_id);
  
-      let recipients: { id: string; full_name: string; contact_number: string | null }[] = [];
+      let recipients: { id: string; full_name: string; contact_number: string | null; purok: string | null }[] = [];
       if (motherIds.length > 0) {
       const { data: mothers } = await supabase
         .from('pregnant_mothers')
-        .select('id, full_name, contact_number')
+        .select('id, full_name, contact_number, purok')
         .in('id', motherIds)
         .not('contact_number', 'is', null);
       recipients = (mothers ?? []).filter((m) => m.contact_number);
@@ -105,6 +106,13 @@ export async function checkAndSendPrenatalReminders() {
         title: 'Prenatal schedule reminder',
         message,
       })));
+      await createRoleNotification(supabase, {
+        eventKey: `schedule-role-alert:${schedule.id}`,
+        category: 'appointment',
+        recipientRole: 'nurse',
+        title: 'Prenatal reminders sent',
+        message: `Prenatal reminders were sent for the ${schedule.visit_date} schedule.`,
+      });
       }
  
     // Mark as processed either way, so we never retry/duplicate-send
@@ -136,7 +144,7 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
     if (motherIds.length) {
       await supabase.from('prenatal_follow_ups').upsert(motherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })), { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true });
 
-      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number').in('id', motherIds).not('contact_number', 'is', null);
+      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number, purok').in('id', motherIds).not('contact_number', 'is', null);
       const recipients = (mothers ?? []).filter((mother) => mother.contact_number);
       const apiKey = process.env.SEMAPHORE_API_KEY;
       if (apiKey && recipients.length) {
@@ -156,6 +164,13 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
         await supabase.from('prenatal_follow_ups').update({ sms_status: smsStatus, follow_up_sent_at: new Date().toISOString() }).eq('schedule_id', schedule.id).in('pregnant_mother_id', recipients.map((mother) => mother.id));
         await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), recipient_mother_ids: recipients.map((mother) => mother.id), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', message_type: 'missed_visit_follow_up', sent_by: null });
       }
+      await createRoleNotification(supabase, {
+        eventKey: `missed-visit-role-alert:${schedule.id}`,
+        category: 'follow_up',
+        recipientRole: 'nurse',
+        title: 'Missed prenatal follow-up needed',
+        message: `Missed-visit follow-up records were created for the ${schedule.visit_date} schedule.`,
+      });
       await Promise.all(motherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
         pregnantMotherId,
         eventKey: `missed-visit:${schedule.id}:${pregnantMotherId}`,

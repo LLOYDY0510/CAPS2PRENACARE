@@ -106,6 +106,17 @@ export default function ScheduleSetter({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'appointment', scheduleId: schedule.id }),
     });
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Prenatal schedule updated', message: `A prenatal schedule was set for ${visitDate} for ${selected.size} pregnant mother(s).` }),
+    });
+    const puroks = Array.from(new Set(mothers.filter((mother) => selected.has(mother.id)).map((mother) => mother.purok).filter(Boolean)));
+    await Promise.all(puroks.map((purok) => fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: purok, title: 'Prenatal schedule updated', message: `A prenatal schedule was set for ${visitDate} for mothers in your assigned purok.` }),
+    })));
  
     setVisitDate('');
     setSelected(new Set());

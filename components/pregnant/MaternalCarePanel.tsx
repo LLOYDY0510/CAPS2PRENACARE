@@ -36,6 +36,11 @@ export default function MaternalCarePanel({
     const { data, error: insertError } = await supabase.from('maternal_referrals').insert({ pregnant_mother_id: motherId, referred_to: referredTo.trim(), reason: reason.trim() }).select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').single();
     if (insertError) { setError(insertError.message); return; }
     if (data) setReferrals((current) => [data as Referral, ...current]);
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Maternal referral updated', message: `A referral for ${referredTo.trim()} was created for a pregnant mother. Please review the referral details.` }),
+    });
     setReferredTo(''); setReason('');
   }
 
