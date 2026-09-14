@@ -36,7 +36,7 @@ export default async function SmsLogPage() {
     return {
       id: log.id,
       recipient_count: log.recipient_count,
-      recipients: (log.recipient_mother_ids ?? []).map((id) => mothersById.get(id)?.full_name ?? id).join(', ') || (log.recipient_numbers ?? []).join(', ') || '—',
+      recipients: (log.recipient_mother_ids ?? []).map((id: string) => mothersById.get(id)?.full_name ?? id).join(', ') || (log.recipient_numbers ?? []).join(', ') || '—',
       message: log.message,
       message_type: log.message_type as SmsLogRow['message_type'],
       status: log.status as 'success' | 'failed',
@@ -47,7 +47,15 @@ export default async function SmsLogPage() {
     };
   });
 
-  const followUpRows = (followUps ?? []).map((item) => ({
+  const followUpRows: {
+    id: string;
+    motherId: string;
+    motherName: string;
+    contactNumber: string | null;
+    reason: string;
+    status: string;
+    messageType: 'missed_visit_follow_up' | 'risk_alert';
+  }[] = (followUps ?? []).map((item) => ({
     id: item.id,
     motherId: item.pregnant_mother_id,
     motherName: mothersById.get(item.pregnant_mother_id)?.full_name ?? 'Pregnant mother',
