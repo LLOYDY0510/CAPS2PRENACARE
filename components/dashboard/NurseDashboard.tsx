@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
-import RiskTipsSection, { type AtRiskMother, type MatchedIndicatorDetail } from '@/components/tips/RiskTipsSection';
-import { getRiskTipForIndicator } from '@/utils/riskTips';
+import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
+import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
 
 export default async function NurseDashboard() {
   const supabase = await createClient();
@@ -36,7 +36,7 @@ export default async function NurseDashboard() {
 
   const activeIndicatorsList = indicators ?? [];
 
-  const indicatorsByMotherId: Record<string, { id: string; label: string; indicator_type: string; threshold_value: number | null }[]> = {};
+  const indicatorsByMotherId: Record<string, RiskIndicatorInput[]> = {};
   motherIndicators?.forEach((item: any) => {
     const motherId = item.pregnant_mother_id;
     const ind = Array.isArray(item.risk_indicators) ? item.risk_indicators[0] : item.risk_indicators;
@@ -56,50 +56,7 @@ export default async function NurseDashboard() {
   const atRiskMothers: AtRiskMother[] = [];
 
   (records ?? []).forEach((mother) => {
-    const matchedList: MatchedIndicatorDetail[] = [];
-    const seenIds = new Set<string>();
-
-    // A. Explicitly matched indicators from DB
-    const recorded = indicatorsByMotherId[mother.id] ?? [];
-    recorded.forEach((ind) => {
-      seenIds.add(ind.id);
-      const tipData = getRiskTipForIndicator(ind.label, ind.indicator_type, ind.threshold_value);
-      matchedList.push({ id: ind.id, label: ind.label, indicatorType: ind.indicator_type, thresholdValue: ind.threshold_value, ...tipData });
-    });
-
-    // B. Automatic threshold evaluation
-    const ageNum = mother.age;
-    const isFirstPregnancy = mother.gravida_para ? mother.gravida_para.toLowerCase().startsWith('g1') : false;
-
-    activeIndicatorsList.forEach((ind) => {
-      if (seenIds.has(ind.id)) return;
-      let isMatch = false;
-      if (ind.indicator_type === 'age_below' && ageNum != null && ind.threshold_value != null && ageNum < ind.threshold_value) {
-        isMatch = true;
-      } else if (ind.indicator_type === 'first_pregnancy_age_above' && ageNum != null && isFirstPregnancy && ind.threshold_value != null && ageNum >= ind.threshold_value) {
-        isMatch = true;
-      }
-      if (isMatch) {
-        seenIds.add(ind.id);
-        const tipData = getRiskTipForIndicator(ind.label, ind.indicator_type, ind.threshold_value);
-        matchedList.push({ id: ind.id, label: ind.label, indicatorType: ind.indicator_type, thresholdValue: ind.threshold_value, ...tipData });
-      }
-    });
-
-    // C. Fallback for high-risk with no specific indicator
-    if (mother.risk_level === 'high' && matchedList.length === 0) {
-      const fallbackTip = getRiskTipForIndicator(
-        mother.blood_pressure ? `High Blood Pressure (${mother.blood_pressure})` : 'High Risk Case',
-        'checklist', null
-      );
-      matchedList.push({
-        id: `general-${mother.id}`,
-        label: mother.blood_pressure ? `Blood Pressure: ${mother.blood_pressure}` : 'High Risk Pregnancy Profile',
-        indicatorType: 'checklist',
-        thresholdValue: null,
-        ...fallbackTip,
-      });
-    }
+    const matchedList = getMatchedRiskTips(mother, activeIndicatorsList, indicatorsByMotherId[mother.id] ?? []);
 
     if (matchedList.length > 0 || mother.risk_level === 'high') {
       atRiskMothers.push({

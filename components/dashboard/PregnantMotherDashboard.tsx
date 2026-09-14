@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
  
 export default async function PregnantMotherDashboard({
   pregnantMotherId,
@@ -15,14 +16,17 @@ export default async function PregnantMotherDashboard({
 
   const { data: matchedIndicators } = await supabase
     .from('pregnant_mother_indicators')
-    .select('risk_indicators(label)')
+    .select('risk_indicators(id, label, indicator_type, threshold_value)')
     .eq('pregnant_mother_id', pregnantMotherId);
 
-  const riskReasons = (matchedIndicators ?? [])
-    .map((m: any) =>
-      Array.isArray(m.risk_indicators) ? m.risk_indicators[0]?.label : m.risk_indicators?.label
-    )
-    .filter((label): label is string => !!label);
+  const { data: activeIndicators } = await supabase
+    .from('risk_indicators')
+    .select('id, label, indicator_type, threshold_value')
+    .eq('active', true);
+
+  const recordedIndicators: RiskIndicatorInput[] = (matchedIndicators ?? [])
+    .map((m: any) => Array.isArray(m.risk_indicators) ? m.risk_indicators[0] : m.risk_indicators)
+    .filter((indicator: RiskIndicatorInput | null): indicator is RiskIndicatorInput => !!indicator);
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
@@ -87,6 +91,7 @@ export default async function PregnantMotherDashboard({
   const fullName = [record.first_name, record.middle_name, record.last_name]
     .filter(Boolean)
     .join(' ');
+  const healthTips = getMatchedRiskTips(record, activeIndicators ?? [], recordedIndicators);
  
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -106,12 +111,33 @@ export default async function PregnantMotherDashboard({
           )}
         </div>
 
-        {record.risk_level === 'high' && riskReasons.length > 0 && (
+        {record.risk_level === 'high' && healthTips.length > 0 && (
           <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
-            {riskReasons.map((reason, i) => (
-              <li key={i}>{reason}</li>
+            {healthTips.map((tip) => (
+              <li key={tip.id}>{tip.label}</li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="card p-5">
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Health Tips for You</h2>
+        {healthTips.length === 0 ? (
+          <p className="text-sm text-muted-2">No risk-based health tips at this time.</p>
+        ) : (
+          <div className="space-y-3">
+            {healthTips.map((tip) => (
+              <div key={tip.id} className={tip.urgency === 'high' ? 'border border-red-200 bg-red-50 rounded-lg p-3' : 'border border-amber-200 bg-amber-50 rounded-lg p-3'}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">{tip.tipTitle}</p>
+                  <span className={tip.urgency === 'high' ? 'badge-high' : 'badge-warning'}>{tip.urgency === 'high' ? 'High Priority' : 'Moderate'}</span>
+                </div>
+                <p className="text-xs text-muted mt-1">Based on: {tip.label}</p>
+                <p className="text-sm text-gray-700 mt-2">{tip.tipAdvice}</p>
+                <p className="text-xs text-gray-700 mt-2"><strong>Recommended action:</strong> {tip.clinicalAction}</p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
  

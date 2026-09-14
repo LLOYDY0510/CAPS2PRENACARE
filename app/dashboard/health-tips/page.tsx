@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
-import RiskTipsSection, { type AtRiskMother, type MatchedIndicatorDetail } from '@/components/tips/RiskTipsSection';
-import { getRiskTipForIndicator } from '@/utils/riskTips';
+import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
 import { requireRoles } from '@/utils/auth/roles';
+import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ export default async function HealthTipsPage() {
     .from('pregnant_mother_indicators')
     .select('pregnant_mother_id, indicator_id, risk_indicators(id, label, indicator_type, threshold_value)');
 
-  const indicatorsByMotherId: Record<string, { id: string; label: string; indicator_type: string; threshold_value: number | null }[]> = {};
+  const indicatorsByMotherId: Record<string, RiskIndicatorInput[]> = {};
   motherIndicators?.forEach((item: any) => {
     const indicator = Array.isArray(item.risk_indicators) ? item.risk_indicators[0] : item.risk_indicators;
     if (!item.pregnant_mother_id || !indicator) return;
@@ -37,28 +37,7 @@ export default async function HealthTipsPage() {
   const atRiskMothers: AtRiskMother[] = [];
 
   (records ?? []).forEach((mother) => {
-    const matchedIndicators: MatchedIndicatorDetail[] = [];
-    const seenIds = new Set<string>();
-    const addIndicator = (indicator: { id: string; label: string; indicator_type: string; threshold_value: number | null }) => {
-      if (seenIds.has(indicator.id)) return;
-      seenIds.add(indicator.id);
-      const tip = getRiskTipForIndicator(indicator.label, indicator.indicator_type, indicator.threshold_value);
-      matchedIndicators.push({ id: indicator.id, label: indicator.label, indicatorType: indicator.indicator_type, thresholdValue: indicator.threshold_value, ...tip });
-    };
-
-    (indicatorsByMotherId[mother.id] ?? []).forEach(addIndicator);
-    const isFirstPregnancy = mother.gravida_para?.toLowerCase().startsWith('g1') ?? false;
-    activeIndicators.forEach((indicator) => {
-      const ageMatches = indicator.indicator_type === 'age_below' && mother.age != null && indicator.threshold_value != null && mother.age < indicator.threshold_value;
-      const firstPregnancyMatches = indicator.indicator_type === 'first_pregnancy_age_above' && mother.age != null && isFirstPregnancy && indicator.threshold_value != null && mother.age >= indicator.threshold_value;
-      if (ageMatches || firstPregnancyMatches) addIndicator(indicator);
-    });
-
-    if (mother.risk_level === 'high' && matchedIndicators.length === 0) {
-      const label = mother.blood_pressure ? `High Blood Pressure (${mother.blood_pressure})` : 'High Risk Case';
-      const tip = getRiskTipForIndicator(label, 'checklist', null);
-      matchedIndicators.push({ id: `general-${mother.id}`, label, indicatorType: 'checklist', thresholdValue: null, ...tip });
-    }
+    const matchedIndicators = getMatchedRiskTips(mother, activeIndicators, indicatorsByMotherId[mother.id] ?? []);
 
     if (matchedIndicators.length > 0 || mother.risk_level === 'high') {
       atRiskMothers.push({
