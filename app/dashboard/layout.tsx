@@ -57,7 +57,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name')
+    .select('role, full_name, purok, pregnant_mother_id')
     .eq('id', user.id)
     .single();
 
@@ -66,12 +66,28 @@ export default async function DashboardLayout({
   if (isStaffRole(role)) await checkAndSendPrenatalReminders();
   const menuItems = MENUS[role] ?? [];
 
+  const { data: notificationRows } = await supabase
+    .from('maternal_notifications')
+    .select('id, pregnant_mother_id, recipient_user_id, recipient_role, recipient_purok, title, message, category, read_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(80);
+  const notifications = (notificationRows ?? [])
+    .filter((notification) => (
+      notification.recipient_user_id === user.id ||
+      notification.recipient_role === role ||
+      (role === 'bhw_purok' && notification.recipient_purok === profile?.purok) ||
+      (role === 'pregnant_mother' && notification.pregnant_mother_id === profile?.pregnant_mother_id)
+    ))
+    .slice(0, 40)
+    .map(({ id, title, message, category, read_at, created_at }) => ({ id, title, message, category, read_at, created_at }));
+
   return (
     <Sidebar
       role={role}
       menuItems={menuItems}
       fullName={profile?.full_name}
       email={user.email}
+      notifications={notifications}
     >
       {children}
     </Sidebar>
