@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json() as DispatchBody;
+  if (body.type === 'risk_alert' && profile.role !== 'nurse') {
+    return NextResponse.json({ error: 'Only Nurses can send risk-based health advice.' }, { status: 403 });
+  }
   const notificationKey = (motherId: string, title: string, message: string) =>
     createHash('sha256').update(`${user.id}:${motherId}:${title}:${message}`).digest('hex');
   const targets: { id: string; eventKey: string; category: 'health_tip' | 'appointment' | 'risk_alert' | 'care_message'; title: string; message: string }[] = [];
