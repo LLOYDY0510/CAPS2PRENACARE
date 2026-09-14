@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server';
 import IndicatorManager from '@/components/tips/IndicatorManager';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RiskIndicatorsPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['nurse']);
 
   const { data: indicators } = await supabase
     .from('risk_indicators')

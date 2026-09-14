@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server';
 import MonthlyTipsManager from '@/components/tips/MonthlyTipsManager';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HealthTipsPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['nurse']);
 
   const { data: records } = await supabase
     .from('pregnant_mothers')

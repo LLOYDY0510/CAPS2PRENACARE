@@ -27,6 +27,8 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
   nurse: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
+    { label: 'Health Tips', href: '/dashboard/health-tips' },
   ],
   pregnant_mother: [
     { label: 'Messages', href: '/dashboard' },
