@@ -41,8 +41,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await checkAndSendPrenatalReminders();
-
   const supabase = await createClient();
 
   const {
@@ -61,6 +59,7 @@ export default async function DashboardLayout({
 
   const role = profile?.role ?? 'pending';
   if (!isStaffRole(role) && role !== 'pregnant_mother') redirect('/login');
+  if (isStaffRole(role)) await checkAndSendPrenatalReminders();
   const menuItems = MENUS[role] ?? [];
 
   return (

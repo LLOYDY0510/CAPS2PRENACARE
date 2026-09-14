@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { STAFF_ROLES } from '@/utils/auth/roles';
 import { createMaternalNotification } from '@/utils/notifications';
+import { createHash } from 'crypto';
 
 type DispatchBody = {
   type: 'appointment' | 'health_tip' | 'risk_alert' | 'care_message';
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json() as DispatchBody;
-  const now = Date.now();
+  const notificationKey = (motherId: string, title: string, message: string) =>
+    createHash('sha256').update(`${user.id}:${motherId}:${title}:${message}`).digest('hex');
   const targets: { id: string; eventKey: string; category: 'health_tip' | 'appointment' | 'risk_alert' | 'care_message'; title: string; message: string }[] = [];
 
   if (body.type === 'appointment' && body.scheduleId) {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.type === 'care_message' && body.pregnantMotherIds?.length && body.title && body.message) {
-    for (const id of body.pregnantMotherIds) targets.push({ id, eventKey: `care-message:${user.id}:${now}:${id}`, category: 'care_message', title: body.title, message: body.message });
+    for (const id of body.pregnantMotherIds) targets.push({ id, eventKey: `care-message:${notificationKey(id, body.title, body.message)}`, category: 'care_message', title: body.title, message: body.message });
   }
 
   let created = 0;
