@@ -38,9 +38,9 @@ export default async function SmsLogPage() {
       recipient_count: log.recipient_count,
       recipients: (log.recipient_mother_ids ?? []).map((id: string) => mothersById.get(id)?.full_name ?? id).join(', ') || (log.recipient_numbers ?? []).join(', ') || '—',
       message: log.message,
-      message_type: log.message_type as SmsLogRow['message_type'],
+      message_type: (log.message_type ?? 'general') as SmsLogRow['message_type'],
       status: log.status as 'success' | 'failed',
-      delivery_status: log.delivery_status as SmsLogRow['delivery_status'],
+      delivery_status: (log.delivery_status ?? 'unknown') as SmsLogRow['delivery_status'],
       error_message: log.error_message,
       created_at: log.created_at,
       sender: sender?.full_name || sender?.email || null,
@@ -80,7 +80,7 @@ export default async function SmsLogPage() {
     <div>
       <div className="page-header">
         <h1>SMS Log</h1>
-        <p className="page-date">History of prenatal schedule reminders sent.</p>
+        <p className="page-date">Sent messages, recipients, message types, delivery status, and follow-up actions.</p>
       </div>
 
       <SmsLogTable logs={rows} followUps={followUpRows} />
