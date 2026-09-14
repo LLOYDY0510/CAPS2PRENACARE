@@ -18,6 +18,13 @@ export default async function PatientMessages({
     .select('id, tip_broadcasts(id, title, content, status, sent_at)')
     .eq('pregnant_mother_id', pregnantMotherId);
 
+  const { data: notifications } = await supabase
+    .from('maternal_notifications')
+    .select('id, title, message, category, email_status, read_at, created_at')
+    .eq('pregnant_mother_id', pregnantMotherId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
   const messages = (recipientRows ?? [])
     .map((r) => {
       const b = Array.isArray(r.tip_broadcasts) ? r.tip_broadcasts[0] : r.tip_broadcasts;
@@ -44,6 +51,28 @@ export default async function PatientMessages({
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
+      <div className="card p-5">
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          🔔 System Notifications ({notifications?.length ?? 0})
+        </h2>
+        {!notifications || notifications.length === 0 ? (
+          <p className="text-sm text-muted-2">No system notifications yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {notifications.map((notification) => (
+              <div key={notification.id} className="border rounded-lg p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs font-medium text-brand">{notification.title}</p>
+                  <span className="badge-neutral">{notification.email_status === 'sent' ? 'Email sent' : 'In dashboard'}</span>
+                </div>
+                <p className="text-sm text-gray-700 mt-1">{notification.message}</p>
+                <p className="text-xs text-muted-2 mt-1">{new Date(notification.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="card p-5">
         <h1 className="text-xl font-semibold text-ink">{fullName}</h1>
         <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>

@@ -199,6 +199,17 @@ export default function RegisterPregnantMotherPage() {
             indicator_id,
           }))
         );
+
+        await fetch('/api/notifications/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'risk_alert',
+            pregnantMotherId: inserted.id,
+            title: 'High-risk pregnancy alert',
+            message: 'Your record has been flagged for enhanced prenatal monitoring. Please review your care plan with your BHW or nurse at your next visit.',
+          }),
+        });
       }
 
       window.location.href = '/dashboard/pregnant';
