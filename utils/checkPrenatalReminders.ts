@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { createMaternalNotification } from '@/utils/notifications';
  
 function tomorrowDateString(): string {
   const d = new Date();
@@ -91,6 +92,13 @@ export async function checkAndSendPrenatalReminders() {
           message,
         }))
       );
+      await Promise.all(recipients.map((mother) => createMaternalNotification(supabase, {
+        pregnantMotherId: mother.id,
+        eventKey: `prenatal-reminder:${schedule.id}:${mother.id}`,
+        category: 'prenatal_reminder',
+        title: 'Prenatal schedule reminder',
+        message,
+      })));
       }
  
     // Mark as processed either way, so we never retry/duplicate-send
@@ -142,6 +150,13 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
         await supabase.from('prenatal_follow_ups').update({ sms_status: smsStatus, follow_up_sent_at: new Date().toISOString() }).eq('schedule_id', schedule.id).in('pregnant_mother_id', recipients.map((mother) => mother.id));
         await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', sent_by: null });
       }
+      await Promise.all(motherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
+        pregnantMotherId,
+        eventKey: `missed-visit:${schedule.id}:${pregnantMotherId}`,
+        category: 'missed_visit',
+        title: 'Missed prenatal visit follow-up',
+        message: `Our records show a missed prenatal visit on ${schedule.visit_date}. Please contact the Barangay Health Center to arrange a follow-up schedule.`,
+      })));
     }
     await supabase.from('prenatal_schedules').update({ status: 'missed', missed_follow_up_sent: true }).eq('id', schedule.id);
   }

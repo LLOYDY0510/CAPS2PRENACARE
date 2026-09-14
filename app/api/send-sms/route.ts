@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { STAFF_ROLES } from '@/utils/auth/roles';
+import { createMaternalNotification } from '@/utils/notifications';
 
 const PHONE_PATTERN = /^\+?[0-9][0-9\- ]{6,19}$/;
 
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
 
   try {
-    const { numbers, message } = await req.json();
+    const { numbers, message, pregnantMotherIds } = await req.json();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
@@ -104,6 +105,19 @@ export async function POST(req: NextRequest) {
       provider_message_id: Array.isArray(data) ? data[0]?.message_id ?? null : data?.message_id ?? null,
       sent_by: user?.id ?? null,
     });
+
+    if (Array.isArray(pregnantMotherIds)) {
+      await Promise.all(pregnantMotherIds.map((pregnantMotherId: unknown) => {
+        if (typeof pregnantMotherId !== 'string') return null;
+        return createMaternalNotification(supabase, {
+          pregnantMotherId,
+          eventKey: `care-message:${user.id}:${Date.now()}:${pregnantMotherId}`,
+          category: 'care_message',
+          title: 'Message from your care team',
+          message,
+        });
+      }));
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
