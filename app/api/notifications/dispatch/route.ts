@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.type === 'risk_alert' && body.pregnantMotherId && body.message) {
-    targets.push({ id: body.pregnantMotherId, eventKey: `risk-alert:${body.pregnantMotherId}`, category: 'risk_alert', title: body.title || 'Important maternal health alert', message: body.message });
+    const title = body.title || 'Important maternal health alert';
+    targets.push({ id: body.pregnantMotherId, eventKey: `risk-alert:${notificationKey(body.pregnantMotherId, title, body.message)}`, category: 'risk_alert', title, message: body.message });
   }
 
   if (body.type === 'care_message' && body.pregnantMotherIds?.length && body.title && body.message) {

@@ -32,6 +32,8 @@ export default function IndicatorManager({
   const [threshold, setThreshold] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState('');
  
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -79,6 +81,13 @@ export default function IndicatorManager({
       .from('risk_indicators')
       .update({ active: !indicator.active })
       .eq('id', indicator.id);
+    router.refresh();
+  }
+
+  async function saveLabel(indicator: Indicator) {
+    if (!editLabel.trim()) return;
+    await supabase.from('risk_indicators').update({ label: editLabel.trim() }).eq('id', indicator.id);
+    setEditingId(null);
     router.refresh();
   }
  
@@ -171,13 +180,26 @@ export default function IndicatorManager({
             }`}
           >
             <div>
-              <p className="text-sm font-medium">{ind.label}</p>
+              {editingId === ind.id ? (
+                <div className="flex items-center gap-2">
+                  <input className="form-input" value={editLabel} onChange={(e) => setEditLabel(e.target.value)} aria-label="Edit indicator label" />
+                  <button onClick={() => saveLabel(ind)} className="btn-primary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Save</button>
+                  <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Cancel</button>
+                </div>
+              ) : <p className="text-sm font-medium">{ind.label}</p>}
               <p className="text-xs text-muted-2 mt-0.5">
                 {TYPE_LABELS[ind.indicator_type] ?? ind.indicator_type}
                 {ind.threshold_value != null ? ` · Threshold: ${ind.threshold_value}` : ''}
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setEditingId(ind.id); setEditLabel(ind.label); }}
+                className="btn-secondary"
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
+              >
+                Edit
+              </button>
               <button
                 onClick={() => toggleActive(ind)}
                 className={ind.active ? 'btn-danger' : 'btn-primary'}
