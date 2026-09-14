@@ -8,94 +8,12 @@ import LogoutButton from '@/components/layout/LogoutButton';
 
 type MenuItem = { label: string; href: string };
 
-const ROLE_DISPLAY: Record<string, { title: string; sub: string }> = {
-  admin:           { title: 'Administrator',   sub: 'Midwife / Admin' },
-  bhw_head:        { title: 'BHW Head',         sub: 'Barangay Health Worker' },
-  bhw_purok:       { title: 'BHW (Purok)',       sub: 'Barangay Health Worker' },
-  nurse:           { title: 'Nurse',             sub: 'Health Personnel' },
-  pregnant_mother: { title: 'Patient Portal',   sub: 'Pregnant Mother' },
+const ROLE_LABELS: Record<string, { title: string; subtitle: string }> = {
+  admin: { title: 'Admin', subtitle: 'Midwife' },
+  bhw_head: { title: 'Manager', subtitle: 'BHW' },
+  nurse: { title: 'Nurse', subtitle: '' },
+  pregnant_mother: { title: 'Pregnant Women Portal', subtitle: '' },
 };
-
-const NAV_ICONS: Record<string, React.ReactElement> = {
-  Dashboard: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <rect x="1" y="1" width="6" height="6" rx="1"/>
-      <rect x="9" y="1" width="6" height="6" rx="1"/>
-      <rect x="1" y="9" width="6" height="6" rx="1"/>
-      <rect x="9" y="9" width="6" height="6" rx="1"/>
-    </svg>
-  ),
-  'Risk Map': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <path d="M8 1C5.8 1 4 2.8 4 5c0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z"/>
-      <circle cx="8" cy="5" r="1.25" fill="currentColor" stroke="none"/>
-    </svg>
-  ),
-  'Pregnant Records': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <rect x="2" y="1" width="12" height="14" rx="1.5"/>
-      <path d="M5 5h6M5 8h6M5 11h4"/>
-    </svg>
-  ),
-  'Prenatal Schedule': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <rect x="1" y="3" width="14" height="12" rx="1.5"/>
-      <path d="M1 7h14M5 1v4M11 1v4"/>
-    </svg>
-  ),
-  'Prenatal Checkups': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <path d="M8 2v12M2 8h12" strokeLinecap="round"/>
-      <circle cx="8" cy="8" r="6.5"/>
-    </svg>
-  ),
-  'SMS Log': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <path d="M1.5 2.5h13a1 1 0 011 1v7a1 1 0 01-1 1H5l-3.5 2V3.5a1 1 0 011-1z"/>
-    </svg>
-  ),
-  'Manage BHW (Purok)': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <circle cx="6" cy="5" r="2.5"/>
-      <path d="M1 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
-      <circle cx="12.5" cy="5" r="2"/>
-      <path d="M15 14c0-2.2-1.6-4-3.5-4"/>
-    </svg>
-  ),
-  'Manage Users': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <circle cx="8" cy="5" r="3"/>
-      <path d="M1 14.5c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"/>
-    </svg>
-  ),
-  Reports: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <rect x="2" y="1" width="12" height="14" rx="1.5"/>
-      <path d="M5 5h6M5 8h6M5 11h4"/>
-      <path d="M11 10l2 2-2 2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  'Risk Indicators': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <path d="M8 2L1.5 13.5h13L8 2z" strokeLinejoin="round"/>
-      <path d="M8 6v4M8 11.5v.5" strokeLinecap="round"/>
-    </svg>
-  ),
-  'Health Tips': (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <path d="M8 1a5 5 0 00-2 9.6V12h4v-1.4A5 5 0 008 1z"/>
-      <path d="M6 14h4M6.5 15.5h3"/>
-    </svg>
-  ),
-};
-
-function MenuIcon({ label }: { label: string }): React.ReactElement {
-  return NAV_ICONS[label] ?? (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-      <circle cx="8" cy="8" r="2"/>
-    </svg>
-  );
-}
 
 export default function Sidebar({
   role,
@@ -113,175 +31,92 @@ export default function Sidebar({
   const [open, setOpen] = useState(true);
   const pathname = usePathname();
 
-  /* Hamburger toggle */
-  function handleToggle() {
-    setOpen((o) => !o);
-  }
-
-  const display = ROLE_DISPLAY[role] ?? {
-    title: role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    sub: 'Staff',
-  };
-  const initials = (fullName ?? email ?? '?')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   return (
-    <div
-      className="h-screen flex flex-col overflow-hidden"
-      style={{ background: 'var(--background)' }}
-    >
-      {/* ── Top bar ── */}
-      <header
-        className="shrink-0 flex items-center justify-between px-4 z-30"
-        style={{
-          background: '#1A2F3A',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          height: '52px',
-        }}
-      >
+    <div className="h-screen flex flex-col bg-[#F3F4F6] overflow-hidden">
+      {/* Top bar */}
+      <header className="shrink-0 bg-[#0E3D38] text-white flex items-center justify-between px-4 py-3 z-30">
         <div className="flex items-center gap-3">
-          {/* Hamburger — still works for touch */}
           <button
-            onClick={handleToggle}
-            aria-label={open ? 'Close sidebar' : 'Open sidebar'}
-            style={{ color: 'rgba(255,255,255,0.6)' }}
-            className="p-1.5 rounded hover:text-white transition-colors"
+            onClick={() => setOpen((o) => !o)}
+            aria-label="Toggle menu"
+            className="p-2 rounded-lg hover:bg-white/10 transition"
           >
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-5 h-5" aria-hidden>
-              <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round"/>
-            </svg>
+            <div className="w-5 h-0.5 bg-white mb-1"></div>
+            <div className="w-5 h-0.5 bg-white mb-1"></div>
+            <div className="w-5 h-0.5 bg-white"></div>
           </button>
-
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded overflow-hidden relative shrink-0">
-              <Image src="/logo.jpg" alt="" fill className="object-cover" />
-            </div>
-            <span
-              className="text-sm font-semibold"
-              style={{ color: '#fff', letterSpacing: '-0.01em' }}
-            >
-              Prenatrack
-            </span>
-          </div>
+          <span className="font-display text-lg font-semibold">Prenatrack</span>
         </div>
 
-        {/* User chip */}
-        <div className="flex items-center gap-2">
-          {(fullName || email) && (
-            <span className="text-xs hidden sm:block" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              {fullName ?? email}
-            </span>
-          )}
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-            style={{ background: 'var(--brand)', color: '#fff' }}
-            title={fullName ?? email ?? 'User'}
-          >
-            {initials}
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-semibold">
+            {(fullName ?? email ?? '?').charAt(0).toUpperCase()}
           </div>
         </div>
       </header>
 
       <div className="flex flex-1 min-h-0">
-
-        {/* ── Sidebar ──
-            Sits in normal flow (relative) so it pushes the main content
-            right. Collapses to 0 when closed; hamburger is the only toggle. */}
-        <div
-          style={{
-            width: open ? '220px' : '0px',
-            flexShrink: 0,
-            overflow: 'hidden',
-            transition: 'width 0.18s ease',
-          }}
+        {/* Sidebar */}
+        <aside
+          className={`
+            bg-white border-r border-gray-100 flex flex-col shrink-0 overflow-hidden
+            transition-[width] duration-200 ease-in-out
+            ${open ? 'w-64' : 'w-0'}
+          `}
         >
-          <aside
-            style={{
-              width: '220px',
-              height: '100%',
-              background: '#fff',
-              borderRight: '1px solid var(--border)',
-              boxShadow: open ? '2px 0 8px rgba(0,0,0,0.05)' : 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              transition: 'box-shadow 0.18s ease',
-            }}
-          >
-            <div className="h-full flex flex-col overflow-y-auto">
-
-              {/* Role identity */}
-              <div
-                className="px-4 py-3 shrink-0"
-                style={{ borderBottom: '1px solid var(--border-light)' }}
-              >
-                <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>
-                  {display.title}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-                  {display.sub}
-                </p>
-              </div>
-
-              {/* Nav label */}
-              <p
-                className="px-4 pt-4 pb-1 text-xs font-semibold shrink-0"
-                style={{ color: 'var(--muted-2)', letterSpacing: '0.07em' }}
-              >
-                NAVIGATION
-              </p>
-
-              {/* Nav links */}
-              <nav className="px-2 pb-2 flex-1">
-                {menuItems.length === 0 && (
-                  <p className="px-3 py-2 text-xs" style={{ color: 'var(--muted-2)' }}>
-                    No menu available.
+          <div className="w-64 h-full flex flex-col overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full overflow-hidden relative shrink-0">
+                  <Image src="/logo.jpg" alt="Prenatrack logo" fill className="object-cover" />
+                </div>
+                <div>
+                  <p className="font-semibold text-ink text-sm">
+                    {ROLE_LABELS[role]?.title ?? role.replace('_', ' ')}
                   </p>
-                )}
-                {menuItems.map((item) => {
-                  const active = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors"
-                      style={{
-                        color: active ? 'var(--brand)' : 'var(--ink-secondary)',
-                        background: active ? 'var(--brand-light)' : 'transparent',
-                        fontWeight: active ? 500 : 400,
-                        marginBottom: '1px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <MenuIcon label={item.label} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              {/* Logout */}
-              <div
-                className="px-2 pb-3 pt-2 shrink-0"
-                style={{ borderTop: '1px solid var(--border-light)' }}
-              >
-                <LogoutButton />
+                  {ROLE_LABELS[role]?.subtitle && (
+                    <p className="text-xs text-muted">{ROLE_LABELS[role]?.subtitle}</p>
+                  )}
+                </div>
               </div>
             </div>
-          </aside>
-        </div>
 
-        {/* ── Page content ── */}
-        <main
-          className="flex-1 overflow-y-auto"
-          style={{ padding: '1.5rem' }}
-        >
-          {children}
-        </main>
+            <p className="text-xs font-semibold text-muted-2 tracking-wide px-5 pt-4 pb-1 shrink-0">
+              MAIN MENU
+            </p>
+
+            <nav className="px-3 space-y-1 pb-4">
+              {menuItems.length === 0 && (
+                <p className="text-sm text-muted-2 px-3 py-2">
+                  No menu available for this role yet.
+                </p>
+              )}
+              {menuItems.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block px-3 py-2 rounded-lg text-sm transition ${
+                      active
+                        ? 'bg-brand-light text-brand font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="px-3 pb-4 mt-auto shrink-0">
+              <LogoutButton />
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-8">{children}</main>
       </div>
     </div>
   );

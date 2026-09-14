@@ -15,12 +15,12 @@ type RiskPoint = {
   lmp: string | null;
   edd: string | null;
   gravida_para: string | null;
-  risk_level: 'low' | 'high' | 'moderate' | string;
+  risk_level: 'low' | 'high' | string;
   latitude: number;
   longitude: number;
 };
 
-type RiskFilter = 'all' | 'high' | 'moderate' | 'low';
+type RiskFilter = 'all' | 'high' | 'low';
 
 /* ─── Dynamic import of the actual map (SSR off) ─── */
 const RiskMap = dynamic<{ records: RiskPoint[]; pendingClick?: (lat: number, lng: number) => void }>(
@@ -70,14 +70,12 @@ function PinSwatch({ color, stroke }: { color: string; stroke: string }) {
 /* ─── Static config ─── */
 const RISK_META = {
   high:     { label: 'High Risk',     fill: '#DC2626', stroke: '#991B1B' },
-  moderate: { label: 'Moderate Risk', fill: '#D97706', stroke: '#92400E' },
   low:      { label: 'Low Risk',      fill: '#16A34A', stroke: '#14532D' },
 } as const;
 
 const FILTER_TABS: { key: RiskFilter; label: string }[] = [
   { key: 'all',      label: 'All' },
   { key: 'high',     label: 'High Risk' },
-  { key: 'moderate', label: 'Moderate Risk' },
   { key: 'low',      label: 'Low Risk' },
 ];
 

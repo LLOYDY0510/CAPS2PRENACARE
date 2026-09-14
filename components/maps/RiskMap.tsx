@@ -16,7 +16,7 @@ type RiskPoint = {
   lmp: string | null;
   edd: string | null;
   gravida_para: string | null;
-  risk_level: 'low' | 'high' | 'moderate' | string;
+  risk_level: 'low' | 'high' | string;
   latitude: number;
   longitude: number;
 };
@@ -24,7 +24,6 @@ type RiskPoint = {
 /* ─── Color per risk level ─── */
 const RISK_COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
   high:     { fill: '#DC2626', stroke: '#991B1B', label: 'High Risk' },
-  moderate: { fill: '#D97706', stroke: '#92400E', label: 'Moderate Risk' },
   low:      { fill: '#16A34A', stroke: '#14532D', label: 'Low Risk' },
 };
 

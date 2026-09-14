@@ -2,10 +2,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
 import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
- 
+
 export const dynamic = 'force-dynamic';
- 
-// Menu items per role. Add more roles here as we build them out.
+
 const MENUS: Record<string, { label: string; href: string }[]> = {
   bhw_head: [
     { label: 'Dashboard', href: '/dashboard' },
@@ -24,43 +23,45 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Manage Users', href: '/dashboard/users' },
     { label: 'Reports', href: '/dashboard/reports' },
   ],
-    nurse: [
+  nurse: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
-    { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
-    { label: 'Health Tips', href: '/dashboard/health-tips' },
   ],
-    pregnant_mother: [
-    { label: 'Dashboard', href: '/dashboard' },
+  pregnant_mother: [
+    { label: 'Messages', href: '/dashboard' },
+    { label: 'Prenatal Schedule', href: '/dashboard/my-schedule' },
+    { label: 'My Information', href: '/dashboard/my-info' },
+    { label: 'Medical Records', href: '/dashboard/my-records' },
   ],
 };
- 
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-    await checkAndSendPrenatalReminders()
+  await checkAndSendPrenatalReminders();
+
   const supabase = await createClient();
- 
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
- 
+
   if (!user) {
     redirect('/login');
   }
- 
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, full_name')
     .eq('id', user.id)
     .single();
- 
+
   const role = profile?.role ?? 'pending';
   const menuItems = MENUS[role] ?? [];
- 
-    return (
+
+  return (
     <Sidebar
       role={role}
       menuItems={menuItems}
@@ -71,4 +72,3 @@ export default async function DashboardLayout({
     </Sidebar>
   );
 }
- 

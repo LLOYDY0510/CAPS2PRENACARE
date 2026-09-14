@@ -1,10 +1,10 @@
 'use client';
- 
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/utils/supabase/client';
- 
+
 const LocationPicker = dynamic<{
   latitude: number | null;
   longitude: number | null;
@@ -17,18 +17,18 @@ const LocationPicker = dynamic<{
     </div>
   ),
 });
- 
+
 type Indicator = {
   id: string;
   label: string;
   indicator_type: string;
   threshold_value: number | null;
 };
- 
+
 export default function RegisterPregnantMotherPage() {
   const router = useRouter();
   const supabase = createClient();
- 
+
   const [form, setForm] = useState({
     date_registered: new Date().toISOString().slice(0, 10),
     first_name: '',
@@ -56,7 +56,7 @@ export default function RegisterPregnantMotherPage() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [showForm, setShowForm] = useState(false);
- 
+
   useEffect(() => {
     async function loadIndicators() {
       const { data } = await supabase
@@ -69,12 +69,11 @@ export default function RegisterPregnantMotherPage() {
     }
     loadIndicators();
   }, [supabase]);
- 
+
   function updateField(field: string, value: string) {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
- 
-      // Auto-calculate EDC from LMP using Naegele's Rule (LMP + 280 days)
+
       if (field === 'lmp' && value) {
         const lmpDate = new Date(value);
         if (!isNaN(lmpDate.getTime())) {
@@ -83,62 +82,59 @@ export default function RegisterPregnantMotherPage() {
           next.edd = edcDate.toISOString().slice(0, 10);
         }
       }
- 
+
       return next;
     });
   }
- 
+
   function toggleIndicator(id: string) {
     setSelectedIndicatorIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
- 
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
- 
+
     if (!form.last_name.trim() || !form.first_name.trim()) {
       setError('First and last name are required.');
       return;
     }
- 
+
     setLoading(true);
- 
+
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
- 
-      // Generate a unique serial number, e.g. SPM-2026-0001
+
       const currentYear = new Date().getFullYear();
       const { count } = await supabase
         .from('pregnant_mothers')
         .select('id', { count: 'exact', head: true })
         .gte('date_registered', `${currentYear}-01-01`)
         .lte('date_registered', `${currentYear}-12-31`);
- 
+
       const nextNumber = (count ?? 0) + 1;
       const serial_no = `SPM-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
- 
+
       const full_name = [form.first_name, form.middle_name, form.last_name]
         .filter(Boolean)
         .join(' ');
- 
+
       const gravida_para =
         form.gravida && form.para ? `G${form.gravida}P${form.para}` : null;
- 
-      // ---- Automatic risk computation ----
+
       const ageNum = form.age ? parseInt(form.age) : null;
       const gravidaNum = form.gravida ? parseInt(form.gravida) : null;
- 
-      // Fetch active auto-type indicators to evaluate against
+
       const { data: autoIndicators } = await supabase
         .from('risk_indicators')
         .select('id, indicator_type, threshold_value')
         .eq('active', true)
         .in('indicator_type', ['age_below', 'first_pregnancy_age_above']);
- 
+
       const matchedAutoIds: string[] = [];
       autoIndicators?.forEach((ind) => {
         if (
@@ -159,11 +155,10 @@ export default function RegisterPregnantMotherPage() {
           matchedAutoIds.push(ind.id);
         }
       });
- 
+
       const matchedIndicatorIds = [...selectedIndicatorIds, ...matchedAutoIds];
       const risk_level = matchedIndicatorIds.length > 0 ? 'high' : 'low';
-      // ---- end risk computation ----
- 
+
       const { data: inserted, error: insertError } = await supabase
         .from('pregnant_mothers')
         .insert({
@@ -190,14 +185,13 @@ export default function RegisterPregnantMotherPage() {
         })
         .select()
         .single();
- 
+
       if (insertError) {
         setError(`Save failed: ${insertError.message}`);
         setLoading(false);
         return;
       }
- 
-      // Record which indicators were matched for this mother
+
       if (matchedIndicatorIds.length > 0 && inserted) {
         await supabase.from('pregnant_mother_indicators').insert(
           matchedIndicatorIds.map((indicator_id) => ({
@@ -206,22 +200,22 @@ export default function RegisterPregnantMotherPage() {
           }))
         );
       }
- 
+
       window.location.href = '/dashboard/pregnant';
     } catch (err) {
       setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
     }
   }
- 
+
   if (!showForm) {
     return (
-          <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-semibold mb-1">Data Privacy Notice</h1>
         <p className="text-muted mb-6">
           Please read and agree before proceeding to the registration form.
         </p>
- 
+
         <div className="card p-6">
           <div className="prose prose-sm max-w-none text-gray-700 space-y-3 mb-6">
             <p>
@@ -244,7 +238,7 @@ export default function RegisterPregnantMotherPage() {
               barangay health worker or midwife.
             </p>
           </div>
- 
+
           <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer mb-6">
             <input
               type="checkbox"
@@ -258,7 +252,7 @@ export default function RegisterPregnantMotherPage() {
               her personal information as described above.
             </span>
           </label>
- 
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -280,75 +274,73 @@ export default function RegisterPregnantMotherPage() {
       </div>
     );
   }
- 
+
   return (
-        <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-1">Register Pregnant Women</h1>
-      <p className="text-muted mb-6">
-        Fill in the details below to add a new record.
-      </p>
- 
-      <form
-        onSubmit={handleSubmit}
-        className="card p-6 space-y-5"
-      >
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Register Pregnant Woman</h1>
+        <p className="text-muted">Fill in the details below to add a new record.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
         {error && (
           <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
         )}
- 
-        <div>
-          <label className="block text-sm font-medium mb-1">Date of Registration</label>
-          <input
-            type="date"
-            value={form.date_registered}
-            onChange={(e) => updateField('date_registered', e.target.value)}
-            required
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-          />
-        </div>
- 
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Name * (Middle Initial only)</label>
-          <div className="grid grid-cols-3 gap-3">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date of Registration</label>
             <input
-              type="text"
-              value={form.first_name}
-              onChange={(e) => updateField('first_name', e.target.value)}
-              placeholder="First name"
+              type="date"
+              value={form.date_registered}
+              onChange={(e) => updateField('date_registered', e.target.value)}
               required
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-            <input
-              type="text"
-              value={form.middle_name}
-              onChange={(e) => updateField('middle_name', e.target.value)}
-              placeholder="M.I."
-              maxLength={2}
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-            <input
-              type="text"
-              value={form.last_name}
-              onChange={(e) => updateField('last_name', e.target.value)}
-              placeholder="Last name"
-              required
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Name * (Middle Initial only)</label>
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                type="text"
+                value={form.first_name}
+                onChange={(e) => updateField('first_name', e.target.value)}
+                placeholder="First name"
+                required
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+              <input
+                type="text"
+                value={form.middle_name}
+                onChange={(e) => updateField('middle_name', e.target.value)}
+                placeholder="M.I."
+                maxLength={2}
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+              <input
+                type="text"
+                value={form.last_name}
+                onChange={(e) => updateField('last_name', e.target.value)}
+                placeholder="Last name"
+                required
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+            </div>
+          </div>
         </div>
- 
+
         <div>
           <label className="block text-sm font-medium mb-1">Address</label>
           <input
             type="text"
             value={form.address}
             onChange={(e) => updateField('address', e.target.value)}
+            placeholder="Enter complete address"
             className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
- 
-        <div className="grid grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Zone</label>
             <select
@@ -370,23 +362,23 @@ export default function RegisterPregnantMotherPage() {
               type="number"
               value={form.age}
               onChange={(e) => updateField('age', e.target.value)}
+              placeholder="Enter age"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Contact Number</label>
+            <input
+              type="text"
+              value={form.contact_number}
+              onChange={(e) => updateField('contact_number', e.target.value)}
+              placeholder="Enter contact number"
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
         </div>
- 
-        <div>
-          <label className="block text-sm font-medium mb-1">Contact Number</label>
-          <input
-            type="text"
-            value={form.contact_number}
-            onChange={(e) => updateField('contact_number', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-          />
-        </div>
- 
-        {/* Pregnancy details */}
-        <div className="grid grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
           <div>
             <label className="block text-sm font-medium mb-1">LMP (Last Menstrual Period)</label>
             <input
@@ -395,6 +387,7 @@ export default function RegisterPregnantMotherPage() {
               onChange={(e) => updateField('lmp', e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             />
+            <p className="text-xs text-transparent mt-1 select-none">.</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -408,9 +401,6 @@ export default function RegisterPregnantMotherPage() {
             />
             <p className="text-xs text-muted-2 mt-1">Auto-computed from LMP</p>
           </div>
-        </div>
- 
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Gravida (G)</label>
             <select
@@ -425,6 +415,7 @@ export default function RegisterPregnantMotherPage() {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-transparent mt-1 select-none">.</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Para (P)</label>
@@ -440,11 +431,11 @@ export default function RegisterPregnantMotherPage() {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-transparent mt-1 select-none">.</p>
           </div>
         </div>
- 
-        {/* Vitals */}
-        <div className="grid grid-cols-3 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Blood Pressure</label>
             <select
@@ -495,47 +486,50 @@ export default function RegisterPregnantMotherPage() {
             </select>
           </div>
         </div>
- 
-        {/* High-risk checklist */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            High-Risk Indicators (tick all that apply)
-          </label>
-          {indicators.length === 0 ? (
-            <p className="text-xs text-muted-2">No active checklist indicators configured.</p>
-          ) : (
-            <div className="border rounded-lg divide-y">
-              {indicators.map((ind) => (
-                <label
-                  key={ind.id}
-                  className="flex items-start gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedIndicatorIds.includes(ind.id)}
-                    onChange={() => toggleIndicator(ind.id)}
-                    className="mt-0.5 rounded border-gray-300"
-                  />
-                  <span>{ind.label}</span>
-                </label>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-muted-2 mt-1">
-            Risk level (High/Low) is automatically determined by the system based on age,
-            first pregnancy status, and the indicators selected above.
-          </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 border rounded-lg p-4">
+            <label className="block text-sm font-medium mb-3">
+              High-Risk Indicators (tick all that apply)
+            </label>
+            {indicators.length === 0 ? (
+              <p className="text-xs text-muted-2">No active checklist indicators configured.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 items-start">
+                {indicators.map((ind) => (
+                  <label
+                    key={ind.id}
+                    className="flex items-start gap-2 text-sm cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIndicatorIds.includes(ind.id)}
+                      onChange={() => toggleIndicator(ind.id)}
+                      className="mt-0.5 rounded border-gray-300"
+                    />
+                    <span>{ind.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-2 mt-3">
+              Risk level (High/Low) is automatically determined by the system based on age,
+              first pregnancy status, and the indicators selected above.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Location (pin the mother&apos;s home)
+            </label>
+            <LocationPicker
+              latitude={location.lat}
+              longitude={location.lng}
+              onChange={(lat, lng) => setLocation({ lat, lng })}
+            />
+          </div>
         </div>
- 
-        <div>
-          <label className="block text-sm font-medium mb-1">Location (pin the mother&apos;s home)</label>
-          <LocationPicker
-            latitude={location.lat}
-            longitude={location.lng}
-            onChange={(lat, lng) => setLocation({ lat, lng })}
-          />
-        </div>
- 
+
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
