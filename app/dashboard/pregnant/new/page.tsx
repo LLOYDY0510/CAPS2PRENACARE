@@ -217,6 +217,13 @@ export default function RegisterPregnantMotherPage() {
         ]);
       }
 
+      if (inserted) {
+        await Promise.all([
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'New pregnant mother registered', message: `${full_name} was added to the maternal registry.` }) }),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'New mother in your purok', message: `${full_name} was added to the maternal registry in your assigned purok.` }) }) : Promise.resolve(),
+        ]);
+      }
+
       window.location.href = '/dashboard/pregnant';
     } catch (err) {
       setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);

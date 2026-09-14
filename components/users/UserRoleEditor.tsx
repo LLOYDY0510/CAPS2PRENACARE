@@ -74,6 +74,12 @@ export default function UserRoleEditor({
       return;
     }
 
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientUserId: profile.id, title: 'Account access updated', message: `Your Prenatrack role is now ${role.replace('_', ' ')}${role === 'bhw_purok' && purok ? ` for Purok ${purok}` : ''}.` }),
+    });
+
     router.refresh();
   }
 
