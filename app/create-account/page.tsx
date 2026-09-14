@@ -103,6 +103,7 @@ export default function CreateAccountPage() {
               src="/logo.jpg"
               alt="Prenatrack logo"
               fill
+              sizes="(max-width: 768px) 176px, 208px"
               className="object-contain"
               priority
             />

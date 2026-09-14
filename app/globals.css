@@ -472,6 +472,167 @@ p { margin: 0; }
   }
 }
 
+/* Responsive application shell and dense data surfaces. */
+.dashboard-shell {
+  position: relative;
+}
+
+.dashboard-main > * {
+  min-width: 0;
+}
+
+.data-table {
+  table-layout: auto;
+}
+
+.data-table td,
+.data-table th {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-main {
+    padding: clamp(1rem, 3vw, 2rem) !important;
+  }
+
+  .dashboard-main .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .stat-card {
+    padding: 0.875rem 1rem;
+  }
+
+  .stat-card .stat-value {
+    font-size: clamp(1.4rem, 4vw, 1.875rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-shell {
+    overflow: hidden;
+  }
+
+  .dashboard-shell > header {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .dashboard-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    box-shadow: 6px 0 20px rgba(15, 24, 35, 0.14);
+  }
+
+  .dashboard-main {
+    width: 100%;
+    padding: 1rem !important;
+  }
+
+  .dashboard-main h1 {
+    font-size: 1.25rem;
+  }
+
+  .dashboard-main .page-header h1 {
+    font-size: 1.125rem;
+  }
+
+  .dashboard-main .grid-cols-2,
+  .dashboard-main .grid-cols-3 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .dashboard-main .flex.items-center.justify-between {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .dashboard-main .card,
+  .dashboard-main .stat-card {
+    max-width: 100%;
+  }
+
+  .dashboard-main .data-table {
+    display: block;
+    width: 100%;
+    font-size: 0.75rem;
+  }
+
+  .dashboard-main .data-table thead {
+    display: none;
+  }
+
+  .dashboard-main .data-table tbody,
+  .dashboard-main .data-table tr,
+  .dashboard-main .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .dashboard-main .data-table tbody tr {
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .dashboard-main .data-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .dashboard-main .data-table tbody td {
+    min-width: 0;
+    padding: 0.25rem 0.875rem;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-main .data-table tbody td:first-child {
+    padding-top: 0.125rem;
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .dashboard-main .data-table tbody td:last-child {
+    padding-bottom: 0.125rem;
+  }
+
+  .dashboard-main .data-table tbody td:empty {
+    display: none;
+  }
+
+  .dashboard-main .data-table tbody td[style*="max-width"] {
+    max-width: none !important;
+  }
+
+  .dashboard-main .data-table tbody td > .btn-secondary,
+  .dashboard-main .data-table tbody td > .btn-danger {
+    margin-top: 0.25rem;
+  }
+
+  .dashboard-main .btn-primary,
+  .dashboard-main .btn-secondary,
+  .dashboard-main .btn-danger,
+  .dashboard-main .btn-ghost {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .dashboard-main .form-input,
+  .dashboard-main .form-select,
+  .dashboard-main .form-textarea {
+    max-width: 100%;
+  }
+
+  .dashboard-main .risk-map-container {
+    height: min(62vh, 480px) !important;
+    min-height: 320px;
+  }
+}
+
 /* ─────────────────────────────────────────────
    PRINT STYLES
    Optimised for clinical record printing.

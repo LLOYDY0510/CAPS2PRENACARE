@@ -151,6 +151,21 @@ export type SmsLog = {
   created_at: string;
 };
 
+export type MaternalNotification = {
+  id: string;
+  pregnant_mother_id: string;
+  event_key: string;
+  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message';
+  title: string;
+  message: string;
+  email: string | null;
+  email_status: 'pending' | 'sent' | 'failed' | 'skipped';
+  email_sent_at: string | null;
+  email_error: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
 export type RiskPoint = {
   id: string;
   full_name: string;

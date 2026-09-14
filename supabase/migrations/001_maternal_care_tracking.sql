@@ -62,6 +62,41 @@ create table if not exists public.prenatal_follow_ups (
 create unique index if not exists prenatal_follow_ups_schedule_mother_idx
   on public.prenatal_follow_ups(schedule_id, pregnant_mother_id);
 
+create table if not exists public.maternal_notifications (
+  id uuid primary key default gen_random_uuid(),
+  pregnant_mother_id uuid not null references public.pregnant_mothers(id) on delete cascade,
+  event_key text not null,
+  category text not null,
+  title text not null,
+  message text not null,
+  email text,
+  email_status text not null default 'pending',
+  email_sent_at timestamptz,
+  email_error text,
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint maternal_notifications_email_status_check check (email_status in ('pending', 'sent', 'failed', 'skipped'))
+);
+
+create unique index if not exists maternal_notifications_event_key_idx
+  on public.maternal_notifications(event_key);
+
+alter table public.maternal_notifications enable row level security;
+
+create policy "mothers can read their notifications"
+  on public.maternal_notifications for select to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id));
+create policy "staff can read notifications"
+  on public.maternal_notifications for select to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')));
+create policy "staff can create notifications"
+  on public.maternal_notifications for insert to authenticated
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')));
+create policy "mothers can mark notifications read"
+  on public.maternal_notifications for update to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id));
+
 alter table public.sms_logs
   add column if not exists delivery_status text not null default 'unknown',
   add column if not exists provider_message_id text,
