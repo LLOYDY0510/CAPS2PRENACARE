@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
+import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
+import { EDIT_ROLES } from '@/utils/auth/roles';
+import type { UserRole } from '@/types';
  
 export const dynamic = 'force-dynamic';
  
@@ -23,7 +26,7 @@ export default async function ViewPregnantMotherPage({
     .single();
  
   const role = profile?.role ?? 'pending';
-  const canEdit = role !== 'admin' && role !== 'nurse';
+  const canEdit = EDIT_ROLES.includes(role as UserRole);
  
    const { data: record } = await supabase
     .from('pregnant_mothers')
@@ -48,8 +51,13 @@ export default async function ViewPregnantMotherPage({
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes')
+    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', id);
+
+  const [{ data: history }, { data: referrals }] = await Promise.all([
+    supabase.from('maternal_health_history').select('id, condition, details, diagnosed_date, resolved_date, created_at').eq('pregnant_mother_id', id).order('created_at', { ascending: false }),
+    supabase.from('maternal_referrals').select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').eq('pregnant_mother_id', id).order('updated_at', { ascending: false }),
+  ]);
  
   const fullName = [record.first_name, record.middle_name, record.last_name]
     .filter(Boolean)
@@ -99,6 +107,12 @@ export default async function ViewPregnantMotherPage({
       </div>
  
       <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} canEdit={canEdit} />
+      <MaternalCarePanel
+        motherId={id}
+        canEdit={canEdit}
+        initialHistory={history ?? []}
+        initialReferrals={referrals ?? []}
+      />
     </div>
   );
 }

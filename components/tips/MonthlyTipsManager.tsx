@@ -199,6 +199,12 @@ export default function MonthlyTipsManager({
       .from('tip_broadcast_recipients')
       .update({ sent: true, sent_at: new Date().toISOString() })
       .eq('broadcast_id', broadcast.id);
+
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'health_tip', broadcastId: broadcast.id }),
+    });
  
     router.refresh();
   }

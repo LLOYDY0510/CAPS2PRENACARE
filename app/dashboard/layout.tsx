@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
 import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
+import { isStaffRole } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,8 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
   nurse: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
+    { label: 'Health Tips', href: '/dashboard/health-tips' },
   ],
   pregnant_mother: [
     { label: 'Messages', href: '/dashboard' },
@@ -40,8 +43,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await checkAndSendPrenatalReminders();
-
   const supabase = await createClient();
 
   const {
@@ -59,6 +60,8 @@ export default async function DashboardLayout({
     .single();
 
   const role = profile?.role ?? 'pending';
+  if (!isStaffRole(role) && role !== 'pregnant_mother') redirect('/login');
+  if (isStaffRole(role)) await checkAndSendPrenatalReminders();
   const menuItems = MENUS[role] ?? [];
 
   return (

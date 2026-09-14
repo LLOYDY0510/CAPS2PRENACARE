@@ -1,22 +1,12 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import PregnantRecordsTable from '@/components/pregnant/PregnantRecordsTable';
+import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
+import type { UserRole } from '@/types';
 
 export default async function PregnantRecordsPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single();
-
-  const role    = profile?.role ?? 'pending';
-  const canEdit = role !== 'admin' && role !== 'nurse';
+  const { supabase, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const canEdit = EDIT_ROLES.includes(role as UserRole);
 
   const { data: records, error } = await supabase
     .from('pregnant_mothers')

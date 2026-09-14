@@ -8,6 +8,7 @@ export type SmsLogRow = {
   recipient_count: number;
   message: string;
   status: 'success' | 'failed';
+  delivery_status: 'unknown' | 'queued' | 'sent' | 'delivered' | 'failed';
   error_message: string | null;
   created_at: string;
   sender: string | null;
@@ -77,6 +78,7 @@ export default function SmsLogTable({ logs }: { logs: SmsLogRow[] }) {
               <th>Recipients</th>
               <th>Message</th>
               <th>Status</th>
+              <th>Delivery</th>
             </tr>
           </thead>
           <tbody>
@@ -121,6 +123,7 @@ export default function SmsLogTable({ logs }: { logs: SmsLogRow[] }) {
                     : <span className="badge-high">Failed</span>
                   }
                 </td>
+                <td>{log.delivery_status}</td>
               </tr>
             ))}
           </tbody>

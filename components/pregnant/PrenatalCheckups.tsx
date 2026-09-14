@@ -10,6 +10,8 @@ type Checkup = {
   blood_pressure: string | null;
   weight_kg: number | null;
   notes: string | null;
+  status: 'scheduled' | 'completed' | 'missed' | 'cancelled';
+  scheduled_for: string | null;
 };
 
 const TRIMESTERS: ('1st' | '2nd' | '3rd')[] = ['1st', '2nd', '3rd'];
@@ -27,7 +29,7 @@ export default function PrenatalCheckups({
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+  const [form, setForm]                   = useState({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' as Checkup['status'] });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
 
@@ -47,6 +49,17 @@ export default function PrenatalCheckups({
       return;
     }
 
+    const weight = form.weight_kg ? Number(form.weight_kg) : null;
+    if (weight != null && (!Number.isFinite(weight) || weight <= 0 || weight > 300)) {
+      setError('Weight must be between 0 and 300 kg.');
+      return;
+    }
+
+    if (form.blood_pressure && !/^\d{2,3}\/\d{2,3}$/.test(form.blood_pressure.trim())) {
+      setError('Blood pressure must use the format 120/80.');
+      return;
+    }
+
     setSaving(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -58,8 +71,10 @@ export default function PrenatalCheckups({
         trimester: activeTrimester,
         checkup_date: form.checkup_date,
         blood_pressure: form.blood_pressure || null,
-        weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+        weight_kg: weight,
         notes: form.notes || null,
+        status: form.status,
+        scheduled_for: form.status === 'scheduled' ? form.checkup_date : null,
         recorded_by: user?.id ?? null,
       })
       .select()
@@ -73,7 +88,7 @@ export default function PrenatalCheckups({
     }
 
     setCheckups((prev) => [...prev, data as Checkup]);
-    setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+    setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' });
     setShowForm(false);
   }
 
@@ -160,6 +175,7 @@ export default function PrenatalCheckups({
                   <th>Blood Pressure</th>
                   <th>Weight (kg)</th>
                   <th>Notes</th>
+                  <th>Status</th>
                   {canEdit && <th style={{ width: '60px' }}></th>}
                 </tr>
               </thead>
@@ -170,6 +186,7 @@ export default function PrenatalCheckups({
                     <td>{c.blood_pressure ?? '—'}</td>
                     <td>{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
                     <td style={{ maxWidth: '240px', whiteSpace: 'normal' }}>{c.notes ?? '—'}</td>
+                    <td><span className={c.status === 'completed' ? 'badge-low' : c.status === 'missed' ? 'badge-high' : 'badge-neutral'}>{c.status}</span></td>
                     {canEdit && (
                       <td>
                         <button
@@ -259,6 +276,21 @@ export default function PrenatalCheckups({
                   className="form-input"
                   style={{ maxWidth: '160px' }}
                 />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label" htmlFor="checkup-status">Visit Status</label>
+                <select
+                  id="checkup-status"
+                  value={form.status}
+                  onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Checkup['status'] }))}
+                  className="form-select"
+                >
+                  <option value="completed">Completed</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="missed">Missed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
               </div>
 
               <div className="mb-4">

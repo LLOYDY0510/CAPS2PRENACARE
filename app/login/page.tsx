@@ -46,7 +46,7 @@ export default function LoginPage() {
       >
         <div>
           <div className="w-12 h-12 rounded-lg overflow-hidden relative mb-8">
-            <Image src="/logo.jpg" alt="Prenatrack" fill className="object-cover" priority />
+            <Image src="/logo.jpg" alt="Prenatrack" fill sizes="48px" className="object-cover" priority />
           </div>
           <h1
             className="text-2xl font-semibold mb-3 leading-snug"
@@ -82,7 +82,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-9 h-9 rounded overflow-hidden relative shrink-0">
-              <Image src="/logo.jpg" alt="Prenatrack" fill className="object-cover" />
+              <Image src="/logo.jpg" alt="Prenatrack" fill sizes="36px" className="object-cover" />
             </div>
             <span className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Prenatrack</span>
           </div>

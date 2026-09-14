@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server';
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PrenatalCheckupsPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
 
   const { data: records } = await supabase
     .from('pregnant_mothers')

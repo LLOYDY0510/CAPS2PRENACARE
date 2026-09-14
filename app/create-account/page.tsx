@@ -69,6 +69,7 @@ export default function CreateAccountPage() {
     const { error: linkError } = await supabase
       .from('profiles')
       .update({
+        email: email.trim().toLowerCase(),
         role: 'pregnant_mother',
         pregnant_mother_id: motherRecord.id,
         full_name: motherRecord.full_name,
@@ -103,6 +104,7 @@ export default function CreateAccountPage() {
               src="/logo.jpg"
               alt="Prenatrack logo"
               fill
+              sizes="(max-width: 768px) 176px, 208px"
               className="object-contain"
               priority
             />

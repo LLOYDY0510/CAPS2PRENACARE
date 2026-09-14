@@ -57,6 +57,7 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
     const numbers = withContact
       .filter((r) => selected.has(r.id))
       .map((r) => r.contact_number as string);
+      const pregnantMotherIds = withContact.filter((r) => selected.has(r.id)).map((r) => r.id);
 
     setSending(true);
 
@@ -64,7 +65,7 @@ export default function ScheduleSmsForm({ records }: { records: Record[] }) {
       const res = await fetch('/api/send-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numbers, message }),
+        body: JSON.stringify({ numbers, message, pregnantMotherIds }),
       });
 
       const data = await res.json();

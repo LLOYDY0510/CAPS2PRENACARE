@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const role = profile?.role ?? 'pending';
 
   return (
-    <div className="max-w-5xl">
+    <div className="dashboard-page w-full">
       {role === 'pending' && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
           <h1 className="text-xl font-semibold mb-2 text-ink">Waiting for role assignment</h1>

@@ -100,6 +100,12 @@ export default function ScheduleSetter({
       setError(recipientsError.message);
       return;
     }
+
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'appointment', scheduleId: schedule.id }),
+    });
  
     setVisitDate('');
     setSelected(new Set());

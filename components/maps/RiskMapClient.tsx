@@ -29,8 +29,9 @@ const RiskMap = dynamic<{ records: RiskPoint[]; pendingClick?: (lat: number, lng
     ssr: false,
     loading: () => (
       <div
+        className="risk-map-container"
         style={{
-          height: '600px',
+          height: 'clamp(320px, 62vh, 600px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

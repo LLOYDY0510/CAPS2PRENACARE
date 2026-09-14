@@ -96,8 +96,9 @@ export default function RiskMap({
 }) {
   return (
     <div
+      className="risk-map-container"
       style={{
-        height: '600px',
+        height: 'clamp(320px, 62vh, 600px)',
         borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
         border: '1px solid var(--border)',

@@ -32,7 +32,7 @@ export default function Sidebar({
   const pathname = usePathname();
 
   return (
-    <div className="h-screen flex flex-col bg-[#F3F4F6] overflow-hidden">
+    <div className="dashboard-shell h-screen flex flex-col bg-[#F3F4F6] overflow-hidden">
       {/* Top bar */}
       <header className="shrink-0 bg-[#0E3D38] text-white flex items-center justify-between px-4 py-3 z-30">
         <div className="flex items-center gap-3">
@@ -58,7 +58,7 @@ export default function Sidebar({
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
         <aside
-          className={`
+          className={`dashboard-sidebar
             bg-white border-r border-gray-100 flex flex-col shrink-0 overflow-hidden
             transition-[width] duration-200 ease-in-out
             ${open ? 'w-64' : 'w-0'}
@@ -68,7 +68,7 @@ export default function Sidebar({
             <div className="p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-full overflow-hidden relative shrink-0">
-                  <Image src="/logo.jpg" alt="Prenatrack logo" fill className="object-cover" />
+                  <Image src="/logo.jpg" alt="Prenatrack logo" fill sizes="36px" className="object-cover" />
                 </div>
                 <div>
                   <p className="font-semibold text-ink text-sm">
@@ -116,7 +116,7 @@ export default function Sidebar({
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
+        <main className="dashboard-main flex-1 min-w-0 overflow-y-auto p-8">{children}</main>
       </div>
     </div>
   );
