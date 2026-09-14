@@ -117,11 +117,18 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
       return;
     }
 
-    await fetch('/api/notifications/dispatch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Maternal record updated', message: `${full_name}'s maternal record was updated and is ready for review.` }),
-    });
+    await Promise.all([
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Maternal record updated', message: `${full_name}'s maternal record was updated and is ready for review.` }),
+      }),
+      record.purok ? fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: record.purok, title: 'Maternal record updated', message: `${full_name}'s record was updated in your assigned purok.` }),
+      }) : Promise.resolve(),
+    ]);
 
     // Redirect back to the records list after saving
     window.location.href = '/dashboard/pregnant';
