@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
 
   try {
-    const { numbers, message, pregnantMotherIds } = await req.json();
+    const { numbers, message, pregnantMotherIds, messageType = 'care_message' } = await req.json();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
         message,
         status: 'failed',
         delivery_status: 'failed',
+          message_type: messageType,
+          recipient_mother_ids: Array.isArray(pregnantMotherIds) ? pregnantMotherIds : null,
         error_message: rawText || 'Semaphore returned an unexpected response.',
         sent_by: user?.id ?? null,
       });
@@ -87,6 +89,8 @@ export async function POST(req: NextRequest) {
         message,
         status: 'failed',
         delivery_status: 'failed',
+        message_type: messageType,
+        recipient_mother_ids: Array.isArray(pregnantMotherIds) ? pregnantMotherIds : null,
         error_message: data?.message || 'Failed to send SMS.',
         sent_by: user?.id ?? null,
       });
@@ -103,6 +107,8 @@ export async function POST(req: NextRequest) {
       message,
       status: 'success',
       delivery_status: 'sent',
+      message_type: messageType,
+      recipient_mother_ids: Array.isArray(pregnantMotherIds) ? pregnantMotherIds : null,
       provider_message_id: Array.isArray(data) ? data[0]?.message_id ?? null : data?.message_id ?? null,
       sent_by: user?.id ?? null,
     });

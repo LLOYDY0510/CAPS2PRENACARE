@@ -30,6 +30,7 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
     { label: 'Health Tips', href: '/dashboard/health-tips' },
     { label: 'Nutrition Tips', href: '/dashboard/nutrition-tips' },
+    { label: 'SMS Log', href: '/dashboard/sms-log' },
   ],
   pregnant_mother: [
     { label: 'Messages', href: '/dashboard' },

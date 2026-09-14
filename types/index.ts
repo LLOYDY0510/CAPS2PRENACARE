@@ -144,6 +144,8 @@ export type SmsLog = {
   message: string;
   status: 'success' | 'failed';
   delivery_status: 'unknown' | 'queued' | 'sent' | 'delivered' | 'failed';
+  message_type: 'general' | 'prenatal_reminder' | 'missed_visit_follow_up' | 'risk_alert' | 'health_tip' | 'nutrition_tip' | 'care_message';
+  recipient_mother_ids?: string[] | null;
   provider_message_id?: string | null;
   delivered_at?: string | null;
   error_message: string | null;

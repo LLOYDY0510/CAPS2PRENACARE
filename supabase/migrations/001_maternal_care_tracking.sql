@@ -100,7 +100,15 @@ create policy "mothers can mark notifications read"
 alter table public.sms_logs
   add column if not exists delivery_status text not null default 'unknown',
   add column if not exists provider_message_id text,
-  add column if not exists delivered_at timestamptz;
+  add column if not exists delivered_at timestamptz,
+  add column if not exists message_type text not null default 'general',
+  add column if not exists recipient_mother_ids uuid[];
+
+alter table public.sms_logs
+  drop constraint if exists sms_logs_message_type_check;
+alter table public.sms_logs
+  add constraint sms_logs_message_type_check
+  check (message_type in ('general', 'prenatal_reminder', 'missed_visit_follow_up', 'risk_alert', 'health_tip', 'nutrition_tip', 'care_message'));
 
 alter table public.sms_logs
   drop constraint if exists sms_logs_delivery_status_check;

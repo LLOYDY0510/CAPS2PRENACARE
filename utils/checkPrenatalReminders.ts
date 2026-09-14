@@ -69,6 +69,9 @@ export async function checkAndSendPrenatalReminders() {
             recipient_numbers: recipients.map((m) => m.contact_number),
             message,
             status: ok ? 'success' : 'failed',
+            delivery_status: ok ? 'sent' : 'failed',
+            message_type: 'prenatal_reminder',
+            recipient_mother_ids: recipients.map((m) => m.id),
             error_message: ok ? null : rawText,
             sent_by: null,
           });
@@ -78,6 +81,9 @@ export async function checkAndSendPrenatalReminders() {
             recipient_numbers: recipients.map((m) => m.contact_number),
             message,
             status: 'failed',
+            delivery_status: 'failed',
+            message_type: 'prenatal_reminder',
+            recipient_mother_ids: recipients.map((m) => m.id),
             error_message: err instanceof Error ? err.message : String(err),
             sent_by: null,
           });
@@ -148,7 +154,7 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
           smsStatus = 'failed';
         }
         await supabase.from('prenatal_follow_ups').update({ sms_status: smsStatus, follow_up_sent_at: new Date().toISOString() }).eq('schedule_id', schedule.id).in('pregnant_mother_id', recipients.map((mother) => mother.id));
-        await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', sent_by: null });
+        await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), recipient_mother_ids: recipients.map((mother) => mother.id), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', message_type: 'missed_visit_follow_up', sent_by: null });
       }
       await Promise.all(motherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
         pregnantMotherId,
