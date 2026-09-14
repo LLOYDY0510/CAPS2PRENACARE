@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
 import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
+import { isStaffRole } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,7 @@ export default async function DashboardLayout({
     .single();
 
   const role = profile?.role ?? 'pending';
+  if (!isStaffRole(role) && role !== 'pregnant_mother') redirect('/login');
   const menuItems = MENUS[role] ?? [];
 
   return (

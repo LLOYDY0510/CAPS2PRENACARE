@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { STAFF_ROLES } from '@/utils/auth/roles';
+
+const PHONE_PATTERN = /^\+?[0-9][0-9\- ]{6,19}$/;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -7,18 +10,26 @@ export async function POST(req: NextRequest) {
   try {
     const { numbers, message } = await req.json();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
-    if (!numbers || !Array.isArray(numbers) || numbers.length === 0) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (!profile?.role || !STAFF_ROLES.includes(profile.role as (typeof STAFF_ROLES)[number])) {
+      return NextResponse.json({ error: 'You are not authorized to send SMS.' }, { status: 403 });
+    }
+
+    if (!numbers || !Array.isArray(numbers) || numbers.length === 0 || numbers.length > 100) {
       return NextResponse.json(
         { error: 'No recipient numbers provided.' },
         { status: 400 }
       );
     }
 
-    if (!message || typeof message !== 'string' || !message.trim()) {
+    if (numbers.some((number) => typeof number !== 'string' || !PHONE_PATTERN.test(number.trim()))) {
+      return NextResponse.json({ error: 'One or more recipient numbers are invalid.' }, { status: 400 });
+    }
+
+    if (!message || typeof message !== 'string' || !message.trim() || message.length > 480) {
       return NextResponse.json(
         { error: 'Message is required.' },
         { status: 400 }
@@ -57,6 +68,7 @@ export async function POST(req: NextRequest) {
         recipient_numbers: numbers,
         message,
         status: 'failed',
+        delivery_status: 'failed',
         error_message: rawText || 'Semaphore returned an unexpected response.',
         sent_by: user?.id ?? null,
       });
@@ -72,6 +84,7 @@ export async function POST(req: NextRequest) {
         recipient_numbers: numbers,
         message,
         status: 'failed',
+        delivery_status: 'failed',
         error_message: data?.message || 'Failed to send SMS.',
         sent_by: user?.id ?? null,
       });
@@ -87,6 +100,8 @@ export async function POST(req: NextRequest) {
       recipient_numbers: numbers,
       message,
       status: 'success',
+      delivery_status: 'sent',
+      provider_message_id: Array.isArray(data) ? data[0]?.message_id ?? null : data?.message_id ?? null,
       sent_by: user?.id ?? null,
     });
 

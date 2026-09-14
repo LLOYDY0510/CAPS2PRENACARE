@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server';
 import ScheduleSetter from '@/components/schedule/ScheduleSetter';
+import { requireRoles } from '@/utils/auth/roles';
  
 export const dynamic = 'force-dynamic';
  
 export default async function PrenatalSchedulePage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
  
   const { data: currentSchedule } = await supabase
     .from('prenatal_schedules')

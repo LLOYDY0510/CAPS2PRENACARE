@@ -1,10 +1,11 @@
 import { createClient } from '@/utils/supabase/server';
 import UsersTable from '@/components/users/UsersTable';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ManageUsersPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['admin']);
 
   const { data: profiles, error } = await supabase
     .from('profiles')

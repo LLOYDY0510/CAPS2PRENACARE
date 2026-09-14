@@ -54,7 +54,33 @@ export type PrenatalCheckup = {
   blood_pressure: string | null;
   weight_kg: number | null;
   notes: string | null;
+  status: 'scheduled' | 'completed' | 'missed' | 'cancelled';
+  scheduled_for?: string | null;
   recorded_by?: string | null;
+};
+
+export type MaternalHealthHistory = {
+  id: string;
+  pregnant_mother_id: string;
+  condition: string;
+  details: string | null;
+  diagnosed_date: string | null;
+  resolved_date: string | null;
+  recorded_by: string | null;
+  created_at: string;
+};
+
+export type MaternalReferral = {
+  id: string;
+  pregnant_mother_id: string;
+  referred_to: string;
+  reason: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  referred_at: string;
+  follow_up_date: string | null;
+  outcome: string | null;
+  created_by: string | null;
+  updated_at: string;
 };
 
 export type RiskIndicatorType =
@@ -117,6 +143,9 @@ export type SmsLog = {
   recipient_numbers?: string[] | null;
   message: string;
   status: 'success' | 'failed';
+  delivery_status: 'unknown' | 'queued' | 'sent' | 'delivered' | 'failed';
+  provider_message_id?: string | null;
+  delivered_at?: string | null;
   error_message: string | null;
   sent_by: string | null;
   created_at: string;

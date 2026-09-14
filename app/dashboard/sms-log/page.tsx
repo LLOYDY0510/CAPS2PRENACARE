@@ -1,14 +1,15 @@
 import { createClient } from '@/utils/supabase/server';
 import SmsLogTable, { type SmsLogRow } from '@/components/schedule/SmsLogTable';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SmsLogPage() {
-  const supabase = await createClient();
+  const { supabase } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
 
   const { data: logs } = await supabase
     .from('sms_logs')
-    .select('id, recipient_count, message, status, error_message, created_at, sent_by, profiles(full_name, email)')
+    .select('id, recipient_count, message, status, delivery_status, error_message, created_at, sent_by, profiles(full_name, email)')
     .order('created_at', { ascending: false });
 
   const rows: SmsLogRow[] = (logs ?? []).map((log) => {
@@ -18,6 +19,7 @@ export default async function SmsLogPage() {
       recipient_count: log.recipient_count,
       message: log.message,
       status: log.status as 'success' | 'failed',
+      delivery_status: log.delivery_status as SmsLogRow['delivery_status'],
       error_message: log.error_message,
       created_at: log.created_at,
       sender: sender?.full_name || sender?.email || null,

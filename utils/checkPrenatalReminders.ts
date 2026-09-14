@@ -18,17 +18,16 @@ export async function checkAndSendPrenatalReminders() {
       .eq('reminder_sent', false)
       .maybeSingle();
  
-    if (!schedule) return;
+    if (schedule) {
+      const { data: recipientLinks } = await supabase
+        .from('prenatal_schedule_recipients')
+        .select('pregnant_mother_id')
+        .eq('schedule_id', schedule.id);
  
-    const { data: recipientLinks } = await supabase
-      .from('prenatal_schedule_recipients')
-      .select('pregnant_mother_id')
-      .eq('schedule_id', schedule.id);
+      const motherIds = (recipientLinks ?? []).map((r) => r.pregnant_mother_id);
  
-    const motherIds = (recipientLinks ?? []).map((r) => r.pregnant_mother_id);
- 
-    let recipients: { id: string; full_name: string; contact_number: string | null }[] = [];
-    if (motherIds.length > 0) {
+      let recipients: { id: string; full_name: string; contact_number: string | null }[] = [];
+      if (motherIds.length > 0) {
       const { data: mothers } = await supabase
         .from('pregnant_mothers')
         .select('id, full_name, contact_number')
@@ -37,9 +36,9 @@ export async function checkAndSendPrenatalReminders() {
       recipients = (mothers ?? []).filter((m) => m.contact_number);
     }
  
-    const message = `Paalala: Bukas (${schedule.visit_date}) po ang inyong prenatal checkup sa Barangay Health Center. Mangyaring pumunta sa nakatakdang oras. Salamat!`;
+      const message = `Paalala: Bukas (${schedule.visit_date}) po ang inyong prenatal checkup sa Barangay Health Center. Mangyaring pumunta sa nakatakdang oras. Salamat!`;
  
-    if (recipients.length > 0) {
+      if (recipients.length > 0) {
       const apiKey = process.env.SEMAPHORE_API_KEY;
  
       if (apiKey) {
@@ -92,15 +91,59 @@ export async function checkAndSendPrenatalReminders() {
           message,
         }))
       );
-    }
+      }
  
     // Mark as processed either way, so we never retry/duplicate-send
-    await supabase
-      .from('prenatal_schedules')
-      .update({ reminder_sent: true, reminder_sent_at: new Date().toISOString() })
-      .eq('id', schedule.id);
+      await supabase
+        .from('prenatal_schedules')
+        .update({ reminder_sent: true, reminder_sent_at: new Date().toISOString() })
+        .eq('id', schedule.id);
+    }
+
+    await createMissedVisitFollowUps(supabase);
   } catch (err) {
     console.error('checkAndSendPrenatalReminders error:', err);
+  }
+}
+
+async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: schedules } = await supabase
+    .from('prenatal_schedules')
+    .select('id, visit_date')
+    .lt('visit_date', today)
+    .eq('status', 'scheduled')
+    .eq('missed_follow_up_sent', false);
+  if (!schedules?.length) return;
+
+  for (const schedule of schedules) {
+    const { data: links } = await supabase.from('prenatal_schedule_recipients').select('pregnant_mother_id').eq('schedule_id', schedule.id);
+    const motherIds = (links ?? []).map((link) => link.pregnant_mother_id);
+    if (motherIds.length) {
+      await supabase.from('prenatal_follow_ups').upsert(motherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })), { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true });
+
+      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number').in('id', motherIds).not('contact_number', 'is', null);
+      const recipients = (mothers ?? []).filter((mother) => mother.contact_number);
+      const apiKey = process.env.SEMAPHORE_API_KEY;
+      if (apiKey && recipients.length) {
+        const message = `Paalala: Hindi kayo nakadalo sa prenatal visit noong ${schedule.visit_date}. Mangyaring makipag-ugnayan sa Barangay Health Center para sa follow-up schedule. Salamat!`;
+        let smsStatus: 'sent' | 'failed' = 'failed';
+        try {
+          const response = await fetch('https://api.semaphore.co/api/v4/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ apikey: apiKey, number: recipients.map((mother) => mother.contact_number as string).join(','), message }),
+          });
+          smsStatus = response.ok ? 'sent' : 'failed';
+          await response.text();
+        } catch {
+          smsStatus = 'failed';
+        }
+        await supabase.from('prenatal_follow_ups').update({ sms_status: smsStatus, follow_up_sent_at: new Date().toISOString() }).eq('schedule_id', schedule.id).in('pregnant_mother_id', recipients.map((mother) => mother.id));
+        await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', sent_by: null });
+      }
+    }
+    await supabase.from('prenatal_schedules').update({ status: 'missed', missed_follow_up_sent: true }).eq('id', schedule.id);
   }
 }
  
