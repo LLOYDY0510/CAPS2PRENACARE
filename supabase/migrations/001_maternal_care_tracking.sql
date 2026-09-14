@@ -111,6 +111,10 @@ create policy "users can mark their notifications read"
   on public.maternal_notifications for update to authenticated
   using (recipient_user_id = auth.uid())
   with check (recipient_user_id = auth.uid());
+create policy "roles can mark their notifications read"
+  on public.maternal_notifications for update to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and (p.role = maternal_notifications.recipient_role or (p.role = 'bhw_purok' and p.purok = maternal_notifications.recipient_purok))))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and (p.role = maternal_notifications.recipient_role or (p.role = 'bhw_purok' and p.purok = maternal_notifications.recipient_purok))));
 
 alter table public.sms_logs
   add column if not exists delivery_status text not null default 'unknown',
