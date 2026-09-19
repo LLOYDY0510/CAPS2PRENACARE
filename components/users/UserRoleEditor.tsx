@@ -52,25 +52,26 @@ export default function UserRoleEditor({
     setSaving(true);
     setError('');
 
-    const selectedMother = availableMothers.find((m) => m.id === motherId);
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
+    const res = await fetch('/api/admin/update-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: profile.id,
         role,
-        purok:              role === 'bhw_purok'        ? purok || null    : null,
-        pregnant_mother_id: role === 'pregnant_mother'  ? motherId || null : null,
-        full_name:
+        purok: role === 'bhw_purok' ? purok || null : null,
+        pregnantMotherId: role === 'pregnant_mother' ? motherId || null : null,
+        fullName:
           role === 'pregnant_mother' && selectedMother
             ? selectedMother.full_name
             : profile.full_name,
-      })
-      .eq('id', profile.id);
+      }),
+    });
 
+    const data = await res.json();
     setSaving(false);
 
-    if (updateError) {
-      setError(updateError.message);
+    if (!res.ok) {
+      setError(data.error || 'Failed to update role.');
       return;
     }
 
