@@ -74,10 +74,13 @@ export default async function PregnantMotherDashboard({
     (b.sent_at ?? '').localeCompare(a.sent_at ?? '')
   );
  
+  const today = new Date().toISOString().slice(0, 10);
   const { data: upcomingSchedule } = await supabase
     .from('prenatal_schedules')
-    .select('visit_date')
-    .order('created_at', { ascending: false })
+    .select('visit_date, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .eq('prenatal_schedule_recipients.pregnant_mother_id', pregnantMotherId)
+    .gte('visit_date', today)
+    .order('visit_date', { ascending: true })
     .limit(1)
     .maybeSingle();
  

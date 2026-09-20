@@ -10,14 +10,15 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json() as { notificationId?: string; markAll?: boolean };
   let query = supabase.from('maternal_notifications').update({ read_at: new Date().toISOString() });
+  const filters = [`recipient_user_id.eq.${user.id}`];
+  if (profile?.role) filters.push(`recipient_role.eq.${profile.role}`);
+  if (profile?.role === 'bhw_purok' && profile.purok) filters.push(`recipient_purok.eq.${profile.purok}`);
+  if (profile?.role === 'pregnant_mother' && profile.pregnant_mother_id) filters.push(`pregnant_mother_id.eq.${profile.pregnant_mother_id}`);
+
   if (body.markAll) {
-    const filters = [`recipient_user_id.eq.${user.id}`];
-    if (profile?.role) filters.push(`recipient_role.eq.${profile.role}`);
-    if (profile?.role === 'bhw_purok' && profile.purok) filters.push(`recipient_purok.eq.${profile.purok}`);
-    if (profile?.role === 'pregnant_mother' && profile.pregnant_mother_id) filters.push(`pregnant_mother_id.eq.${profile.pregnant_mother_id}`);
     query = query.is('read_at', null).or(filters.join(','));
   } else if (body.notificationId) {
-    query = query.eq('id', body.notificationId);
+    query = query.eq('id', body.notificationId).or(filters.join(','));
   } else {
     return NextResponse.json({ error: 'Notification id or markAll is required.' }, { status: 400 });
   }

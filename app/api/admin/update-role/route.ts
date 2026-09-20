@@ -36,13 +36,17 @@ export async function POST(req: NextRequest) {
 
     const adminClient = createAdminClient();
 
-    const updatePayload: Record<string, any> = {
+    if (role === 'pregnant_mother' && (!pregnantMotherId || typeof pregnantMotherId !== 'string')) {
+      return NextResponse.json({ error: 'A pregnant mother record is required for this role.' }, { status: 400 });
+    }
+
+    const updatePayload: Record<string, string | null> = {
       role,
-      purok: role === 'bhw_purok' ? purok || null : null,
-      pregnant_mother_id: role === 'pregnant_mother' ? pregnantMotherId || null : null,
+      purok: role === 'bhw_purok' && typeof purok === 'string' ? purok.trim() || null : null,
+      pregnant_mother_id: role === 'pregnant_mother' ? pregnantMotherId : null,
     };
 
-    if (fullName) {
+    if (typeof fullName === 'string' && fullName.trim()) {
       updatePayload.full_name = fullName;
     }
 
