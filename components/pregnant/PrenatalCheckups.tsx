@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 type Checkup = {
@@ -26,7 +25,6 @@ export default function PrenatalCheckups({
   initialCheckups: Checkup[];
   canEdit?: boolean;
 }) {
-  const supabase = createClient();
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
@@ -63,32 +61,28 @@ export default function PrenatalCheckups({
 
     setSaving(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { data, error: insertError } = await supabase
-      .from('prenatal_checkups')
-      .insert({
-        pregnant_mother_id: motherId,
+    const response = await fetch('/api/prenatal-checkups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pregnantMotherId: motherId,
         trimester: activeTrimester,
-        checkup_date: form.checkup_date,
-        blood_pressure: form.blood_pressure || null,
-        weight_kg: weight,
-        notes: form.notes || null,
-        status: 'completed',
-        scheduled_for: form.checkup_date,
-        recorded_by: user?.id ?? null,
-      })
-      .select()
-      .single();
+        checkupDate: form.checkup_date,
+        bloodPressure: form.blood_pressure,
+        weightKg: weight,
+        notes: form.notes,
+      }),
+    });
+    const result = await response.json() as { data?: Checkup; error?: string };
 
     setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (!response.ok || !result.data) {
+      setError(result.error ?? 'Failed to save checkup.');
       return;
     }
 
-    setCheckups((prev) => [...prev, data as Checkup]);
+    setCheckups((prev) => [...prev, result.data as Checkup]);
     setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
     setShowForm(false);
   }
@@ -97,7 +91,12 @@ export default function PrenatalCheckups({
     const confirmed = window.confirm('Delete this checkup record?');
     if (!confirmed) return;
 
-    await supabase.from('prenatal_checkups').delete().eq('id', id);
+    const response = await fetch('/api/prenatal-checkups', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, pregnantMotherId: motherId }),
+    });
+    if (!response.ok) return;
     setCheckups((prev) => prev.filter((c) => c.id !== id));
   }
 
