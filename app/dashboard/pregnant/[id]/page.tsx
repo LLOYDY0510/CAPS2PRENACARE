@@ -58,6 +58,20 @@ export default async function ViewPregnantMotherPage({
     .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', id);
 
+  const { data: scheduleRows } = await supabase
+    .from('prenatal_schedules')
+    .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .eq('prenatal_schedule_recipients.pregnant_mother_id', id)
+    .not('trimester', 'is', null)
+    .order('created_at', { ascending: false });
+  const scheduledDates: Record<'1st' | '2nd' | '3rd', string | null> = { '1st': null, '2nd': null, '3rd': null };
+  (scheduleRows ?? []).forEach((schedule) => {
+    const trimester = schedule.trimester as '1st' | '2nd' | '3rd';
+    if ((trimester === '1st' || trimester === '2nd' || trimester === '3rd') && !scheduledDates[trimester]) {
+      scheduledDates[trimester] = schedule.visit_date;
+    }
+  });
+
   const [{ data: history }, { data: referrals }] = await Promise.all([
     supabase.from('maternal_health_history').select('id, condition, details, diagnosed_date, resolved_date, created_at').eq('pregnant_mother_id', id).order('created_at', { ascending: false }),
     supabase.from('maternal_referrals').select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').eq('pregnant_mother_id', id).order('updated_at', { ascending: false }),
@@ -110,7 +124,7 @@ export default async function ViewPregnantMotherPage({
         )}
       </div>
  
-      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} canEdit={canEdit} />
+      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
       <MaternalCarePanel
         motherId={id}
         canEdit={canEdit}

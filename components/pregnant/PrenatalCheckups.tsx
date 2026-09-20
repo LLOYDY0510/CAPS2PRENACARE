@@ -21,16 +21,18 @@ const TRIMESTERS: ('1st' | '2nd' | '3rd')[] = ['1st', '2nd', '3rd'];
 export default function PrenatalCheckups({
   motherId,
   initialCheckups,
+  scheduledDates,
   canEdit = true,
 }: {
   motherId: string;
   initialCheckups: Checkup[];
+  scheduledDates: Record<'1st' | '2nd' | '3rd', string | null>;
   canEdit?: boolean;
 }) {
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ scheduled_checkup_date: '', actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+  const [form, setForm]                   = useState({ actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
 
@@ -45,12 +47,13 @@ export default function PrenatalCheckups({
     e.preventDefault();
     setError('');
 
-    if (!form.scheduled_checkup_date) {
-      setError('Scheduled checkup date is required.');
+    const scheduledCheckupDate = scheduledDates[activeTrimester];
+    if (!scheduledCheckupDate) {
+      setError(`No ${activeTrimester} trimester schedule exists for this mother.`);
       return;
     }
 
-    if (form.actual_checkup_date && form.actual_checkup_date < form.scheduled_checkup_date) {
+    if (form.actual_checkup_date && form.actual_checkup_date < scheduledCheckupDate) {
       setError('Actual checkup date cannot be before the scheduled date.');
       return;
     }
@@ -74,7 +77,6 @@ export default function PrenatalCheckups({
       body: JSON.stringify({
         pregnantMotherId: motherId,
         trimester: activeTrimester,
-        scheduledCheckupDate: form.scheduled_checkup_date,
         actualCheckupDate: form.actual_checkup_date || null,
         bloodPressure: form.blood_pressure,
         weightKg: weight,
@@ -94,7 +96,7 @@ export default function PrenatalCheckups({
       ...prev.filter((checkup) => checkup.trimester !== result.data?.trimester),
       result.data as Checkup,
     ]);
-    setForm({ scheduled_checkup_date: '', actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+    setForm({ actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
     setShowForm(false);
   }
 
@@ -196,13 +198,13 @@ export default function PrenatalCheckups({
                   <tr key={c.id}>
                     {(() => {
                       const status = getPrenatalVisitStatus({
-                        scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
+                        scheduledFor: scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
                         actualCheckupDate: c.actual_checkup_date,
                         recordedStatus: c.status,
                       });
                       return (
                         <>
-                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date}</td>
+                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date}</td>
                     <td>{c.actual_checkup_date ?? '—'}</td>
                     <td>{c.blood_pressure ?? '—'}</td>
                     <td>{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
@@ -268,13 +270,9 @@ export default function PrenatalCheckups({
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="form-label" htmlFor="scheduled-checkup-date">Scheduled Checkup Date</label>
-                  <input
-                    id="scheduled-checkup-date"
-                    type="date"
-                    value={form.scheduled_checkup_date}
-                    onChange={(e) => setForm((p) => ({ ...p, scheduled_checkup_date: e.target.value }))}
-                    className="form-input"
-                  />
+                  <p id="scheduled-checkup-date" className="form-input bg-gray-50">
+                    {scheduledDates[activeTrimester] ?? 'No schedule set'}
+                  </p>
                 </div>
                 <div>
                   <label className="form-label" htmlFor="actual-checkup-date">Actual Checkup Date</label>

@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       pregnantMotherId?: unknown;
       trimester?: unknown;
-      scheduledCheckupDate?: unknown;
       actualCheckupDate?: unknown;
       bloodPressure?: unknown;
       weightKg?: unknown;
@@ -56,8 +55,6 @@ export async function POST(request: NextRequest) {
     if (
       typeof body.pregnantMotherId !== 'string' ||
       !['1st', '2nd', '3rd'].includes(String(body.trimester)) ||
-      typeof body.scheduledCheckupDate !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduledCheckupDate) ||
       (body.actualCheckupDate != null && body.actualCheckupDate !== '' &&
         (typeof body.actualCheckupDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.actualCheckupDate)))
     ) {
@@ -75,7 +72,23 @@ export async function POST(request: NextRequest) {
 
     const adminClient = createAdminClient();
     const actualCheckupDate = typeof body.actualCheckupDate === 'string' && body.actualCheckupDate ? body.actualCheckupDate : null;
-    const scheduledCheckupDate = body.scheduledCheckupDate;
+    const { data: schedule } = await adminClient
+      .from('prenatal_schedules')
+      .select('visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .eq('trimester', body.trimester)
+      .eq('prenatal_schedule_recipients.pregnant_mother_id', body.pregnantMotherId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!schedule) {
+      return NextResponse.json({ error: `No ${body.trimester} trimester prenatal schedule exists for this mother.` }, { status: 400 });
+    }
+
+    const scheduledCheckupDate = schedule.visit_date;
+    if (actualCheckupDate && actualCheckupDate < scheduledCheckupDate) {
+      return NextResponse.json({ error: 'Actual checkup date cannot be before the scheduled date.' }, { status: 400 });
+    }
     const { data: existing } = await adminClient
       .from('prenatal_checkups')
       .select('id')
