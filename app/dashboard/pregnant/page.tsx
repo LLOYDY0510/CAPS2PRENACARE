@@ -2,6 +2,7 @@ import Link from 'next/link';
 import PregnantRecordsTable from '@/components/pregnant/PregnantRecordsTable';
 import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
+import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 export default async function PregnantRecordsPage() {
   const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
@@ -30,6 +31,28 @@ export default async function PregnantRecordsPage() {
     error = legacyResult.error;
   }
 
+  const { data: checkupRows } = await supabase
+    .from('prenatal_checkups')
+    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
+  const completedTrimesters: Record<string, Set<string>> = {};
+  (checkupRows ?? []).forEach((checkup) => {
+    const trimester = checkup.trimester;
+    if (!['1st', '2nd', '3rd'].includes(trimester)) return;
+    const status = getPrenatalVisitStatus({
+      scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date,
+      actualCheckupDate: checkup.actual_checkup_date,
+      recordedStatus: checkup.status,
+    });
+    if (status === 'completed') {
+      if (!completedTrimesters[checkup.pregnant_mother_id]) completedTrimesters[checkup.pregnant_mother_id] = new Set();
+      completedTrimesters[checkup.pregnant_mother_id].add(trimester);
+    }
+  });
+  const recordsWithCheckupCount = (records ?? []).map((record) => ({
+    ...record,
+    checkupCount: completedTrimesters[record.id]?.size ?? 0,
+  }));
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -54,7 +77,7 @@ export default async function PregnantRecordsPage() {
       )}
 
       <PregnantRecordsTable
-        records={records ?? []}
+        records={recordsWithCheckupCount}
         canEdit={canEdit}
       />
     </div>

@@ -25,6 +25,7 @@ export type PregnantRecord = {
   weight_kg: number | null;
   risk_level: string | null;
   checkup_recorded: boolean;
+  checkupCount: number;
 };
 
 export default function PregnantRecordsTable({
@@ -90,8 +91,8 @@ export default function PregnantRecordsTable({
         >
           <option value="all">All Ages</option>
           <option value="under-18">Under 18</option>
-          <option value="18-24">18–24</option>
-          <option value="25-34">25–34</option>
+          <option value="18-24">18-24</option>
+          <option value="25-34">25-34</option>
           <option value="35-plus">35 and older</option>
         </select>
 
@@ -130,7 +131,7 @@ export default function PregnantRecordsTable({
               <th>LMP</th>
               <th>G-P</th>
               <th>EDC</th>
-              <th>Checkup Recorded</th>
+              <th>Checkups Recorded</th>
               <th>BP</th>
               <th>Height (cm)</th>
               <th>Weight (kg)</th>
@@ -162,9 +163,9 @@ export default function PregnantRecordsTable({
                 <td>{r.gravida_para ?? '—'}</td>
                 <td>{r.edd ?? '—'}</td>
                 <td>
-                  {r.checkup_recorded
-                    ? <span className="badge-low">Yes</span>
-                    : <span className="badge-neutral">No</span>}
+                  <span style={{ fontWeight: r.checkupCount > 0 ? 600 : 400, color: r.checkupCount > 0 ? 'var(--brand)' : 'var(--muted-2)' }}>
+                    {r.checkupCount}
+                  </span>
                 </td>
                 <td>{r.blood_pressure ?? '—'}</td>
                 <td>{r.height_cm ?? '—'}</td>
