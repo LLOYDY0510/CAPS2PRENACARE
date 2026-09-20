@@ -57,7 +57,6 @@ function daysFromToday(dateStr: string): number {
   const t = new Date(today());
   return Math.round((d.getTime() - t.getTime()) / 86_400_000);
 }
-function formatDate(dateStr: string | null): string {
 function printDate(): string {
   return new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric',
