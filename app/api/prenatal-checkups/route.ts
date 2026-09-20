@@ -98,11 +98,10 @@ export async function POST(request: NextRequest) {
       status: actualCheckupDate ? 'completed' : 'scheduled',
       recorded_by: auth.user.id,
     };
-    const { data, error } = await adminClient
-      .from('prenatal_checkups')
-      .upsert(existing ? { id: existing.id, ...values } : values, { onConflict: 'id' })
-      .select()
-      .single();
+    const query = existing
+      ? adminClient.from('prenatal_checkups').update(values).eq('id', existing.id)
+      : adminClient.from('prenatal_checkups').insert(values);
+    const { data, error } = await query.select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ data }, { status: 201 });

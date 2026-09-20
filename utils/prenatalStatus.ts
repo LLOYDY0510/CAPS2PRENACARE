@@ -9,6 +9,7 @@ type VisitStatusInput = {
 
 export function getPrenatalVisitStatus({
   scheduledFor,
+  actualCheckupDate,
   recordedStatus,
   today = new Date().toISOString().slice(0, 10),
 }: VisitStatusInput): PrenatalVisitStatus {
