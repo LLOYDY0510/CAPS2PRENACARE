@@ -41,16 +41,20 @@ export default async function ReportsPage() {
   const today = new Date().toISOString().slice(0, 10);
   const { data: scheduleRows } = await supabase
     .from('prenatal_schedules')
-    .select('pregnant_mother_id, visit_date')
+    .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .not('trimester', 'is', null)
     .gte('visit_date', today)
     .order('visit_date', { ascending: true });
 
   // Keep only the earliest upcoming visit per mother
   const nextVisit: Record<string, string> = {};
   scheduleRows?.forEach((s) => {
-    if (!nextVisit[s.pregnant_mother_id]) {
-      nextVisit[s.pregnant_mother_id] = s.visit_date;
-    }
+    const recipients = Array.isArray(s.prenatal_schedule_recipients) ? s.prenatal_schedule_recipients : [];
+    recipients.forEach((recipient) => {
+      if (!nextVisit[recipient.pregnant_mother_id]) {
+        nextVisit[recipient.pregnant_mother_id] = s.visit_date;
+      }
+    });
   });
 
   const rows: ReportRow[] = (records ?? []).map((r) => ({
