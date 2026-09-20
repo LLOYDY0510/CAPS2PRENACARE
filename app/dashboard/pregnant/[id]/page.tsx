@@ -55,7 +55,7 @@ export default async function ViewPregnantMotherPage({
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
+    .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', id);
 
   const [{ data: history }, { data: referrals }] = await Promise.all([

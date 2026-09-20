@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       pregnantMotherId?: unknown;
       trimester?: unknown;
-      checkupDate?: unknown;
+      scheduledCheckupDate?: unknown;
+      actualCheckupDate?: unknown;
       bloodPressure?: unknown;
       weightKg?: unknown;
       notes?: unknown;
@@ -55,8 +56,10 @@ export async function POST(request: NextRequest) {
     if (
       typeof body.pregnantMotherId !== 'string' ||
       !['1st', '2nd', '3rd'].includes(String(body.trimester)) ||
-      typeof body.checkupDate !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(body.checkupDate)
+      typeof body.scheduledCheckupDate !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduledCheckupDate) ||
+      (body.actualCheckupDate != null && body.actualCheckupDate !== '' &&
+        (typeof body.actualCheckupDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.actualCheckupDate)))
     ) {
       return NextResponse.json({ error: 'Invalid prenatal checkup data.' }, { status: 400 });
     }
@@ -71,19 +74,33 @@ export async function POST(request: NextRequest) {
     }
 
     const adminClient = createAdminClient();
+    const actualCheckupDate = typeof body.actualCheckupDate === 'string' && body.actualCheckupDate ? body.actualCheckupDate : null;
+    const scheduledCheckupDate = body.scheduledCheckupDate;
+    const { data: existing } = await adminClient
+      .from('prenatal_checkups')
+      .select('id')
+      .eq('pregnant_mother_id', body.pregnantMotherId)
+      .eq('trimester', body.trimester)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const values = {
+      pregnant_mother_id: body.pregnantMotherId,
+      trimester: body.trimester,
+      scheduled_checkup_date: scheduledCheckupDate,
+      actual_checkup_date: actualCheckupDate,
+      checkup_date: actualCheckupDate ?? scheduledCheckupDate,
+      scheduled_for: scheduledCheckupDate,
+      blood_pressure: typeof body.bloodPressure === 'string' && body.bloodPressure.trim() ? body.bloodPressure.trim() : null,
+      weight_kg: weight,
+      notes: typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null,
+      status: actualCheckupDate ? 'completed' : 'scheduled',
+      recorded_by: auth.user.id,
+    };
     const { data, error } = await adminClient
       .from('prenatal_checkups')
-      .insert({
-        pregnant_mother_id: body.pregnantMotherId,
-        trimester: body.trimester,
-        checkup_date: body.checkupDate,
-        blood_pressure: typeof body.bloodPressure === 'string' && body.bloodPressure.trim() ? body.bloodPressure.trim() : null,
-        weight_kg: weight,
-        notes: typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null,
-        status: 'completed',
-        scheduled_for: body.checkupDate,
-        recorded_by: auth.user.id,
-      })
+      .upsert(existing ? { id: existing.id, ...values } : values, { onConflict: 'id' })
       .select()
       .single();
 
