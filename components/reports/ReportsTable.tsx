@@ -128,9 +128,9 @@ export default function ReportsTable({
 
   /* ── Export rows = filtered (what user sees) ── */
   const exportRows: ReportRow[] = filtered.map((row) => {
-    const exportRow = { ...row } as ReportRowWithId;
-    delete exportRow._id;
-    return exportRow;
+    return Object.fromEntries(
+      Object.entries(row).filter(([key]) => key !== '_id')
+    ) as ReportRow;
   });
 
   /* ── Print ── */
