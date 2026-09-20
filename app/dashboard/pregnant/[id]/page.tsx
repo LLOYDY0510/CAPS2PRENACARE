@@ -70,16 +70,24 @@ export default async function ViewPregnantMotherPage({
   });
 
   const [{ data: history }, { data: referrals }] = showCheckups
-    ? [{ data: [] }, { data: [] }]
-    : await Promise.all([
+    ? await Promise.all([
         supabase.from('maternal_health_history').select('id, condition, details, diagnosed_date, resolved_date, created_at').eq('pregnant_mother_id', id).order('created_at', { ascending: false }),
         supabase.from('maternal_referrals').select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').eq('pregnant_mother_id', id).order('updated_at', { ascending: false }),
-      ]);
+      ])
+    : [{ data: [] }, { data: [] }];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {showCheckups ? (
-        <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
+        <>
+          <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
+          <MaternalCarePanel
+            motherId={id}
+            canEdit={canEdit}
+            initialHistory={history ?? []}
+            initialReferrals={referrals ?? []}
+          />
+        </>
       ) : (
         <>
           <div>
@@ -102,7 +110,6 @@ export default async function ViewPregnantMotherPage({
               <InfoRow label="Risk Level" value={record.risk_level === 'high' ? 'High Risk' : 'Low Risk'} />
             </div>
           </div>
-          <MaternalCarePanel motherId={id} canEdit={canEdit} initialHistory={history ?? []} initialReferrals={referrals ?? []} />
         </>
       )}
     </div>
