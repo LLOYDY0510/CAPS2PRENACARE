@@ -9,10 +9,14 @@ export const dynamic = 'force-dynamic';
  
 export default async function ViewPregnantMotherPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { id } = await params;
+  const { view } = await searchParams;
+  const showCheckups = view === 'checkups';
   const supabase = await createClient();
  
   const {
@@ -37,6 +41,10 @@ export default async function ViewPregnantMotherPage({
   if (!record) {
     notFound();
   }
+
+  const fullName = [record.first_name, record.middle_name, record.last_name]
+    .filter(Boolean)
+    .join(' ');
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
@@ -64,13 +72,43 @@ export default async function ViewPregnantMotherPage({
  
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
-      <MaternalCarePanel
-        motherId={id}
-        canEdit={canEdit}
-        initialHistory={history ?? []}
-        initialReferrals={referrals ?? []}
-      />
+      {showCheckups ? (
+        <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
+      ) : (
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold mb-1">
+              {record.serial_no ?? 'Record'} - {fullName}
+            </h1>
+            <p className="text-muted">Pregnant mother details.</p>
+          </div>
+          <div className="card p-6">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <InfoRow label="Date Registered" value={record.date_registered} />
+              <InfoRow label="Address" value={record.address} />
+              <InfoRow label="Zone" value={record.purok ? `Zone ${record.purok}` : null} />
+              <InfoRow label="Age" value={record.age} />
+              <InfoRow label="Contact Number" value={record.contact_number} />
+              <InfoRow label="LMP" value={record.lmp} />
+              <InfoRow label="EDC" value={record.edd} />
+              <InfoRow label="Gravida-Para" value={record.gravida_para} />
+              <InfoRow label="Blood Pressure" value={record.blood_pressure} />
+              <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
+              <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
+              <InfoRow label="Risk Level" value={record.risk_level === 'high' ? 'High Risk' : 'Low Risk'} />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <div>
+      <p className="text-muted-2 text-xs mb-0.5">{label}</p>
+      <p className="text-gray-800">{value ?? '—'}</p>
     </div>
   );
 }
