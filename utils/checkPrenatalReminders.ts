@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createMaternalNotification } from '@/utils/notifications';
 import { createRoleNotification } from '@/utils/notifications';
+import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
  
 function tomorrowDateString(): string {
   const d = new Date();
@@ -13,14 +14,13 @@ export async function checkAndSendPrenatalReminders() {
     const supabase = await createClient();
     const tomorrow = tomorrowDateString();
  
-    const { data: schedule } = await supabase
+    const { data: schedules } = await supabase
       .from('prenatal_schedules')
       .select('id, visit_date, reminder_sent')
       .eq('visit_date', tomorrow)
-      .eq('reminder_sent', false)
-      .maybeSingle();
+      .eq('reminder_sent', false);
  
-    if (schedule) {
+    for (const schedule of schedules ?? []) {
       const { data: recipientLinks } = await supabase
         .from('prenatal_schedule_recipients')
         .select('pregnant_mother_id')
@@ -142,9 +142,26 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
     const { data: links } = await supabase.from('prenatal_schedule_recipients').select('pregnant_mother_id').eq('schedule_id', schedule.id);
     const motherIds = (links ?? []).map((link) => link.pregnant_mother_id);
     if (motherIds.length) {
-      await supabase.from('prenatal_follow_ups').upsert(motherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })), { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true });
+      const { data: completedCheckups } = await supabase
+        .from('prenatal_checkups')
+        .select('pregnant_mother_id, checkup_date, scheduled_for, status')
+        .in('pregnant_mother_id', motherIds)
+        .eq('status', 'completed');
+      const completedMotherIds = new Set(
+        (completedCheckups ?? [])
+          .filter((checkup) => (checkup.scheduled_for ?? checkup.checkup_date) === schedule.visit_date)
+          .filter((checkup) => getPrenatalVisitStatus({ scheduledFor: checkup.scheduled_for ?? checkup.checkup_date, recordedStatus: checkup.status }) === 'completed')
+          .map((checkup) => checkup.pregnant_mother_id)
+      );
+      const missedMotherIds = motherIds.filter((id) => !completedMotherIds.has(id));
+      if (!missedMotherIds.length) {
+        await supabase.from('prenatal_schedules').update({ status: 'completed', missed_follow_up_sent: true }).eq('id', schedule.id);
+        continue;
+      }
 
-      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number, purok').in('id', motherIds).not('contact_number', 'is', null);
+      await supabase.from('prenatal_follow_ups').upsert(missedMotherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })), { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true });
+
+      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number, purok').in('id', missedMotherIds).not('contact_number', 'is', null);
       const recipients = (mothers ?? []).filter((mother) => mother.contact_number);
       const apiKey = process.env.SEMAPHORE_API_KEY;
       if (apiKey && recipients.length) {
@@ -171,7 +188,7 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
         title: 'Missed prenatal follow-up needed',
         message: `Missed-visit follow-up records were created for the ${schedule.visit_date} schedule.`,
       });
-      await Promise.all(motherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
+      await Promise.all(missedMotherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
         pregnantMotherId,
         eventKey: `missed-visit:${schedule.id}:${pregnantMotherId}`,
         category: 'missed_visit',

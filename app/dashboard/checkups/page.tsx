@@ -1,5 +1,6 @@
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
 import { requireRoles } from '@/utils/auth/roles';
+import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,17 +14,20 @@ export default async function PrenatalCheckupsPage() {
   if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
   const { data: records } = await recordsQuery;
 
-  let checkupQuery = supabase
+  const checkupQuery = supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id');
-  if (role === 'bhw_purok' && profile?.purok) {
-    checkupQuery = checkupQuery.eq('pregnant_mothers.purok', profile.purok);
-  }
-  const { data: checkupCounts } = await checkupQuery;
+    .select('pregnant_mother_id, checkup_date, scheduled_for, status');
+  const { data: checkups } = await checkupQuery;
 
   const countsByMother: Record<string, number> = {};
-  checkupCounts?.forEach((c) => {
-    countsByMother[c.pregnant_mother_id] = (countsByMother[c.pregnant_mother_id] || 0) + 1;
+  checkups?.forEach((checkup) => {
+    const status = getPrenatalVisitStatus({
+      scheduledFor: checkup.scheduled_for ?? checkup.checkup_date,
+      recordedStatus: checkup.status,
+    });
+    if (status === 'completed') {
+      countsByMother[checkup.pregnant_mother_id] = (countsByMother[checkup.pregnant_mother_id] || 0) + 1;
+    }
   });
 
   const tableRecords = (records ?? []).map((r) => ({

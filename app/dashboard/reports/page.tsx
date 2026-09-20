@@ -1,6 +1,7 @@
 import ReportsTable from '@/components/reports/ReportsTable';
 import { type ReportRow } from '@/components/reports/ReportExport';
 import { requireRoles } from '@/utils/auth/roles';
+import { getPrenatalVisitStatus, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +21,19 @@ export default async function ReportsPage() {
   // Checkup counts per mother
   const { data: checkupRows } = await supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id');
+    .select('pregnant_mother_id, checkup_date, scheduled_for, status');
 
   const checkupCounts: Record<string, number> = {};
+  const missedCounts: Record<string, number> = {};
+  const upcomingCounts: Record<string, number> = {};
   checkupRows?.forEach((c) => {
-    checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
+    const status = getPrenatalVisitStatus({
+      scheduledFor: c.scheduled_for ?? c.checkup_date,
+      recordedStatus: c.status,
+    });
+    if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
+    if (status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
+    if (status === 'upcoming') upcomingCounts[c.pregnant_mother_id] = (upcomingCounts[c.pregnant_mother_id] || 0) + 1;
   });
 
   // Next prenatal schedule per mother
@@ -61,11 +70,17 @@ export default async function ReportsPage() {
   }));
 
   // Extra metadata passed to the client table (not part of ReportRow export type)
-  const meta: Record<string, { checkupCount: number; nextVisit: string | null }> = {};
+  const meta: Record<string, { checkupCount: number; nextVisit: string | null; missedVisits: number; upcomingVisits: number; latestStatus: PrenatalVisitStatus | null }> = {};
   (records ?? []).forEach((r) => {
+    const latestCheckup = (checkupRows ?? [])
+      .filter((checkup) => checkup.pregnant_mother_id === r.id)
+      .sort((a, b) => (b.scheduled_for ?? b.checkup_date).localeCompare(a.scheduled_for ?? a.checkup_date))[0];
     meta[r.id] = {
       checkupCount: checkupCounts[r.id] ?? 0,
       nextVisit:    nextVisit[r.id] ?? null,
+      missedVisits: missedCounts[r.id] ?? 0,
+      upcomingVisits: upcomingCounts[r.id] ?? 0,
+      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: latestCheckup.scheduled_for ?? latestCheckup.checkup_date, recordedStatus: latestCheckup.status }) : null,
     };
   });
 

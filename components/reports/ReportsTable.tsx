@@ -10,6 +10,9 @@ export type ReportRowWithId = ReportRow & { _id: string };
 export type RowMeta = {
   checkupCount: number;
   nextVisit: string | null;
+  missedVisits: number;
+  upcomingVisits: number;
+  latestStatus: 'upcoming' | 'missed' | 'completed' | null;
 };
 
 /* ─── Report type definitions ─── */
@@ -90,7 +93,7 @@ export default function ReportsTable({
         case 'low_risk':
           return r.risk_level === 'low';
         case 'missed_checkups':
-          return (meta[r._id]?.checkupCount ?? 0) === 0;
+          return (meta[r._id]?.missedVisits ?? 0) > 0;
         case 'upcoming_edc':
           if (!r.edd) return false;
           const days = daysFromToday(r.edd);
@@ -352,6 +355,9 @@ export default function ReportsTable({
                     }}>
                       {m?.checkupCount ?? 0}
                     </span>
+                  </td>
+                  <td>
+                    {m?.latestStatus === 'missed' ? <span className="badge-high">Missed</span> : m?.latestStatus === 'completed' ? <span className="badge-low">Completed</span> : m?.latestStatus === 'upcoming' ? <span className="badge-neutral">Upcoming</span> : '—'}
                   </td>
                   <td>
                     {r.risk_level === 'high'
