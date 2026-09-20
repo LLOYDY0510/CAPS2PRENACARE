@@ -1,19 +1,22 @@
 import { createClient } from '@/utils/supabase/server';
 import ReportsTable from '@/components/reports/ReportsTable';
 import { type ReportRow } from '@/components/reports/ReportExport';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
-  const supabase = await createClient();
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
 
   // Main records
-  const { data: records, error } = await supabase
+  let recordsQuery = supabase
     .from('pregnant_mothers')
     .select(
       'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, contact_number, lmp, edd, gravida_para, blood_pressure, height_cm, weight_kg, risk_level'
     )
     .order('serial_no', { ascending: true });
+  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records, error } = await recordsQuery;
 
   // Checkup counts per mother
   const { data: checkupRows } = await supabase

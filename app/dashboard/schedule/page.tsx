@@ -1,11 +1,10 @@
-import { createClient } from '@/utils/supabase/server';
 import ScheduleSetter from '@/components/schedule/ScheduleSetter';
 import { requireRoles } from '@/utils/auth/roles';
  
 export const dynamic = 'force-dynamic';
  
 export default async function PrenatalSchedulePage() {
-  const { supabase } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
  
   const { data: currentSchedule } = await supabase
     .from('prenatal_schedules')
@@ -14,10 +13,12 @@ export default async function PrenatalSchedulePage() {
     .limit(1)
     .maybeSingle();
  
-  const { data: mothers } = await supabase
+  let mothersQuery = supabase
     .from('pregnant_mothers')
     .select('id, full_name, purok, contact_number')
     .order('full_name', { ascending: true });
+  if (role === 'bhw_purok' && profile?.purok) mothersQuery = mothersQuery.eq('purok', profile.purok);
+  const { data: mothers } = await mothersQuery;
  
   return (
     <div>

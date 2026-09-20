@@ -13,6 +13,7 @@ export type PregnantRecord = {
   middle_name: string | null;
   last_name: string;
   address: string | null;
+  purok: string | null;
   age: number | null;
   lmp: string | null;
   gravida_para: string | null;
@@ -36,7 +37,7 @@ export default function PregnantRecordsTable({
 
   // Derive distinct zones from records
   const zones = useMemo(() => {
-    const set = new Set(records.map((r) => r.address).filter(Boolean) as string[]);
+    const set = new Set(records.map((r) => r.purok).filter(Boolean) as string[]);
     return Array.from(set).sort();
   }, [records]);
 
@@ -46,7 +47,7 @@ export default function PregnantRecordsTable({
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
       if (q && !name.includes(q) && !serial.includes(q)) return false;
-      if (zone !== 'all' && r.address !== zone) return false;
+      if (zone !== 'all' && r.purok !== zone) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
       return true;
     });

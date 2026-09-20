@@ -1,20 +1,25 @@
-import { createClient } from '@/utils/supabase/server';
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
 import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PrenatalCheckupsPage() {
-  const { supabase } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
 
-  const { data: records } = await supabase
+  let recordsQuery = supabase
     .from('pregnant_mothers')
     .select('id, serial_no, first_name, middle_name, last_name, purok, edd')
     .order('serial_no', { ascending: true });
+  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records } = await recordsQuery;
 
-  const { data: checkupCounts } = await supabase
+  let checkupQuery = supabase
     .from('prenatal_checkups')
     .select('pregnant_mother_id');
+  if (role === 'bhw_purok' && profile?.purok) {
+    checkupQuery = checkupQuery.eq('pregnant_mothers.purok', profile.purok);
+  }
+  const { data: checkupCounts } = await checkupQuery;
 
   const countsByMother: Record<string, number> = {};
   checkupCounts?.forEach((c) => {
