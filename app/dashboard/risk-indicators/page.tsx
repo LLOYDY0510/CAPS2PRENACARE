@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import IndicatorManager from '@/components/tips/IndicatorManager';
 import { requireRoles } from '@/utils/auth/roles';
 

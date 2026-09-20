@@ -131,7 +131,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
     ]);
 
     // Redirect back to the records list after saving
-    window.location.href = '/dashboard/pregnant';
+    router.push('/dashboard/pregnant');
   }
 
   return (

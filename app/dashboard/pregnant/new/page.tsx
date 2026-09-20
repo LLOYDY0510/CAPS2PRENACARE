@@ -224,7 +224,7 @@ export default function RegisterPregnantMotherPage() {
         ]);
       }
 
-      window.location.href = '/dashboard/pregnant';
+      router.push('/dashboard/pregnant');
     } catch (err) {
       setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 
 type Profile = {
   id: string;
@@ -29,7 +28,6 @@ export default function UserRoleEditor({
   profile: Profile;
   availableMothers: MotherOption[];
 }) {
-  const supabase = createClient();
   const router   = useRouter();
 
   const [role, setRole]         = useState(profile.role ?? 'pending');

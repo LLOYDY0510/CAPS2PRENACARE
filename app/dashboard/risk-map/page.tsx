@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import RiskMapClient from '@/components/maps/RiskMapClient';
 import { requireRoles } from '@/utils/auth/roles';
 

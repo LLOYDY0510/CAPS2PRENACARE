@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import MonthlyTipsManager from '@/components/tips/MonthlyTipsManager';
 import { requireRoles } from '@/utils/auth/roles';
 

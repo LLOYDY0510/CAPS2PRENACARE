@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import SmsLogTable, { type SmsLogRow } from '@/components/schedule/SmsLogTable';
 import { requireRoles } from '@/utils/auth/roles';
 

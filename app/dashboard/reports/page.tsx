@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import ReportsTable from '@/components/reports/ReportsTable';
 import { type ReportRow } from '@/components/reports/ReportExport';
 import { requireRoles } from '@/utils/auth/roles';

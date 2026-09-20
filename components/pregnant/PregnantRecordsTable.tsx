@@ -32,14 +32,7 @@ export default function PregnantRecordsTable({
   canEdit: boolean;
 }) {
   const [search, setSearch]   = useState('');
-  const [zone, setZone]       = useState('all');
   const [risk, setRisk]       = useState('all');
-
-  // Derive distinct zones from records
-  const zones = useMemo(() => {
-    const set = new Set(records.map((r) => r.purok).filter(Boolean) as string[]);
-    return Array.from(set).sort();
-  }, [records]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -47,13 +40,12 @@ export default function PregnantRecordsTable({
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
       if (q && !name.includes(q) && !serial.includes(q)) return false;
-      if (zone !== 'all' && r.purok !== zone) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
       return true;
     });
-  }, [records, search, zone, risk]);
+  }, [records, search, risk]);
 
-  const hasFilters = search || zone !== 'all' || risk !== 'all';
+  const hasFilters = search || risk !== 'all';
 
   return (
     <div>
@@ -82,7 +74,7 @@ export default function PregnantRecordsTable({
 
         {hasFilters && (
           <button
-            onClick={() => { setSearch(''); setZone('all'); setRisk('all'); }}
+            onClick={() => { setSearch(''); setRisk('all'); }}
             className="btn-ghost"
             style={{ fontSize: '0.75rem' }}
           >
