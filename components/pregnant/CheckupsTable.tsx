@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
+import { prenatalStatusLabel, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 export type CheckupRecord = {
   id: string;
@@ -13,6 +14,7 @@ export type CheckupRecord = {
   purok: string | null;
   edd: string | null;
   checkupCount: number;
+  trimesterStatuses: Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>;
 };
 
 export default function CheckupsTable({ records }: { records: CheckupRecord[] }) {
@@ -53,13 +55,16 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
               <th>Purok</th>
               <th>EDC</th>
               <th>Checkups Recorded</th>
+              <th>1st</th>
+              <th>2nd</th>
+              <th>3rd</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
                   {search ? 'No records match your search.' : 'No pregnant mothers registered yet.'}
                 </td>
               </tr>
@@ -82,9 +87,21 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
                     {r.checkupCount}
                   </span>
                 </td>
+                {(['1st', '2nd', '3rd'] as const).map((trimester) => {
+                  const status = r.trimesterStatuses[trimester];
+                  return (
+                    <td key={trimester}>
+                      {status ? (
+                        <span className={status === 'completed' ? 'badge-low' : status === 'missed' ? 'badge-high' : 'badge-neutral'}>
+                          {prenatalStatusLabel(status)}
+                        </span>
+                      ) : '—'}
+                    </td>
+                  );
+                })}
                 <td style={{ textAlign: 'right' }}>
                   <Link
-                    href={`/dashboard/pregnant/${r.id}`}
+                    href={`/dashboard/pregnant/${r.id}?view=checkups`}
                     className="btn-secondary"
                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                   >

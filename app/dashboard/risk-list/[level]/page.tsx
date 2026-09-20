@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import RiskListTable from '@/components/pregnant/RiskListTable';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +16,14 @@ export default async function RiskListPage({
     notFound();
   }
 
-  const supabase = await createClient();
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
 
-  const { data: records } = await supabase
+  let recordsQuery = supabase
     .from('pregnant_mothers')
     .select('id, serial_no, full_name, purok, age, contact_number, risk_level')
     .eq('risk_level', level);
+  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records } = await recordsQuery;
 
   // Sort by zone number, unassigned last
   const sorted = (records ?? []).slice().sort((a, b) => {

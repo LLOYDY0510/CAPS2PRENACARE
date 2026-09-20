@@ -1,16 +1,18 @@
-import { createClient } from '@/utils/supabase/server';
 import RiskMapClient from '@/components/maps/RiskMapClient';
+import { requireRoles } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RiskMapPage() {
-  const supabase = await createClient();
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
 
-  const { data: records } = await supabase
+  let recordsQuery = supabase
     .from('pregnant_mothers')
         .select('id, serial_no, full_name, purok, age, address, contact_number, lmp, edd, gravida_para, risk_level, latitude, longitude')
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
+  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records } = await recordsQuery;
 
   return (
     <div>

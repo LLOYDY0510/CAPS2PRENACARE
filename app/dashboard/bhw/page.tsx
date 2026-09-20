@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import BhwTable from '@/components/users/BhwTable';
 import { requireRoles } from '@/utils/auth/roles';
 

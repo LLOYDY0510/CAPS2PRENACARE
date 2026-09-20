@@ -10,6 +10,9 @@ export type ReportRowWithId = ReportRow & { _id: string };
 export type RowMeta = {
   checkupCount: number;
   nextVisit: string | null;
+  missedVisits: number;
+  upcomingVisits: number;
+  latestStatus: 'upcoming' | 'missed' | 'completed' | null;
 };
 
 /* ─── Report type definitions ─── */
@@ -57,11 +60,6 @@ function daysFromToday(dateStr: string): number {
   const t = new Date(today());
   return Math.round((d.getTime() - t.getTime()) / 86_400_000);
 }
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-}
 function printDate(): string {
   return new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -88,7 +86,6 @@ export default function ReportsTable({
 
   /* ── Primary filter by report type ── */
   const byType = useMemo(() => {
-    const t = today();
     return rowsWithId.filter((r) => {
       switch (reportType) {
         case 'high_risk':
@@ -96,7 +93,7 @@ export default function ReportsTable({
         case 'low_risk':
           return r.risk_level === 'low';
         case 'missed_checkups':
-          return (meta[r._id]?.checkupCount ?? 0) === 0;
+          return (meta[r._id]?.missedVisits ?? 0) > 0;
         case 'upcoming_edc':
           if (!r.edd) return false;
           const days = daysFromToday(r.edd);
@@ -133,7 +130,11 @@ export default function ReportsTable({
   const hasSecondary    = search || zoneFilter !== 'all';
 
   /* ── Export rows = filtered (what user sees) ── */
-  const exportRows: ReportRow[] = filtered.map(({ _id, ...rest }) => rest);
+  const exportRows: ReportRow[] = filtered.map((row) => {
+    return Object.fromEntries(
+      Object.entries(row).filter(([key]) => key !== '_id')
+    ) as ReportRow;
+  });
 
   /* ── Print ── */
   function handlePrint() {
@@ -304,6 +305,7 @@ export default function ReportsTable({
               <th>G-P</th>
               <th>BP</th>
               <th>Checkups</th>
+              <th>Latest Visit</th>
               <th>Risk</th>
               {reportType === 'upcoming_edc' && <th>Days to EDC</th>}
             </tr>
@@ -312,7 +314,7 @@ export default function ReportsTable({
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={reportType === 'upcoming_edc' ? 12 : 11}
+                  colSpan={reportType === 'upcoming_edc' ? 13 : 12}
                   style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--muted-2)' }}
                 >
                   {hasSecondary
@@ -354,6 +356,9 @@ export default function ReportsTable({
                     }}>
                       {m?.checkupCount ?? 0}
                     </span>
+                  </td>
+                  <td>
+                    {m?.latestStatus === 'missed' ? <span className="badge-high">Missed</span> : m?.latestStatus === 'completed' ? <span className="badge-low">Completed</span> : m?.latestStatus === 'upcoming' ? <span className="badge-neutral">Upcoming</span> : '—'}
                   </td>
                   <td>
                     {r.risk_level === 'high'

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export default async function MyRecordsPage() {
 
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes')
+    .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
 
@@ -94,9 +95,13 @@ export default async function MyRecordsPage() {
             {checkups.map((c) => (
               <div key={c.id} className="border rounded-lg px-3 py-2">
                 <p className="text-sm font-medium">
-                  {c.checkup_date} — {c.trimester} Trimester
+                  {c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date} — {c.trimester} Trimester
                 </p>
                 <p className="text-xs text-muted mt-0.5">
+                  Status: {prenatalStatusLabel(getPrenatalVisitStatus({ scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status }))}
+                  {' · '}
+                  Actual: {c.actual_checkup_date ?? '—'}
+                  {' · '}
                   {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                   {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
                 </p>

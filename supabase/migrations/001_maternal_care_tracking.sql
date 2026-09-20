@@ -83,6 +83,17 @@ create unique index if not exists maternal_notifications_event_key_idx
 
 alter table public.maternal_notifications enable row level security;
 
+alter table public.maternal_notifications
+  alter column pregnant_mother_id drop not null,
+  add column if not exists recipient_user_id uuid references auth.users(id) on delete cascade,
+  add column if not exists recipient_role text,
+  add column if not exists recipient_purok text;
+
+create index if not exists maternal_notifications_recipient_user_idx
+  on public.maternal_notifications(recipient_user_id, created_at desc);
+create index if not exists maternal_notifications_recipient_role_idx
+  on public.maternal_notifications(recipient_role, recipient_purok, created_at desc);
+
 create policy "mothers can read their notifications"
   on public.maternal_notifications for select to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id));
@@ -96,11 +107,27 @@ create policy "mothers can mark notifications read"
   on public.maternal_notifications for update to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.pregnant_mother_id = maternal_notifications.pregnant_mother_id));
+create policy "users can mark their notifications read"
+  on public.maternal_notifications for update to authenticated
+  using (recipient_user_id = auth.uid())
+  with check (recipient_user_id = auth.uid());
+create policy "roles can mark their notifications read"
+  on public.maternal_notifications for update to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and (p.role = maternal_notifications.recipient_role or (p.role = 'bhw_purok' and p.purok = maternal_notifications.recipient_purok))))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and (p.role = maternal_notifications.recipient_role or (p.role = 'bhw_purok' and p.purok = maternal_notifications.recipient_purok))));
 
 alter table public.sms_logs
   add column if not exists delivery_status text not null default 'unknown',
   add column if not exists provider_message_id text,
-  add column if not exists delivered_at timestamptz;
+  add column if not exists delivered_at timestamptz,
+  add column if not exists message_type text not null default 'general',
+  add column if not exists recipient_mother_ids uuid[];
+
+alter table public.sms_logs
+  drop constraint if exists sms_logs_message_type_check;
+alter table public.sms_logs
+  add constraint sms_logs_message_type_check
+  check (message_type in ('general', 'prenatal_reminder', 'missed_visit_follow_up', 'risk_alert', 'health_tip', 'nutrition_tip', 'care_message'));
 
 alter table public.sms_logs
   drop constraint if exists sms_logs_delivery_status_check;

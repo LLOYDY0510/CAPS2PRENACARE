@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/layout/LogoutButton';
+import NotificationBell, { type NotificationBellItem } from '@/components/layout/NotificationBell';
 
 type MenuItem = { label: string; href: string };
 
@@ -20,12 +21,14 @@ export default function Sidebar({
   menuItems,
   fullName,
   email,
+  notifications,
   children,
 }: {
   role: string;
   menuItems: MenuItem[];
   fullName?: string | null;
   email?: string | null;
+  notifications: NotificationBellItem[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
@@ -49,6 +52,7 @@ export default function Sidebar({
         </div>
 
         <div className="flex items-center gap-4">
+          <NotificationBell initialNotifications={notifications} />
           <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-sm font-semibold">
             {(fullName ?? email ?? '?').charAt(0).toUpperCase()}
           </div>

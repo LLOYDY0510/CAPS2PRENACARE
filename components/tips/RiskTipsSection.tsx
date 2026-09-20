@@ -37,11 +37,33 @@ export default function RiskTipsSection({
   const [selectedIndicator, setSelectedIndicator] = useState<string>('all');
   const [selectedUrgency, setSelectedUrgency]   = useState<string>('all');
   const [copiedId, setCopiedId]                 = useState<string | null>(null);
+  const [sendingId, setSendingId]               = useState<string | null>(null);
+  const [sentId, setSentId]                     = useState<string | null>(null);
 
   function handleCopy(text: string, id: string) {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function handleSend(mother: AtRiskMother, item: MatchedIndicatorDetail) {
+    const message = `${item.tipAdvice}\n\nRecommended action: ${item.clinicalAction}`;
+    setSendingId(`${mother.id}-${item.id}`);
+    const response = await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'risk_alert',
+        pregnantMotherId: mother.id,
+        title: item.tipTitle,
+        message,
+      }),
+    });
+    setSendingId(null);
+    if (response.ok) {
+      setSentId(`${mother.id}-${item.id}`);
+      setTimeout(() => setSentId(null), 2500);
+    }
   }
 
   const filteredMothers = mothers.filter((m) => {
@@ -173,6 +195,9 @@ export default function RiskTipsSection({
                 mother={mother}
                 copiedId={copiedId}
                 onCopy={handleCopy}
+                sendingId={sendingId}
+                sentId={sentId}
+                onSend={handleSend}
               />
             ))}
           </div>
@@ -189,10 +214,16 @@ function MotherCard({
   mother,
   copiedId,
   onCopy,
+  sendingId,
+  sentId,
+  onSend,
 }: {
   mother: AtRiskMother;
   copiedId: string | null;
   onCopy: (text: string, id: string) => void;
+  sendingId: string | null;
+  sentId: string | null;
+  onSend: (mother: AtRiskMother, item: MatchedIndicatorDetail) => void;
 }) {
   return (
     <div
@@ -282,6 +313,9 @@ function MotherCard({
               item={item}
               isCopied={isCopied}
               onCopy={() => onCopy(copyText, copyKey)}
+              isSending={sendingId === copyKey}
+              isSent={sentId === copyKey}
+              onSend={() => onSend(mother, item)}
             />
           );
         })}
@@ -297,10 +331,16 @@ function TipCard({
   item,
   isCopied,
   onCopy,
+  isSending,
+  isSent,
+  onSend,
 }: {
   item: MatchedIndicatorDetail;
   isCopied: boolean;
   onCopy: () => void;
+  isSending: boolean;
+  isSent: boolean;
+  onSend: () => void;
 }) {
   const isHigh = item.urgency === 'high';
 
@@ -357,6 +397,16 @@ function TipCard({
             title="Copy advisory text"
           >
             {isCopied ? 'Copied' : 'Copy'}
+          </button>
+          <button
+            type="button"
+            onClick={onSend}
+            className="btn-secondary"
+            style={{ padding: '0.1875rem 0.5rem', fontSize: '0.6875rem' }}
+            disabled={isSending}
+            title="Send this health advice to the pregnant mother"
+          >
+            {isSending ? 'Sending…' : isSent ? 'Sent' : 'Send'}
           </button>
         </div>
       </div>

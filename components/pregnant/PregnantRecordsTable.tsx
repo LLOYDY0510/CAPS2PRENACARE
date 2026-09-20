@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
+import { getRecordAge } from '@/utils/age';
 
 export type PregnantRecord = {
   id: string;
@@ -13,7 +14,9 @@ export type PregnantRecord = {
   middle_name: string | null;
   last_name: string;
   address: string | null;
+  purok: string | null;
   age: number | null;
+  date_of_birth: string | null;
   lmp: string | null;
   gravida_para: string | null;
   edd: string | null;
@@ -21,6 +24,8 @@ export type PregnantRecord = {
   height_cm: number | null;
   weight_kg: number | null;
   risk_level: string | null;
+  checkup_recorded: boolean;
+  checkupCount: number;
 };
 
 export default function PregnantRecordsTable({
@@ -31,28 +36,26 @@ export default function PregnantRecordsTable({
   canEdit: boolean;
 }) {
   const [search, setSearch]   = useState('');
-  const [zone, setZone]       = useState('all');
   const [risk, setRisk]       = useState('all');
-
-  // Derive distinct zones from records
-  const zones = useMemo(() => {
-    const set = new Set(records.map((r) => r.address).filter(Boolean) as string[]);
-    return Array.from(set).sort();
-  }, [records]);
+  const [ageFilter, setAgeFilter] = useState('all');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return records.filter((r) => {
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
+      const age = getRecordAge(r.age, r.date_of_birth);
       if (q && !name.includes(q) && !serial.includes(q)) return false;
-      if (zone !== 'all' && r.address !== zone) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
+      if (ageFilter === 'under-18' && (age == null || age >= 18)) return false;
+      if (ageFilter === '18-24' && (age == null || age < 18 || age > 24)) return false;
+      if (ageFilter === '25-34' && (age == null || age < 25 || age > 34)) return false;
+      if (ageFilter === '35-plus' && (age == null || age < 35)) return false;
       return true;
     });
-  }, [records, search, zone, risk]);
+  }, [records, search, risk, ageFilter]);
 
-  const hasFilters = search || zone !== 'all' || risk !== 'all';
+  const hasFilters = search || risk !== 'all' || ageFilter !== 'all';
 
   return (
     <div>
@@ -79,9 +82,23 @@ export default function PregnantRecordsTable({
           <option value="low">Low Risk</option>
         </select>
 
+        <select
+          value={ageFilter}
+          onChange={(e) => setAgeFilter(e.target.value)}
+          className="form-select"
+          style={{ width: 'auto', minWidth: '130px' }}
+          aria-label="Filter by age"
+        >
+          <option value="all">All Ages</option>
+          <option value="under-18">Under 18</option>
+          <option value="18-24">18-24</option>
+          <option value="25-34">25-34</option>
+          <option value="35-plus">35 and older</option>
+        </select>
+
         {hasFilters && (
           <button
-            onClick={() => { setSearch(''); setZone('all'); setRisk('all'); }}
+            onClick={() => { setSearch(''); setRisk('all'); setAgeFilter('all'); }}
             className="btn-ghost"
             style={{ fontSize: '0.75rem' }}
           >
@@ -114,6 +131,7 @@ export default function PregnantRecordsTable({
               <th>LMP</th>
               <th>G-P</th>
               <th>EDC</th>
+              <th>Checkups Recorded</th>
               <th>BP</th>
               <th>Height (cm)</th>
               <th>Weight (kg)</th>
@@ -125,7 +143,7 @@ export default function PregnantRecordsTable({
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}
                 >
                   {hasFilters ? 'No records match the current filters.' : 'No pregnant mothers registered yet.'}
@@ -140,10 +158,15 @@ export default function PregnantRecordsTable({
                   {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                 </td>
                 <td>{r.address ?? '—'}</td>
-                <td>{r.age ?? '—'}</td>
+                <td>{getRecordAge(r.age, r.date_of_birth) ?? '—'}</td>
                 <td>{r.lmp ?? '—'}</td>
                 <td>{r.gravida_para ?? '—'}</td>
                 <td>{r.edd ?? '—'}</td>
+                <td>
+                  <span style={{ fontWeight: r.checkupCount > 0 ? 600 : 400, color: r.checkupCount > 0 ? 'var(--brand)' : 'var(--muted-2)' }}>
+                    {r.checkupCount}
+                  </span>
+                </td>
                 <td>{r.blood_pressure ?? '—'}</td>
                 <td>{r.height_cm ?? '—'}</td>
                 <td>{r.weight_kg ?? '—'}</td>
@@ -154,7 +177,7 @@ export default function PregnantRecordsTable({
                 </td>
                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <Link
-                    href={`/dashboard/pregnant/${r.id}`}
+                    href={`/dashboard/pregnant/${r.id}?view=details`}
                     className="btn-secondary"
                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                   >

@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
  
 type Schedule = {
   id: string;
   visit_date: string;
   reminder_sent: boolean;
+  status?: string | null;
+  trimester?: '1st' | '2nd' | '3rd' | null;
 } | null;
  
 type Mother = {
@@ -28,6 +31,7 @@ export default function ScheduleSetter({
   const router = useRouter();
  
   const [visitDate, setVisitDate] = useState('');
+  const [trimester, setTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +78,7 @@ export default function ScheduleSetter({
       .from('prenatal_schedules')
       .insert({
         visit_date: visitDate,
+          trimester,
         set_by: user?.id ?? null,
       })
       .select()
@@ -106,6 +111,17 @@ export default function ScheduleSetter({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'appointment', scheduleId: schedule.id }),
     });
+    await fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'Prenatal schedule updated', message: `A prenatal schedule was set for ${visitDate} for ${selected.size} pregnant mother(s).` }),
+    });
+    const puroks = Array.from(new Set(mothers.filter((mother) => selected.has(mother.id)).map((mother) => mother.purok).filter(Boolean)));
+    await Promise.all(puroks.map((purok) => fetch('/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: purok, title: 'Prenatal schedule updated', message: `A prenatal schedule was set for ${visitDate} for mothers in your assigned purok.` }),
+    })));
  
     setVisitDate('');
     setSelected(new Set());
@@ -120,7 +136,12 @@ export default function ScheduleSetter({
         {currentSchedule ? (
           <div>
             <p className="text-2xl font-semibold text-ink">{currentSchedule.visit_date}</p>
+            <p className="text-sm text-muted">{currentSchedule.trimester ?? 'General'} trimester schedule</p>
             <p className="text-sm text-muted mt-2">
+              <span className={getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }) === 'missed' ? 'text-red-600' : getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }) === 'completed' ? 'text-green-600' : 'text-amber-600'}>
+                Visit status: {prenatalStatusLabel(getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }))}
+              </span>
+              <br />
               {currentSchedule.reminder_sent ? (
                 <span className="text-green-600">✅ Reminder already sent</span>
               ) : (
@@ -146,6 +167,17 @@ export default function ScheduleSetter({
             before this date — no further action needed.
           </p>
           <div className="max-w-xs">
+            <label className="block text-sm font-medium mb-1" htmlFor="schedule-trimester">Trimester</label>
+            <select
+              id="schedule-trimester"
+              value={trimester}
+              onChange={(e) => setTrimester(e.target.value as '1st' | '2nd' | '3rd')}
+              className="w-full border rounded-lg px-3 py-2 mb-3"
+            >
+              <option value="1st">1st Trimester</option>
+              <option value="2nd">2nd Trimester</option>
+              <option value="3rd">3rd Trimester</option>
+            </select>
             <label className="block text-sm font-medium mb-1">Visit Date</label>
             <input
               type="date"

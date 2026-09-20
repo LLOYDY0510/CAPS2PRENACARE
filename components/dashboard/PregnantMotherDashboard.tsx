@@ -1,4 +1,10 @@
 import { createClient } from '@/utils/supabase/server';
+import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
+
+type MatchedIndicatorRow = {
+  risk_indicators: RiskIndicatorInput | RiskIndicatorInput[] | null;
+};
  
 export default async function PregnantMotherDashboard({
   pregnantMotherId,
@@ -15,18 +21,21 @@ export default async function PregnantMotherDashboard({
 
   const { data: matchedIndicators } = await supabase
     .from('pregnant_mother_indicators')
-    .select('risk_indicators(label)')
+    .select('risk_indicators(id, label, indicator_type, threshold_value)')
     .eq('pregnant_mother_id', pregnantMotherId);
 
-  const riskReasons = (matchedIndicators ?? [])
-    .map((m: any) =>
-      Array.isArray(m.risk_indicators) ? m.risk_indicators[0]?.label : m.risk_indicators?.label
-    )
-    .filter((label): label is string => !!label);
+  const { data: activeIndicators } = await supabase
+    .from('risk_indicators')
+    .select('id, label, indicator_type, threshold_value')
+    .eq('active', true);
+
+  const recordedIndicators: RiskIndicatorInput[] = (matchedIndicators ?? [])
+    .map((m: MatchedIndicatorRow) => Array.isArray(m.risk_indicators) ? m.risk_indicators[0] : m.risk_indicators)
+    .filter((indicator: RiskIndicatorInput | null): indicator is RiskIndicatorInput => !!indicator);
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes')
+    .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
  
@@ -66,10 +75,13 @@ export default async function PregnantMotherDashboard({
     (b.sent_at ?? '').localeCompare(a.sent_at ?? '')
   );
  
+  const today = new Date().toISOString().slice(0, 10);
   const { data: upcomingSchedule } = await supabase
     .from('prenatal_schedules')
-    .select('visit_date')
-    .order('created_at', { ascending: false })
+    .select('visit_date, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .eq('prenatal_schedule_recipients.pregnant_mother_id', pregnantMotherId)
+    .gte('visit_date', today)
+    .order('visit_date', { ascending: true })
     .limit(1)
     .maybeSingle();
  
@@ -87,6 +99,7 @@ export default async function PregnantMotherDashboard({
   const fullName = [record.first_name, record.middle_name, record.last_name]
     .filter(Boolean)
     .join(' ');
+  const healthTips = getMatchedRiskTips(record, activeIndicators ?? [], recordedIndicators);
  
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -106,12 +119,33 @@ export default async function PregnantMotherDashboard({
           )}
         </div>
 
-        {record.risk_level === 'high' && riskReasons.length > 0 && (
+        {record.risk_level === 'high' && healthTips.length > 0 && (
           <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
-            {riskReasons.map((reason, i) => (
-              <li key={i}>{reason}</li>
+            {healthTips.map((tip) => (
+              <li key={tip.id}>{tip.label}</li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="card p-5">
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Health Tips for You</h2>
+        {healthTips.length === 0 ? (
+          <p className="text-sm text-muted-2">No risk-based health tips at this time.</p>
+        ) : (
+          <div className="space-y-3">
+            {healthTips.map((tip) => (
+              <div key={tip.id} className={tip.urgency === 'high' ? 'border border-red-200 bg-red-50 rounded-lg p-3' : 'border border-amber-200 bg-amber-50 rounded-lg p-3'}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">{tip.tipTitle}</p>
+                  <span className={tip.urgency === 'high' ? 'badge-high' : 'badge-warning'}>{tip.urgency === 'high' ? 'High Priority' : 'Moderate'}</span>
+                </div>
+                <p className="text-xs text-muted mt-1">Based on: {tip.label}</p>
+                <p className="text-sm text-gray-700 mt-2">{tip.tipAdvice}</p>
+                <p className="text-xs text-gray-700 mt-2"><strong>Recommended action:</strong> {tip.clinicalAction}</p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
  
@@ -204,14 +238,23 @@ export default async function PregnantMotherDashboard({
           <div className="space-y-2">
             {checkups.map((c) => (
               <div key={c.id} className="border rounded-lg px-3 py-2">
+                {(() => {
+                  const status = getPrenatalVisitStatus({ scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status });
+                  return (
+                    <>
                 <p className="text-sm font-medium">
-                  {c.checkup_date} — {c.trimester} Trimester
+                  {c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date} — {c.trimester} Trimester
                 </p>
+                <p className="text-xs text-muted mt-0.5">Actual date: {c.actual_checkup_date ?? '—'}</p>
+                <p className="text-xs text-muted mt-0.5">Status: {prenatalStatusLabel(status)}</p>
                 <p className="text-xs text-muted mt-0.5">
                   {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                   {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
                 </p>
                 {c.notes && <p className="text-xs text-muted mt-1">{c.notes}</p>}
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

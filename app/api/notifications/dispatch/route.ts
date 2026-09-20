@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { STAFF_ROLES } from '@/utils/auth/roles';
-import { createMaternalNotification } from '@/utils/notifications';
+import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
 
 type DispatchBody = {
-  type: 'appointment' | 'health_tip' | 'risk_alert' | 'care_message';
+  type: 'appointment' | 'health_tip' | 'risk_alert' | 'care_message' | 'role_alert';
   scheduleId?: string;
   broadcastId?: string;
   pregnantMotherId?: string;
   pregnantMotherIds?: string[];
   title?: string;
   message?: string;
+  recipientRole?: string;
+  recipientPurok?: string;
+  recipientUserId?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -25,8 +28,24 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json() as DispatchBody;
-  const notificationKey = (motherId: string, title: string, message: string) =>
-    createHash('sha256').update(`${user.id}:${motherId}:${title}:${message}`).digest('hex');
+  const notificationKey = (recipientKey: string, title: string, message: string) =>
+    createHash('sha256').update(`${user.id}:${recipientKey}:${title}:${message}`).digest('hex');
+  if ((body.type === 'risk_alert' || body.type === 'role_alert') && profile.role !== 'nurse' && body.type === 'risk_alert') {
+    return NextResponse.json({ error: 'Only Nurses can send risk-based health advice.' }, { status: 403 });
+  }
+
+  if (body.type === 'role_alert' && body.title && body.message && (body.recipientRole || body.recipientPurok || body.recipientUserId)) {
+    const notification = await createRoleNotification(supabase, {
+      eventKey: `role-alert:${notificationKey(body.recipientUserId || body.recipientRole || body.recipientPurok || 'all', body.title, body.message)}`,
+      category: 'system',
+      title: body.title,
+      message: body.message,
+      recipientRole: body.recipientRole,
+      recipientPurok: body.recipientPurok,
+      recipientUserId: body.recipientUserId,
+    });
+    return NextResponse.json({ success: true, created: notification ? 1 : 0 });
+  }
   const targets: { id: string; eventKey: string; category: 'health_tip' | 'appointment' | 'risk_alert' | 'care_message'; title: string; message: string }[] = [];
 
   if (body.type === 'appointment' && body.scheduleId) {
@@ -50,7 +69,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.type === 'risk_alert' && body.pregnantMotherId && body.message) {
-    targets.push({ id: body.pregnantMotherId, eventKey: `risk-alert:${body.pregnantMotherId}`, category: 'risk_alert', title: body.title || 'Important maternal health alert', message: body.message });
+    const title = body.title || 'Important maternal health alert';
+    targets.push({ id: body.pregnantMotherId, eventKey: `risk-alert:${notificationKey(body.pregnantMotherId, title, body.message)}`, category: 'risk_alert', title, message: body.message });
   }
 
   if (body.type === 'care_message' && body.pregnantMotherIds?.length && body.title && body.message) {

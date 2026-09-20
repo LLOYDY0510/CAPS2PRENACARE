@@ -3,9 +3,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 type NotificationInput = {
   pregnantMotherId: string;
   eventKey: string;
-  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message';
+  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message' | 'system' | 'staff' | 'maternal_report' | 'follow_up' | 'referral' | 'record_update';
   title: string;
   message: string;
+};
+
+export type RoleNotificationInput = {
+  eventKey: string;
+  category: NotificationInput['category'];
+  title: string;
+  message: string;
+  recipientUserId?: string | null;
+  recipientRole?: string | null;
+  recipientPurok?: string | null;
 };
 
 type NotificationClient = SupabaseClient;
@@ -72,5 +82,29 @@ export async function createMaternalNotification(
     }).eq('id', notification.id);
   }
 
+  return notification;
+}
+
+export async function createRoleNotification(
+  supabase: NotificationClient,
+  input: RoleNotificationInput,
+) {
+  const { data: notification, error } = await supabase
+    .from('maternal_notifications')
+    .insert({
+      pregnant_mother_id: null,
+      recipient_user_id: input.recipientUserId ?? null,
+      recipient_role: input.recipientRole ?? null,
+      recipient_purok: input.recipientPurok ?? null,
+      event_key: input.eventKey,
+      category: input.category,
+      title: input.title,
+      message: input.message,
+      email_status: 'skipped',
+    })
+    .select('id, email_status')
+    .maybeSingle();
+
+  if (error?.code === '23505' || error) return null;
   return notification;
 }

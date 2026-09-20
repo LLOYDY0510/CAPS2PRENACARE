@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server';
 import UsersTable from '@/components/users/UsersTable';
 import { requireRoles } from '@/utils/auth/roles';
 

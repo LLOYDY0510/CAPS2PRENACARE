@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 
 type Profile = {
   id: string;
@@ -29,7 +28,6 @@ export default function UserRoleEditor({
   profile: Profile;
   availableMothers: MotherOption[];
 }) {
-  const supabase = createClient();
   const router   = useRouter();
 
   const [role, setRole]         = useState(profile.role ?? 'pending');
@@ -37,6 +35,7 @@ export default function UserRoleEditor({
   const [motherId, setMotherId] = useState(profile.pregnant_mother_id ?? '');
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
+  const selectedMother = availableMothers.find((mother) => mother.id === motherId);
 
   const isDirty =
     role     !== (profile.role ?? 'pending') ||
@@ -52,27 +51,41 @@ export default function UserRoleEditor({
     setSaving(true);
     setError('');
 
-    const selectedMother = availableMothers.find((m) => m.id === motherId);
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
+    const res = await fetch('/api/admin/update-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: profile.id,
         role,
-        purok:              role === 'bhw_purok'        ? purok || null    : null,
-        pregnant_mother_id: role === 'pregnant_mother'  ? motherId || null : null,
-        full_name:
+        purok: role === 'bhw_purok' ? purok || null : null,
+        pregnantMotherId: role === 'pregnant_mother' ? motherId || null : null,
+        fullName:
           role === 'pregnant_mother' && selectedMother
             ? selectedMother.full_name
             : profile.full_name,
-      })
-      .eq('id', profile.id);
+      }),
+    });
 
+    const data = await res.json();
     setSaving(false);
 
-    if (updateError) {
-      setError(updateError.message);
+    if (!res.ok) {
+      setError(data.error || 'Failed to update role.');
       return;
     }
+
+    await Promise.all([
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'role_alert', recipientUserId: profile.id, title: 'Account access updated', message: `Your Prenatrack role is now ${role.replace('_', ' ')}${role === 'bhw_purok' && purok ? ` for Purok ${purok}` : ''}.` }),
+      }),
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'Staff account updated', message: `${profile.full_name || profile.email || 'A user'} was assigned the ${role.replace('_', ' ')} role.` }),
+      }),
+    ]);
 
     router.refresh();
   }

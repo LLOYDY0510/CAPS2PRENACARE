@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 type Checkup = {
   id: string;
   trimester: '1st' | '2nd' | '3rd';
   checkup_date: string;
+  scheduled_checkup_date: string | null;
+  actual_checkup_date: string | null;
   blood_pressure: string | null;
   weight_kg: number | null;
   notes: string | null;
@@ -19,24 +21,25 @@ const TRIMESTERS: ('1st' | '2nd' | '3rd')[] = ['1st', '2nd', '3rd'];
 export default function PrenatalCheckups({
   motherId,
   initialCheckups,
+  scheduledDates,
   canEdit = true,
 }: {
   motherId: string;
   initialCheckups: Checkup[];
+  scheduledDates: Record<'1st' | '2nd' | '3rd', string | null>;
   canEdit?: boolean;
 }) {
-  const supabase = createClient();
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' as Checkup['status'] });
+  const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '' });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
 
   const grouped = TRIMESTERS.reduce((acc, tri) => {
     acc[tri] = checkups
       .filter((c) => c.trimester === tri)
-      .sort((a, b) => a.checkup_date.localeCompare(b.checkup_date));
+      .sort((a, b) => (a.scheduled_checkup_date ?? a.checkup_date).localeCompare(b.scheduled_checkup_date ?? b.checkup_date));
     return acc;
   }, {} as Record<string, Checkup[]>);
 
@@ -44,8 +47,9 @@ export default function PrenatalCheckups({
     e.preventDefault();
     setError('');
 
-    if (!form.checkup_date) {
-      setError('Checkup date is required.');
+    const scheduledCheckupDate = scheduledDates[activeTrimester];
+    if (!scheduledCheckupDate) {
+      setError(`No ${activeTrimester} trimester schedule exists for this mother.`);
       return;
     }
 
@@ -62,33 +66,31 @@ export default function PrenatalCheckups({
 
     setSaving(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { data, error: insertError } = await supabase
-      .from('prenatal_checkups')
-      .insert({
-        pregnant_mother_id: motherId,
+    const response = await fetch('/api/prenatal-checkups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pregnantMotherId: motherId,
         trimester: activeTrimester,
-        checkup_date: form.checkup_date,
-        blood_pressure: form.blood_pressure || null,
-        weight_kg: weight,
-        notes: form.notes || null,
-        status: form.status,
-        scheduled_for: form.status === 'scheduled' ? form.checkup_date : null,
-        recorded_by: user?.id ?? null,
-      })
-      .select()
-      .single();
+        bloodPressure: form.blood_pressure,
+        weightKg: weight,
+        notes: form.notes,
+      }),
+    });
+    const result = await response.json() as { data?: Checkup; error?: string };
 
     setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (!response.ok || !result.data) {
+      setError(result.error ?? 'Failed to save checkup.');
       return;
     }
 
-    setCheckups((prev) => [...prev, data as Checkup]);
-    setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' });
+    setCheckups((prev) => [
+      ...prev.filter((checkup) => checkup.trimester !== result.data?.trimester),
+      result.data as Checkup,
+    ]);
+    setForm({ blood_pressure: '', weight_kg: '', notes: '' });
     setShowForm(false);
   }
 
@@ -96,7 +98,12 @@ export default function PrenatalCheckups({
     const confirmed = window.confirm('Delete this checkup record?');
     if (!confirmed) return;
 
-    await supabase.from('prenatal_checkups').delete().eq('id', id);
+    const response = await fetch('/api/prenatal-checkups', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, pregnantMotherId: motherId }),
+    });
+    if (!response.ok) return;
     setCheckups((prev) => prev.filter((c) => c.id !== id));
   }
 
@@ -171,7 +178,8 @@ export default function PrenatalCheckups({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>Scheduled Date</th>
+                  <th>Actual Date</th>
                   <th>Blood Pressure</th>
                   <th>Weight (kg)</th>
                   <th>Notes</th>
@@ -182,11 +190,20 @@ export default function PrenatalCheckups({
               <tbody>
                 {grouped[activeTrimester].map((c) => (
                   <tr key={c.id}>
-                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{c.checkup_date}</td>
+                    {(() => {
+                      const status = getPrenatalVisitStatus({
+                        scheduledFor: scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
+                        actualCheckupDate: c.actual_checkup_date,
+                        recordedStatus: c.status,
+                      });
+                      return (
+                        <>
+                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date}</td>
+                    <td>{c.actual_checkup_date ?? '—'}</td>
                     <td>{c.blood_pressure ?? '—'}</td>
                     <td>{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
                     <td style={{ maxWidth: '240px', whiteSpace: 'normal' }}>{c.notes ?? '—'}</td>
-                    <td><span className={c.status === 'completed' ? 'badge-low' : c.status === 'missed' ? 'badge-high' : 'badge-neutral'}>{c.status}</span></td>
+                    <td><span className={status === 'completed' ? 'badge-low' : status === 'missed' ? 'badge-high' : 'badge-neutral'}>{prenatalStatusLabel(status)}</span></td>
                     {canEdit && (
                       <td>
                         <button
@@ -198,6 +215,9 @@ export default function PrenatalCheckups({
                         </button>
                       </td>
                     )}
+                        </>
+                      );
+                    })()}
                   </tr>
                 ))}
               </tbody>
@@ -243,14 +263,10 @@ export default function PrenatalCheckups({
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="form-label" htmlFor="checkup-date">Checkup Date</label>
-                  <input
-                    id="checkup-date"
-                    type="date"
-                    value={form.checkup_date}
-                    onChange={(e) => setForm((p) => ({ ...p, checkup_date: e.target.value }))}
-                    className="form-input"
-                  />
+                  <label className="form-label" htmlFor="scheduled-checkup-date">Scheduled Checkup Date</label>
+                  <p id="scheduled-checkup-date" className="form-input bg-gray-50">
+                    {scheduledDates[activeTrimester] ?? 'No schedule set'}
+                  </p>
                 </div>
                 <div>
                   <label className="form-label" htmlFor="blood-pressure">Blood Pressure</label>
@@ -276,21 +292,6 @@ export default function PrenatalCheckups({
                   className="form-input"
                   style={{ maxWidth: '160px' }}
                 />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label" htmlFor="checkup-status">Visit Status</label>
-                <select
-                  id="checkup-status"
-                  value={form.status}
-                  onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Checkup['status'] }))}
-                  className="form-select"
-                >
-                  <option value="completed">Completed</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="missed">Missed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
               </div>
 
               <div className="mb-4">

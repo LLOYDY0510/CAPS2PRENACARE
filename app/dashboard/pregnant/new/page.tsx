@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/utils/supabase/client';
+import { calculateAge } from '@/utils/age';
 
 const LocationPicker = dynamic<{
   latitude: number | null;
@@ -36,6 +37,7 @@ export default function RegisterPregnantMotherPage() {
     last_name: '',
     address: '',
     purok: '',
+    date_of_birth: '',
     age: '',
     contact_number: '',
     lmp: '',
@@ -126,7 +128,7 @@ export default function RegisterPregnantMotherPage() {
       const gravida_para =
         form.gravida && form.para ? `G${form.gravida}P${form.para}` : null;
 
-      const ageNum = form.age ? parseInt(form.age) : null;
+      const ageNum = calculateAge(form.date_of_birth) ?? (form.age ? parseInt(form.age) : null);
       const gravidaNum = form.gravida ? parseInt(form.gravida) : null;
 
       const { data: autoIndicators } = await supabase
@@ -171,6 +173,7 @@ export default function RegisterPregnantMotherPage() {
           address: form.address || null,
           purok: form.purok || null,
           age: ageNum,
+          date_of_birth: form.date_of_birth || null,
           contact_number: form.contact_number || null,
           lmp: form.lmp || null,
           gravida_para,
@@ -210,9 +213,21 @@ export default function RegisterPregnantMotherPage() {
             message: 'Your record has been flagged for enhanced prenatal monitoring. Please review your care plan with your BHW or nurse at your next visit.',
           }),
         });
+        await Promise.all([
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'High-risk mother registered', message: `${full_name} was registered as high risk and needs enhanced prenatal monitoring.` }) }),
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'High-risk maternal alert', message: `${full_name} was registered as high risk.` }) }),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'High-risk mother in your purok', message: `${full_name} was registered as high risk in your assigned purok.` }) }) : Promise.resolve(),
+        ]);
       }
 
-      window.location.href = '/dashboard/pregnant';
+      if (inserted) {
+        await Promise.all([
+          fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'New pregnant mother registered', message: `${full_name} was added to the maternal registry.` }) }),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'New mother in your purok', message: `${full_name} was added to the maternal registry in your assigned purok.` }) }) : Promise.resolve(),
+        ]);
+      }
+
+      router.push('/dashboard/pregnant');
     } catch (err) {
       setError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setLoading(false);
@@ -368,10 +383,20 @@ export default function RegisterPregnantMotherPage() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">Date of Birth</label>
+            <input
+              type="date"
+              value={form.date_of_birth}
+              onChange={(e) => updateField('date_of_birth', e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">Age</label>
             <input
               type="number"
               value={form.age}
+              disabled={!!form.date_of_birth}
               onChange={(e) => updateField('age', e.target.value)}
               placeholder="Enter age"
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
