@@ -114,6 +114,17 @@ create policy "care staff can delete prenatal checkups"
       select 1
       from public.profiles p
       where p.id = auth.uid()
-        and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')
+        and (
+          p.role in ('admin', 'nurse', 'bhw_head')
+          or (
+            p.role = 'bhw_purok'
+            and exists (
+              select 1
+              from public.pregnant_mothers m
+              where m.id = prenatal_checkups.pregnant_mother_id
+                and m.purok = p.purok
+            )
+          )
+        )
     )
   );
