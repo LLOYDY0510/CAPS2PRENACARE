@@ -1,6 +1,6 @@
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
 import { requireRoles } from '@/utils/auth/roles';
-import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
+import { getPrenatalVisitStatus, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +16,11 @@ export default async function PrenatalCheckupsPage() {
 
   const checkupQuery = supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
   const { data: checkups } = await checkupQuery;
 
   const countsByMother: Record<string, number> = {};
+  const statusByMother: Record<string, Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>> = {};
   checkups?.forEach((checkup) => {
     const status = getPrenatalVisitStatus({
       scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date,
@@ -29,11 +30,19 @@ export default async function PrenatalCheckupsPage() {
     if (status === 'completed') {
       countsByMother[checkup.pregnant_mother_id] = (countsByMother[checkup.pregnant_mother_id] || 0) + 1;
     }
+    const trimester = checkup.trimester as '1st' | '2nd' | '3rd';
+    if (trimester === '1st' || trimester === '2nd' || trimester === '3rd') {
+      if (!statusByMother[checkup.pregnant_mother_id]) {
+        statusByMother[checkup.pregnant_mother_id] = { '1st': null, '2nd': null, '3rd': null };
+      }
+      statusByMother[checkup.pregnant_mother_id][trimester] = status;
+    }
   });
 
   const tableRecords = (records ?? []).map((r) => ({
     ...r,
     checkupCount: countsByMother[r.id] ?? 0,
+    trimesterStatuses: statusByMother[r.id] ?? { '1st': null, '2nd': null, '3rd': null },
   }));
 
   return (
