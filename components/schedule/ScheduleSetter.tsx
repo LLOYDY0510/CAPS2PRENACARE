@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
  
 type Schedule = {
   id: string;
   visit_date: string;
   reminder_sent: boolean;
+  status?: string | null;
 } | null;
  
 type Mother = {
@@ -132,6 +134,10 @@ export default function ScheduleSetter({
           <div>
             <p className="text-2xl font-semibold text-ink">{currentSchedule.visit_date}</p>
             <p className="text-sm text-muted mt-2">
+              <span className={getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }) === 'missed' ? 'text-red-600' : getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }) === 'completed' ? 'text-green-600' : 'text-amber-600'}>
+                Visit status: {prenatalStatusLabel(getPrenatalVisitStatus({ scheduledFor: currentSchedule.visit_date, recordedStatus: currentSchedule.status }))}
+              </span>
+              <br />
               {currentSchedule.reminder_sent ? (
                 <span className="text-green-600">✅ Reminder already sent</span>
               ) : (

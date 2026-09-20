@@ -8,7 +8,7 @@ export default async function PrenatalSchedulePage() {
  
   const { data: currentSchedule } = await supabase
     .from('prenatal_schedules')
-    .select('id, visit_date, reminder_sent')
+    .select('id, visit_date, reminder_sent, status')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
