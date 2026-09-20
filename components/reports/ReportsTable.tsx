@@ -83,7 +83,6 @@ export default function ReportsTable({
 
   /* ── Primary filter by report type ── */
   const byType = useMemo(() => {
-    const t = today();
     return rowsWithId.filter((r) => {
       switch (reportType) {
         case 'high_risk':
@@ -128,7 +127,6 @@ export default function ReportsTable({
   const hasSecondary    = search || zoneFilter !== 'all';
 
   /* ── Export rows = filtered (what user sees) ── */
-  const exportRows: ReportRow[] = filtered.map(({ _id, ...rest }) => rest);
   const exportRows: ReportRow[] = filtered.map((row) => {
     const exportRow = { ...row } as ReportRowWithId;
     delete exportRow._id;
