@@ -305,6 +305,7 @@ export default function ReportsTable({
               <th>G-P</th>
               <th>BP</th>
               <th>Checkups</th>
+              <th>Latest Visit</th>
               <th>Risk</th>
               {reportType === 'upcoming_edc' && <th>Days to EDC</th>}
             </tr>
@@ -313,7 +314,7 @@ export default function ReportsTable({
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={reportType === 'upcoming_edc' ? 12 : 11}
+                  colSpan={reportType === 'upcoming_edc' ? 13 : 12}
                   style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--muted-2)' }}
                 >
                   {hasSecondary

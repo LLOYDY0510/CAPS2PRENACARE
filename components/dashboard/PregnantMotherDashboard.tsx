@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 type MatchedIndicatorRow = {
   risk_indicators: RiskIndicatorInput | RiskIndicatorInput[] | null;
@@ -34,7 +35,7 @@ export default async function PregnantMotherDashboard({
  
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes')
+    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
  
@@ -237,14 +238,22 @@ export default async function PregnantMotherDashboard({
           <div className="space-y-2">
             {checkups.map((c) => (
               <div key={c.id} className="border rounded-lg px-3 py-2">
+                {(() => {
+                  const status = getPrenatalVisitStatus({ scheduledFor: c.scheduled_for ?? c.checkup_date, recordedStatus: c.status });
+                  return (
+                    <>
                 <p className="text-sm font-medium">
                   {c.checkup_date} — {c.trimester} Trimester
                 </p>
+                <p className="text-xs text-muted mt-0.5">Status: {prenatalStatusLabel(status)}</p>
                 <p className="text-xs text-muted mt-0.5">
                   {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                   {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
                 </p>
                 {c.notes && <p className="text-xs text-muted mt-1">{c.notes}</p>}
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export default async function MyRecordsPage() {
 
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes')
+    .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
 
@@ -97,6 +98,8 @@ export default async function MyRecordsPage() {
                   {c.checkup_date} — {c.trimester} Trimester
                 </p>
                 <p className="text-xs text-muted mt-0.5">
+                  Status: {prenatalStatusLabel(getPrenatalVisitStatus({ scheduledFor: c.scheduled_for ?? c.checkup_date, recordedStatus: c.status }))}
+                  {' · '}
                   {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                   {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
                 </p>
