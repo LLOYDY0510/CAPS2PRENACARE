@@ -23,6 +23,18 @@ security definer
 set search_path = public
 as $$
 begin
+  if tg_op = 'DELETE' then
+    update public.pregnant_mothers
+    set checkup_recorded = exists (
+      select 1
+      from public.prenatal_checkups pc
+      where pc.pregnant_mother_id = old.pregnant_mother_id
+        and pc.actual_checkup_date is not null
+    )
+    where id = old.pregnant_mother_id;
+    return old;
+  end if;
+
   update public.pregnant_mothers
   set checkup_recorded = exists (
     select 1
@@ -31,7 +43,7 @@ begin
       and pc.actual_checkup_date is not null
   )
   where id = coalesce(new.pregnant_mother_id, old.pregnant_mother_id);
-  return coalesce(new, old);
+  return new;
 end;
 $$;
 

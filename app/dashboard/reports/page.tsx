@@ -21,14 +21,15 @@ export default async function ReportsPage() {
   // Checkup counts per mother
   const { data: checkupRows } = await supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
 
   const checkupCounts: Record<string, number> = {};
   const missedCounts: Record<string, number> = {};
   const upcomingCounts: Record<string, number> = {};
   checkupRows?.forEach((c) => {
     const status = getPrenatalVisitStatus({
-      scheduledFor: c.scheduled_for ?? c.checkup_date,
+      scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
+      actualCheckupDate: c.actual_checkup_date,
       recordedStatus: c.status,
     });
     if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
@@ -74,13 +75,13 @@ export default async function ReportsPage() {
   (records ?? []).forEach((r) => {
     const latestCheckup = (checkupRows ?? [])
       .filter((checkup) => checkup.pregnant_mother_id === r.id)
-      .sort((a, b) => (b.scheduled_for ?? b.checkup_date).localeCompare(a.scheduled_for ?? a.checkup_date))[0];
+      .sort((a, b) => (b.scheduled_checkup_date ?? b.scheduled_for ?? b.checkup_date).localeCompare(a.scheduled_checkup_date ?? a.scheduled_for ?? a.checkup_date))[0];
     meta[r.id] = {
       checkupCount: checkupCounts[r.id] ?? 0,
       nextVisit:    nextVisit[r.id] ?? null,
       missedVisits: missedCounts[r.id] ?? 0,
       upcomingVisits: upcomingCounts[r.id] ?? 0,
-      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: latestCheckup.scheduled_for ?? latestCheckup.checkup_date, recordedStatus: latestCheckup.status }) : null,
+      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: latestCheckup.scheduled_checkup_date ?? latestCheckup.scheduled_for ?? latestCheckup.checkup_date, actualCheckupDate: latestCheckup.actual_checkup_date, recordedStatus: latestCheckup.status }) : null,
     };
   });
 

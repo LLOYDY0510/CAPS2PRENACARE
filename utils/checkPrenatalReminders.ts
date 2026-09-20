@@ -144,13 +144,13 @@ async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof cr
     if (motherIds.length) {
       const { data: completedCheckups } = await supabase
         .from('prenatal_checkups')
-        .select('pregnant_mother_id, checkup_date, scheduled_for, status')
+        .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status')
         .in('pregnant_mother_id', motherIds)
         .eq('status', 'completed');
       const completedMotherIds = new Set(
         (completedCheckups ?? [])
-          .filter((checkup) => (checkup.scheduled_for ?? checkup.checkup_date) === schedule.visit_date)
-          .filter((checkup) => getPrenatalVisitStatus({ scheduledFor: checkup.scheduled_for ?? checkup.checkup_date, recordedStatus: checkup.status }) === 'completed')
+          .filter((checkup) => (checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date) === schedule.visit_date)
+          .filter((checkup) => getPrenatalVisitStatus({ scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date, actualCheckupDate: checkup.actual_checkup_date, recordedStatus: checkup.status }) === 'completed')
           .map((checkup) => checkup.pregnant_mother_id)
       );
       const missedMotherIds = motherIds.filter((id) => !completedMotherIds.has(id));

@@ -22,6 +22,7 @@ export type PregnantRecord = {
   height_cm: number | null;
   weight_kg: number | null;
   risk_level: string | null;
+  checkup_recorded: boolean;
 };
 
 export default function PregnantRecordsTable({
@@ -107,6 +108,7 @@ export default function PregnantRecordsTable({
               <th>LMP</th>
               <th>G-P</th>
               <th>EDC</th>
+              <th>Checkup Recorded</th>
               <th>BP</th>
               <th>Height (cm)</th>
               <th>Weight (kg)</th>
@@ -118,7 +120,7 @@ export default function PregnantRecordsTable({
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}
                 >
                   {hasFilters ? 'No records match the current filters.' : 'No pregnant mothers registered yet.'}
@@ -137,6 +139,11 @@ export default function PregnantRecordsTable({
                 <td>{r.lmp ?? '—'}</td>
                 <td>{r.gravida_para ?? '—'}</td>
                 <td>{r.edd ?? '—'}</td>
+                <td>
+                  {r.checkup_recorded
+                    ? <span className="badge-low">Yes</span>
+                    : <span className="badge-neutral">No</span>}
+                </td>
                 <td>{r.blood_pressure ?? '—'}</td>
                 <td>{r.height_cm ?? '—'}</td>
                 <td>{r.weight_kg ?? '—'}</td>

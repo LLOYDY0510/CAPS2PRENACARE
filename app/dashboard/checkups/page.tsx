@@ -16,13 +16,14 @@ export default async function PrenatalCheckupsPage() {
 
   const checkupQuery = supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
   const { data: checkups } = await checkupQuery;
 
   const countsByMother: Record<string, number> = {};
   checkups?.forEach((checkup) => {
     const status = getPrenatalVisitStatus({
-      scheduledFor: checkup.scheduled_for ?? checkup.checkup_date,
+      scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date,
+      actualCheckupDate: checkup.actual_checkup_date,
       recordedStatus: checkup.status,
     });
     if (status === 'completed') {
