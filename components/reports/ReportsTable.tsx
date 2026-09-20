@@ -58,10 +58,6 @@ function daysFromToday(dateStr: string): number {
   return Math.round((d.getTime() - t.getTime()) / 86_400_000);
 }
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-}
 function printDate(): string {
   return new Date().toLocaleDateString('en-PH', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -134,6 +130,11 @@ export default function ReportsTable({
 
   /* ── Export rows = filtered (what user sees) ── */
   const exportRows: ReportRow[] = filtered.map(({ _id, ...rest }) => rest);
+  const exportRows: ReportRow[] = filtered.map((row) => {
+    const exportRow = { ...row } as ReportRowWithId;
+    delete exportRow._id;
+    return exportRow;
+  });
 
   /* ── Print ── */
   function handlePrint() {
