@@ -177,7 +177,7 @@ export default function PregnantRecordsTable({
                 </td>
                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <Link
-                    href={`/dashboard/pregnant/${r.id}?view=details`}
+                    href={`/dashboard/pregnant/${r.id}`}
                     className="btn-secondary"
                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                   >
