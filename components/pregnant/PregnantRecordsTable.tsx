@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
+import { getRecordAge } from '@/utils/age';
 
 export type PregnantRecord = {
   id: string;
@@ -15,6 +16,7 @@ export type PregnantRecord = {
   address: string | null;
   purok: string | null;
   age: number | null;
+  date_of_birth: string | null;
   lmp: string | null;
   gravida_para: string | null;
   edd: string | null;
@@ -34,19 +36,25 @@ export default function PregnantRecordsTable({
 }) {
   const [search, setSearch]   = useState('');
   const [risk, setRisk]       = useState('all');
+  const [ageFilter, setAgeFilter] = useState('all');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return records.filter((r) => {
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
+      const age = getRecordAge(r.age, r.date_of_birth);
       if (q && !name.includes(q) && !serial.includes(q)) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
+      if (ageFilter === 'under-18' && (age == null || age >= 18)) return false;
+      if (ageFilter === '18-24' && (age == null || age < 18 || age > 24)) return false;
+      if (ageFilter === '25-34' && (age == null || age < 25 || age > 34)) return false;
+      if (ageFilter === '35-plus' && (age == null || age < 35)) return false;
       return true;
     });
-  }, [records, search, risk]);
+  }, [records, search, risk, ageFilter]);
 
-  const hasFilters = search || risk !== 'all';
+  const hasFilters = search || risk !== 'all' || ageFilter !== 'all';
 
   return (
     <div>
@@ -73,9 +81,23 @@ export default function PregnantRecordsTable({
           <option value="low">Low Risk</option>
         </select>
 
+        <select
+          value={ageFilter}
+          onChange={(e) => setAgeFilter(e.target.value)}
+          className="form-select"
+          style={{ width: 'auto', minWidth: '130px' }}
+          aria-label="Filter by age"
+        >
+          <option value="all">All Ages</option>
+          <option value="under-18">Under 18</option>
+          <option value="18-24">18–24</option>
+          <option value="25-34">25–34</option>
+          <option value="35-plus">35 and older</option>
+        </select>
+
         {hasFilters && (
           <button
-            onClick={() => { setSearch(''); setRisk('all'); }}
+            onClick={() => { setSearch(''); setRisk('all'); setAgeFilter('all'); }}
             className="btn-ghost"
             style={{ fontSize: '0.75rem' }}
           >
@@ -135,7 +157,7 @@ export default function PregnantRecordsTable({
                   {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                 </td>
                 <td>{r.address ?? '—'}</td>
-                <td>{r.age ?? '—'}</td>
+                <td>{getRecordAge(r.age, r.date_of_birth) ?? '—'}</td>
                 <td>{r.lmp ?? '—'}</td>
                 <td>{r.gravida_para ?? '—'}</td>
                 <td>{r.edd ?? '—'}</td>
