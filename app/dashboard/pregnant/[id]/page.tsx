@@ -5,10 +5,6 @@ import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 
-type MatchedIndicatorRow = {
-  risk_indicators: { label: string } | { label: string }[] | null;
-};
- 
 export const dynamic = 'force-dynamic';
  
 export default async function ViewPregnantMotherPage({
@@ -38,17 +34,6 @@ export default async function ViewPregnantMotherPage({
     .eq('id', id)
     .single();
 
-  const { data: matchedIndicators } = await supabase
-    .from('pregnant_mother_indicators')
-    .select('risk_indicators(label)')
-    .eq('pregnant_mother_id', id);
-
-  const riskReasons = (matchedIndicators ?? [])
-    .map((m: MatchedIndicatorRow) =>
-      Array.isArray(m.risk_indicators) ? m.risk_indicators[0]?.label : m.risk_indicators?.label
-    )
-    .filter((label): label is string => !!label);
- 
   if (!record) {
     notFound();
   }
@@ -110,18 +95,6 @@ export default async function ViewPregnantMotherPage({
           />
         </div>
 
-        {record.risk_level === 'high' && riskReasons.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs font-semibold text-muted-2 uppercase tracking-wide mb-2">
-              Reason for High Risk
-            </p>
-            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-              {riskReasons.map((reason, i) => (
-                <li key={i}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
  
       <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
