@@ -2,6 +2,11 @@ import { createClient } from '@/utils/supabase/server';
 import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
 
+type MotherIndicatorRow = {
+  pregnant_mother_id: string | null;
+  risk_indicators: RiskIndicatorInput | RiskIndicatorInput[] | null;
+};
+
 export default async function NurseDashboard() {
   const supabase = await createClient();
 
@@ -37,7 +42,7 @@ export default async function NurseDashboard() {
   const activeIndicatorsList = indicators ?? [];
 
   const indicatorsByMotherId: Record<string, RiskIndicatorInput[]> = {};
-  motherIndicators?.forEach((item: any) => {
+  motherIndicators?.forEach((item: MotherIndicatorRow) => {
     const motherId = item.pregnant_mother_id;
     const ind = Array.isArray(item.risk_indicators) ? item.risk_indicators[0] : item.risk_indicators;
     if (motherId && ind) {

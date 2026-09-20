@@ -37,6 +37,7 @@ export default function UserRoleEditor({
   const [motherId, setMotherId] = useState(profile.pregnant_mother_id ?? '');
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
+  const selectedMother = availableMothers.find((mother) => mother.id === motherId);
 
   const isDirty =
     role     !== (profile.role ?? 'pending') ||

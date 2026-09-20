@@ -4,6 +4,10 @@ import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
 import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
+
+type MatchedIndicatorRow = {
+  risk_indicators: { label: string } | { label: string }[] | null;
+};
  
 export const dynamic = 'force-dynamic';
  
@@ -40,7 +44,7 @@ export default async function ViewPregnantMotherPage({
     .eq('pregnant_mother_id', id);
 
   const riskReasons = (matchedIndicators ?? [])
-    .map((m: any) =>
+    .map((m: MatchedIndicatorRow) =>
       Array.isArray(m.risk_indicators) ? m.risk_indicators[0]?.label : m.risk_indicators?.label
     )
     .filter((label): label is string => !!label);

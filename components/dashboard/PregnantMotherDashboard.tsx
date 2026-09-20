@@ -1,5 +1,9 @@
 import { createClient } from '@/utils/supabase/server';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
+
+type MatchedIndicatorRow = {
+  risk_indicators: RiskIndicatorInput | RiskIndicatorInput[] | null;
+};
  
 export default async function PregnantMotherDashboard({
   pregnantMotherId,
@@ -25,7 +29,7 @@ export default async function PregnantMotherDashboard({
     .eq('active', true);
 
   const recordedIndicators: RiskIndicatorInput[] = (matchedIndicators ?? [])
-    .map((m: any) => Array.isArray(m.risk_indicators) ? m.risk_indicators[0] : m.risk_indicators)
+    .map((m: MatchedIndicatorRow) => Array.isArray(m.risk_indicators) ? m.risk_indicators[0] : m.risk_indicators)
     .filter((indicator: RiskIndicatorInput | null): indicator is RiskIndicatorInput => !!indicator);
  
   const { data: checkups } = await supabase
