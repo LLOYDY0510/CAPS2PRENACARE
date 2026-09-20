@@ -101,7 +101,7 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
                 })}
                 <td style={{ textAlign: 'right' }}>
                   <Link
-                    href={`/dashboard/pregnant/${r.id}`}
+                    href={`/dashboard/pregnant/${r.id}?view=checkups`}
                     className="btn-secondary"
                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                   >
