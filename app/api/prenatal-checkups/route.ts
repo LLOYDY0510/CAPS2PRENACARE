@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       pregnantMotherId?: unknown;
       trimester?: unknown;
-      actualCheckupDate?: unknown;
       bloodPressure?: unknown;
       weightKg?: unknown;
       notes?: unknown;
@@ -54,9 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (
       typeof body.pregnantMotherId !== 'string' ||
-      !['1st', '2nd', '3rd'].includes(String(body.trimester)) ||
-      (body.actualCheckupDate != null && body.actualCheckupDate !== '' &&
-        (typeof body.actualCheckupDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.actualCheckupDate)))
+      !['1st', '2nd', '3rd'].includes(String(body.trimester))
     ) {
       return NextResponse.json({ error: 'Invalid prenatal checkup data.' }, { status: 400 });
     }
@@ -71,7 +68,6 @@ export async function POST(request: NextRequest) {
     }
 
     const adminClient = createAdminClient();
-    const actualCheckupDate = typeof body.actualCheckupDate === 'string' && body.actualCheckupDate ? body.actualCheckupDate : null;
     const { data: schedule } = await adminClient
       .from('prenatal_schedules')
       .select('visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
@@ -86,9 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduledCheckupDate = schedule.visit_date;
-    if (actualCheckupDate && actualCheckupDate < scheduledCheckupDate) {
-      return NextResponse.json({ error: 'Actual checkup date cannot be before the scheduled date.' }, { status: 400 });
-    }
+    const actualCheckupDate = scheduledCheckupDate;
     const { data: existing } = await adminClient
       .from('prenatal_checkups')
       .select('id')

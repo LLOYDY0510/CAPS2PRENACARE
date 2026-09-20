@@ -29,12 +29,13 @@ export default async function PrenatalCheckupsPage() {
   const scheduledByMother: Record<string, Record<'1st' | '2nd' | '3rd', string | null>> = {};
   (scheduleRows ?? []).forEach((schedule) => {
     const trimester = schedule.trimester as '1st' | '2nd' | '3rd';
-    const motherId = Array.isArray(schedule.prenatal_schedule_recipients)
-      ? schedule.prenatal_schedule_recipients[0]?.pregnant_mother_id
-      : null;
-    if (!motherId || !['1st', '2nd', '3rd'].includes(trimester)) return;
-    if (!scheduledByMother[motherId]) scheduledByMother[motherId] = { '1st': null, '2nd': null, '3rd': null };
-    if (!scheduledByMother[motherId][trimester]) scheduledByMother[motherId][trimester] = schedule.visit_date;
+    if (!['1st', '2nd', '3rd'].includes(trimester)) return;
+    const recipients = Array.isArray(schedule.prenatal_schedule_recipients) ? schedule.prenatal_schedule_recipients : [];
+    recipients.forEach((recipient) => {
+      const motherId = recipient.pregnant_mother_id;
+      if (!scheduledByMother[motherId]) scheduledByMother[motherId] = { '1st': null, '2nd': null, '3rd': null };
+      if (!scheduledByMother[motherId][trimester]) scheduledByMother[motherId][trimester] = schedule.visit_date;
+    });
   });
   checkups?.forEach((checkup) => {
     const trimester = checkup.trimester as '1st' | '2nd' | '3rd';

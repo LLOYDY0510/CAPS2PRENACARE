@@ -21,21 +21,11 @@ export default async function ReportsPage() {
   // Checkup counts per mother
   const { data: checkupRows } = await supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
 
   const checkupCounts: Record<string, number> = {};
   const missedCounts: Record<string, number> = {};
   const upcomingCounts: Record<string, number> = {};
-  checkupRows?.forEach((c) => {
-    const status = getPrenatalVisitStatus({
-      scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
-      actualCheckupDate: c.actual_checkup_date,
-      recordedStatus: c.status,
-    });
-    if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
-    if (status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
-    if (status === 'upcoming') upcomingCounts[c.pregnant_mother_id] = (upcomingCounts[c.pregnant_mother_id] || 0) + 1;
-  });
 
   // Next prenatal schedule per mother
   const today = new Date().toISOString().slice(0, 10);
@@ -43,18 +33,32 @@ export default async function ReportsPage() {
     .from('prenatal_schedules')
     .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
     .not('trimester', 'is', null)
-    .gte('visit_date', today)
-    .order('visit_date', { ascending: true });
+    .order('created_at', { ascending: false });
 
   // Keep only the earliest upcoming visit per mother
   const nextVisit: Record<string, string> = {};
+  const scheduledByMother: Record<string, Record<'1st' | '2nd' | '3rd', string | null>> = {};
   scheduleRows?.forEach((s) => {
     const recipients = Array.isArray(s.prenatal_schedule_recipients) ? s.prenatal_schedule_recipients : [];
     recipients.forEach((recipient) => {
-      if (!nextVisit[recipient.pregnant_mother_id]) {
+      const trimester = s.trimester as '1st' | '2nd' | '3rd';
+      if (trimester === '1st' || trimester === '2nd' || trimester === '3rd') {
+        if (!scheduledByMother[recipient.pregnant_mother_id]) scheduledByMother[recipient.pregnant_mother_id] = { '1st': null, '2nd': null, '3rd': null };
+        if (!scheduledByMother[recipient.pregnant_mother_id][trimester]) scheduledByMother[recipient.pregnant_mother_id][trimester] = s.visit_date;
+      }
+      if (s.visit_date >= today && !nextVisit[recipient.pregnant_mother_id]) {
         nextVisit[recipient.pregnant_mother_id] = s.visit_date;
       }
     });
+  });
+
+  checkupRows?.forEach((c) => {
+    const trimester = c.trimester as '1st' | '2nd' | '3rd';
+    const scheduledDate = scheduledByMother[c.pregnant_mother_id]?.[trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date;
+    const status = getPrenatalVisitStatus({ scheduledFor: scheduledDate, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status });
+    if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
+    if (status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
+    if (status === 'upcoming') upcomingCounts[c.pregnant_mother_id] = (upcomingCounts[c.pregnant_mother_id] || 0) + 1;
   });
 
   const rows: ReportRow[] = (records ?? []).map((r) => ({
@@ -85,7 +89,7 @@ export default async function ReportsPage() {
       nextVisit:    nextVisit[r.id] ?? null,
       missedVisits: missedCounts[r.id] ?? 0,
       upcomingVisits: upcomingCounts[r.id] ?? 0,
-      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: latestCheckup.scheduled_checkup_date ?? latestCheckup.scheduled_for ?? latestCheckup.checkup_date, actualCheckupDate: latestCheckup.actual_checkup_date, recordedStatus: latestCheckup.status }) : null,
+      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: scheduledByMother[r.id]?.[latestCheckup.trimester as '1st' | '2nd' | '3rd'] ?? latestCheckup.scheduled_checkup_date ?? latestCheckup.scheduled_for ?? latestCheckup.checkup_date, actualCheckupDate: latestCheckup.actual_checkup_date, recordedStatus: latestCheckup.status }) : null,
     };
   });
 

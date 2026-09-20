@@ -32,7 +32,7 @@ export default function PrenatalCheckups({
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+  const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '' });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
 
@@ -50,11 +50,6 @@ export default function PrenatalCheckups({
     const scheduledCheckupDate = scheduledDates[activeTrimester];
     if (!scheduledCheckupDate) {
       setError(`No ${activeTrimester} trimester schedule exists for this mother.`);
-      return;
-    }
-
-    if (form.actual_checkup_date && form.actual_checkup_date < scheduledCheckupDate) {
-      setError('Actual checkup date cannot be before the scheduled date.');
       return;
     }
 
@@ -77,7 +72,6 @@ export default function PrenatalCheckups({
       body: JSON.stringify({
         pregnantMotherId: motherId,
         trimester: activeTrimester,
-        actualCheckupDate: form.actual_checkup_date || null,
         bloodPressure: form.blood_pressure,
         weightKg: weight,
         notes: form.notes,
@@ -96,7 +90,7 @@ export default function PrenatalCheckups({
       ...prev.filter((checkup) => checkup.trimester !== result.data?.trimester),
       result.data as Checkup,
     ]);
-    setForm({ actual_checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
+    setForm({ blood_pressure: '', weight_kg: '', notes: '' });
     setShowForm(false);
   }
 
@@ -273,16 +267,6 @@ export default function PrenatalCheckups({
                   <p id="scheduled-checkup-date" className="form-input bg-gray-50">
                     {scheduledDates[activeTrimester] ?? 'No schedule set'}
                   </p>
-                </div>
-                <div>
-                  <label className="form-label" htmlFor="actual-checkup-date">Actual Checkup Date</label>
-                  <input
-                    id="actual-checkup-date"
-                    type="date"
-                    value={form.actual_checkup_date}
-                    onChange={(e) => setForm((p) => ({ ...p, actual_checkup_date: e.target.value }))}
-                    className="form-input"
-                  />
                 </div>
                 <div>
                   <label className="form-label" htmlFor="blood-pressure">Blood Pressure</label>
