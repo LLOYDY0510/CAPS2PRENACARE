@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 
 type Checkup = {
   id: string;
@@ -29,7 +30,7 @@ export default function PrenatalCheckups({
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' as Checkup['status'] });
+  const [form, setForm]                   = useState({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
 
@@ -73,8 +74,8 @@ export default function PrenatalCheckups({
         blood_pressure: form.blood_pressure || null,
         weight_kg: weight,
         notes: form.notes || null,
-        status: form.status,
-        scheduled_for: form.status === 'scheduled' ? form.checkup_date : null,
+        status: 'completed',
+        scheduled_for: form.checkup_date,
         recorded_by: user?.id ?? null,
       })
       .select()
@@ -88,7 +89,7 @@ export default function PrenatalCheckups({
     }
 
     setCheckups((prev) => [...prev, data as Checkup]);
-    setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '', status: 'completed' });
+    setForm({ checkup_date: '', blood_pressure: '', weight_kg: '', notes: '' });
     setShowForm(false);
   }
 
@@ -182,11 +183,18 @@ export default function PrenatalCheckups({
               <tbody>
                 {grouped[activeTrimester].map((c) => (
                   <tr key={c.id}>
+                    {(() => {
+                      const status = getPrenatalVisitStatus({
+                        scheduledFor: c.scheduled_for ?? c.checkup_date,
+                        recordedStatus: c.status,
+                      });
+                      return (
+                        <>
                     <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{c.checkup_date}</td>
                     <td>{c.blood_pressure ?? '—'}</td>
                     <td>{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
                     <td style={{ maxWidth: '240px', whiteSpace: 'normal' }}>{c.notes ?? '—'}</td>
-                    <td><span className={c.status === 'completed' ? 'badge-low' : c.status === 'missed' ? 'badge-high' : 'badge-neutral'}>{c.status}</span></td>
+                    <td><span className={status === 'completed' ? 'badge-low' : status === 'missed' ? 'badge-high' : 'badge-neutral'}>{prenatalStatusLabel(status)}</span></td>
                     {canEdit && (
                       <td>
                         <button
@@ -198,6 +206,9 @@ export default function PrenatalCheckups({
                         </button>
                       </td>
                     )}
+                        </>
+                      );
+                    })()}
                   </tr>
                 ))}
               </tbody>
@@ -276,21 +287,6 @@ export default function PrenatalCheckups({
                   className="form-input"
                   style={{ maxWidth: '160px' }}
                 />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label" htmlFor="checkup-status">Visit Status</label>
-                <select
-                  id="checkup-status"
-                  value={form.status}
-                  onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Checkup['status'] }))}
-                  className="form-select"
-                >
-                  <option value="completed">Completed</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="missed">Missed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
               </div>
 
               <div className="mb-4">

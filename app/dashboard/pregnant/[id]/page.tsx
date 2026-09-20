@@ -4,6 +4,7 @@ import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
 import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
+import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
 
 type MatchedIndicatorRow = {
   risk_indicators: { label: string } | { label: string }[] | null;
@@ -58,6 +59,14 @@ export default async function ViewPregnantMotherPage({
     .select('id, trimester, checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', id);
 
+  const normalizedCheckups = (checkups ?? []).map((checkup) => ({
+    ...checkup,
+    status: getPrenatalVisitStatus({
+      scheduledFor: checkup.scheduled_for ?? checkup.checkup_date,
+      recordedStatus: checkup.status,
+    }),
+  }));
+
   const [{ data: history }, { data: referrals }] = await Promise.all([
     supabase.from('maternal_health_history').select('id, condition, details, diagnosed_date, resolved_date, created_at').eq('pregnant_mother_id', id).order('created_at', { ascending: false }),
     supabase.from('maternal_referrals').select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').eq('pregnant_mother_id', id).order('updated_at', { ascending: false }),
@@ -110,7 +119,7 @@ export default async function ViewPregnantMotherPage({
         )}
       </div>
  
-      <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} canEdit={canEdit} />
+      <PrenatalCheckups motherId={id} initialCheckups={normalizedCheckups.map((checkup) => ({ ...checkup, status: checkup.status === 'upcoming' ? 'scheduled' : checkup.status }) as typeof checkups[number])} canEdit={canEdit} />
       <MaternalCarePanel
         motherId={id}
         canEdit={canEdit}
