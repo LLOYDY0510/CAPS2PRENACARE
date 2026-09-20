@@ -10,7 +10,7 @@ export default async function PregnantRecordsPage() {
   let recordsQuery = supabase
     .from('pregnant_mothers')
     .select(
-      'id, serial_no, date_registered, first_name, middle_name, last_name, address, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level'
+      'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level'
     )
     .order('serial_no', { ascending: true });
   if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
