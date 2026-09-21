@@ -73,6 +73,11 @@ export default function ScheduleSetter({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (!canEdit) {
+      setError('You do not have permission to create schedules.');
+      return;
+    }
  
     if (!visitDate) {
       setError('Please select a date.');
@@ -219,12 +224,12 @@ export default function ScheduleSetter({
           </div>
  
           <div className="max-h-[420px] overflow-y-auto">
-            {withContact.length === 0 && (
+            {filteredWithContact.length === 0 && (
               <p className="px-4 py-8 text-center text-muted-2 text-sm">
                 No pregnant mothers with a contact number found.
               </p>
             )}
-            {withContact.map((m) => (
+            {filteredWithContact.map((m) => (
               <label
                 key={m.id}
                 className="flex items-center gap-3 px-4 py-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer"
