@@ -1,5 +1,5 @@
 import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
-import { requireRoles } from '@/utils/auth/roles';
+import { requireHealthTipsManagement } from '@/utils/auth/middleware';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
 
 type MotherIndicatorRow = {
@@ -10,7 +10,7 @@ type MotherIndicatorRow = {
 export const dynamic = 'force-dynamic';
 
 export default async function HealthTipsPage() {
-  const { supabase } = await requireRoles(['nurse']);
+  const { supabase } = await requireHealthTipsManagement();
 
   const { data: records } = await supabase
     .from('pregnant_mothers')
