@@ -1,20 +1,24 @@
 import BhwTable from '@/components/users/BhwTable';
 import { requireBhwManagement } from '@/utils/auth/middleware';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ManageBhwPage() {
   const { supabase } = await requireBhwManagement();
+  const adminSupabase = createAdminClient();
 
   // Get all users who are BHW (purok) or pending (candidates to promote)
-  const { data: bhwUsers } = await supabase
+  // Use admin client to bypass RLS policies
+  const { data: bhwUsers } = await adminSupabase
     .from('profiles')
     .select('id, email, full_name, role, purok')
     .in('role', ['bhw_purok', 'pending'])
     .order('role', { ascending: true });
 
   // Get pregnant mother counts per purok, for workload display
-  const { data: pregnantRecords } = await supabase
+  // Use admin client to bypass RLS policies
+  const { data: pregnantRecords } = await adminSupabase
     .from('pregnant_mothers')
     .select('purok');
 
