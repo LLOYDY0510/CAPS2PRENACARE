@@ -1,17 +1,16 @@
 import { redirect } from 'next/navigation';
 import { getCurrentProfile } from './roles';
-import { canAccessPurok, canManageUsers, canManageRoles, canEditRiskMap, canManageHealthTips, canManageRiskIndicators } from './permissions';
+import { canAccessPurok, canManageUsers, canManageRoles, canEditRiskMap, canManageHealthTips, canManageRiskIndicators, hasPermission } from './permissions';
 import type { UserRole } from '@/types';
 
 /**
  * Middleware to protect routes based on role and permissions
  * Use this in server components to ensure users have proper access
  */
-export async function requirePermission(permission: keyof ReturnType<typeof import('./permissions').ROLE_PERMISSIONS[UserRole]>) {
+export async function requirePermission(permission: keyof typeof import('./permissions').ROLE_PERMISSIONS[UserRole]) {
   const result = await getCurrentProfile();
   if (!result.user) redirect('/login');
   
-  const { hasPermission } = await import('./permissions');
   const role = (result.profile?.role ?? 'pending') as UserRole;
   
   if (!hasPermission(role, permission)) {
