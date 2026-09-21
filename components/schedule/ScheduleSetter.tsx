@@ -63,10 +63,10 @@ export default function ScheduleSetter({
   }
  
   function toggleAll() {
-    if (selected.size === withContact.length) {
+    if (selected.size === filteredWithContact.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(withContact.map((m) => m.id)));
+      setSelected(new Set(filteredWithContact.map((m) => m.id)));
     }
   }
  
