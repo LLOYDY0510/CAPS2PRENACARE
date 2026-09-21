@@ -52,7 +52,7 @@ export default async function PregnantRecordsPage() {
   const recordsWithCheckupCount = (records ?? []).map((record) => ({
     ...record,
     checkupCount: completedTrimesters[record.id]?.size ?? 0,
-    canEditRecord: canEdit && canAccessPurok(role, profile?.purok, record.purok),
+    canEditRecord: canEdit && canAccessPurok(role, profile?.purok ?? null, record.purok),
   }));
 
   return (
