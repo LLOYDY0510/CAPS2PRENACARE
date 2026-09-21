@@ -43,6 +43,15 @@ export default function ScheduleSetter({
   const [error, setError] = useState('');
  
   const withContact = mothers.filter((m) => m.contact_number);
+  
+  // Filter mothers by purok for BHW purok users
+  const filteredMothers = role === 'bhw_purok' && userPurok 
+    ? mothers.filter((m) => m.purok === userPurok)
+    : mothers;
+  
+  const filteredWithContact = role === 'bhw_purok' && userPurok
+    ? withContact.filter((m) => m.purok === userPurok)
+    : withContact;
  
   function toggle(id: string) {
     setSelected((prev) => {
