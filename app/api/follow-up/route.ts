@@ -186,8 +186,8 @@ export async function PATCH(req: NextRequest) {
         .single();
 
       const motherPurok = Array.isArray(followUp?.pregnant_mothers) 
-        ? followUp.pregnant_mothers[0]?.purok 
-        : followUp?.pregnant_mothers?.purok;
+        ? (followUp.pregnant_mothers as any)[0]?.purok 
+        : (followUp?.pregnant_mothers as any)?.purok;
 
       if (motherPurok !== profile.purok) {
         return NextResponse.json({ error: 'You can only update follow-ups for mothers in your purok.' }, { status: 403 });
