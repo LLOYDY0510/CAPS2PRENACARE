@@ -31,6 +31,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json() as DispatchBody;
   const notificationKey = (recipientKey: string, title: string, message: string) =>
     createHash('sha256').update(`${user.id}:${recipientKey}:${title}:${message}`).digest('hex');
+  
+  // BHW purok users cannot create appointment notifications (schedule-related)
+  if (body.type === 'appointment' && !canManageSchedules(profile.role)) {
+    return NextResponse.json({ error: 'You do not have permission to create appointment notifications.' }, { status: 403 });
+  }
+  
   if ((body.type === 'risk_alert' || body.type === 'role_alert') && profile.role !== 'nurse' && body.type === 'risk_alert') {
     return NextResponse.json({ error: 'Only Nurses can send risk-based health advice.' }, { status: 403 });
   }
