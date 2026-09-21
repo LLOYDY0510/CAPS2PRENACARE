@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import BhwHeadDashboard from '@/components/dashboard/BhwHeadDashboard';
+import BhwPurokDashboard from '@/components/dashboard/BhwPurokDashboard';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 import NurseDashboard from '@/components/dashboard/NurseDashboard';
 import PatientMessages from '@/components/patient/PatientMessages';
@@ -37,17 +38,9 @@ export default async function DashboardPage() {
       )}
 
       {role === 'bhw_head' && <BhwHeadDashboard />}
+      {role === 'bhw_purok' && <BhwPurokDashboard />}
       {role === 'admin' && <AdminDashboard />}
       {role === 'nurse' && <NurseDashboard />}
-
-      {role === 'bhw_purok' && (
-        <div className="card p-6">
-          <h1 className="text-2xl font-semibold mb-2 text-ink">
-            BHW Dashboard — Purok {profile?.purok ?? '?'}
-          </h1>
-          <p className="text-muted">Households and pregnant mothers in your assigned purok.</p>
-        </div>
-      )}
 
       {role === 'pregnant_mother' && profile?.pregnant_mother_id && (
         <PatientMessages pregnantMotherId={profile.pregnant_mother_id} />
