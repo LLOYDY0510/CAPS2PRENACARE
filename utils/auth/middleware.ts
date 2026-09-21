@@ -97,7 +97,8 @@ export async function requireHealthTipsManagement() {
   
   const role = (result.profile?.role ?? 'pending') as UserRole;
   
-  if (!canManageHealthTips(role)) {
+  // Only nurses can manage health tips
+  if (role !== 'nurse') {
     redirect('/dashboard');
   }
   
