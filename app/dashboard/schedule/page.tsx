@@ -1,5 +1,6 @@
 import ScheduleSetter from '@/components/schedule/ScheduleSetter';
 import { requireRoles } from '@/utils/auth/roles';
+import { canManageSchedules } from '@/utils/auth/permissions';
  
 export const dynamic = 'force-dynamic';
  
