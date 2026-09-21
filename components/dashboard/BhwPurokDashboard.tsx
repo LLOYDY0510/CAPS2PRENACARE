@@ -79,7 +79,12 @@ export default async function BhwPurokDashboard() {
 
   // Filter missed checkups to only those in this BHW's purok
   const missedCheckupsInPurok = missedCheckups?.filter(
-    (checkup) => checkup.pregnant_mothers?.purok === purok
+    (checkup) => {
+      const motherPurok = Array.isArray(checkup.pregnant_mothers) 
+        ? checkup.pregnant_mothers[0]?.purok 
+        : checkup.pregnant_mothers?.purok;
+      return motherPurok === purok;
+    }
   ) ?? [];
 
   // Get notifications for this BHW
@@ -150,22 +155,27 @@ export default async function BhwPurokDashboard() {
             <p className="text-sm text-muted-2 text-center py-4">No missed checkups</p>
           ) : (
             <div className="space-y-2">
-              {missedCheckupsInPurok.map((checkup) => (
-                <div
-                  key={checkup.id}
-                  className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{checkup.pregnant_mothers?.full_name}</p>
-                    <p className="text-xs text-muted">
-                      Missed: {checkup.checkup_date || checkup.scheduled_checkup_date}
-                    </p>
+              {missedCheckupsInPurok.map((checkup) => {
+                const mother = Array.isArray(checkup.pregnant_mothers) 
+                  ? checkup.pregnant_mothers[0] 
+                  : checkup.pregnant_mothers;
+                return (
+                  <div
+                    key={checkup.id}
+                    className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{mother?.full_name}</p>
+                      <p className="text-xs text-muted">
+                        Missed: {checkup.checkup_date || checkup.scheduled_checkup_date}
+                      </p>
+                    </div>
+                    {mother?.risk_level === 'high' && (
+                      <span className="badge-high text-xs">High Risk</span>
+                    )}
                   </div>
-                  {checkup.pregnant_mothers?.risk_level === 'high' && (
-                    <span className="badge-high text-xs">High Risk</span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -213,20 +223,25 @@ export default async function BhwPurokDashboard() {
         </div>
         {upcomingCheckups && upcomingCheckups.length > 0 ? (
           <div className="space-y-2">
-            {upcomingCheckups.map((checkup) => (
-              <div
-                key={checkup.id}
-                className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100"
-              >
-                <div>
-                  <p className="font-medium text-sm">{checkup.pregnant_mothers?.full_name}</p>
-                  <p className="text-xs text-muted">Scheduled: {checkup.visit_date}</p>
+            {upcomingCheckups.map((checkup) => {
+              const mother = Array.isArray(checkup.pregnant_mothers) 
+                ? checkup.pregnant_mothers[0] 
+                : checkup.pregnant_mothers;
+              return (
+                <div
+                  key={checkup.id}
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{mother?.full_name}</p>
+                    <p className="text-xs text-muted">Scheduled: {checkup.visit_date}</p>
+                  </div>
+                  {mother?.risk_level === 'high' && (
+                    <span className="badge-high text-xs">High Risk</span>
+                  )}
                 </div>
-                {checkup.pregnant_mothers?.risk_level === 'high' && (
-                  <span className="badge-high text-xs">High Risk</span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-muted-2 text-center py-4">No upcoming checkups scheduled</p>
