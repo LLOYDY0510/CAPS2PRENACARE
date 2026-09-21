@@ -87,17 +87,6 @@ export default async function BhwPurokDashboard() {
     }
   ) ?? [];
 
-  // Get notifications for this BHW
-  const { data: notifications } = await supabase
-    .from('maternal_notifications')
-    .select('id, title, message, category, read_at, created_at')
-    .eq('recipient_role', 'bhw_purok')
-    .eq('recipient_purok', purok)
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  const unreadCount = notifications?.filter((n) => !n.read_at).length ?? 0;
-
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -177,38 +166,6 @@ export default async function BhwPurokDashboard() {
                 );
               })}
             </div>
-          )}
-        </div>
-
-        {/* Notifications */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Notifications</h2>
-            {unreadCount > 0 && (
-              <span className="bg-brand text-white text-xs px-2 py-1 rounded-full">
-                {unreadCount} unread
-              </span>
-            )}
-          </div>
-          {notifications && notifications.length > 0 ? (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {notifications.slice(0, 5).map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 rounded-lg border ${
-                    notification.read_at ? 'bg-gray-50 border-gray-100' : 'bg-blue-50 border-blue-100'
-                  }`}
-                >
-                  <p className="font-medium text-sm">{notification.title}</p>
-                  <p className="text-xs text-muted mt-1">{notification.message}</p>
-                  <p className="text-xs text-muted-2 mt-2">
-                    {new Date(notification.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-2 text-center py-4">No notifications</p>
           )}
         </div>
       </div>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { STAFF_ROLES } from '@/utils/auth/roles';
 import { canManageSchedules } from '@/utils/auth/permissions';
 import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
@@ -24,7 +23,14 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profile?.role || !STAFF_ROLES.includes(profile.role as (typeof STAFF_ROLES)[number])) {
+  
+  // BHW purok users cannot create notifications
+  if (profile?.role === 'bhw_purok') {
+    return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
+  }
+  
+  // Only admin, nurse, and bhw_head can create notifications through this API
+  if (!profile?.role || !['admin', 'nurse', 'bhw_head'].includes(profile.role)) {
     return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
   }
 

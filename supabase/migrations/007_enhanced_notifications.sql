@@ -39,7 +39,7 @@ begin
     -- Generate unique event key
     event_key := public.generate_event_key('missed_checkup', new.pregnant_mother_id);
     
-    -- Create notification for relevant BHW
+    -- Create notification for relevant BHW (excluding bhw_purok role)
     insert into public.maternal_notifications (
       pregnant_mother_id,
       event_key,
@@ -60,7 +60,7 @@ begin
              coalesce(new.actual_checkup_date, new.scheduled_checkup_date, new.checkup_date),
              coalesce(mother_info.risk_level, 'unknown')
       ),
-      'bhw_purok',
+      'bhw_head',
       mother_info.purok,
       null
     );
@@ -111,7 +111,7 @@ begin
   if new.risk_level = 'high' and (old.risk_level is null or old.risk_level != 'high') then
     event_key := public.generate_event_key('high_risk', new.id);
     
-    -- Notify assigned BHW
+    -- Notify assigned BHW head (excluding bhw_purok role)
     insert into public.maternal_notifications (
       pregnant_mother_id,
       event_key,
@@ -128,7 +128,7 @@ begin
       'risk_alert',
       'High-Risk Mother Alert',
       format('%s has been flagged as high-risk. Close monitoring required.', new.full_name),
-      'bhw_purok',
+      'bhw_head',
       new.purok,
       null
     );
@@ -188,7 +188,7 @@ begin
     
     event_key := public.generate_event_key('upcoming_checkup', new.id);
     
-    -- Create notification for assigned BHW
+    -- Create notification for assigned BHW head (excluding bhw_purok role)
     insert into public.maternal_notifications (
       pregnant_mother_id,
       event_key,
@@ -209,7 +209,7 @@ begin
              coalesce(new.visit_date, new.scheduled_checkup_date),
              coalesce(mother_info.risk_level, 'unknown')
       ),
-      'bhw_purok',
+      'bhw_head',
       mother_info.purok,
       null
     );
@@ -244,7 +244,7 @@ begin
     
     event_key := public.generate_event_key('referral', new.id);
     
-    -- Notify assigned BHW
+    -- Notify assigned BHW head (excluding bhw_purok role)
     insert into public.maternal_notifications (
       pregnant_mother_id,
       event_key,
@@ -266,7 +266,7 @@ begin
              new.reason,
              new.status
       ),
-      'bhw_purok',
+      'bhw_head',
       mother_info.purok,
       null
     );
