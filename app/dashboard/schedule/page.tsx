@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic';
  
 export default async function PrenatalSchedulePage() {
   const { supabase, profile, role } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
+
+  const canEditSchedule = canManageSchedules(role);
  
   const { data: currentSchedule } = await supabase
     .from('prenatal_schedules')
