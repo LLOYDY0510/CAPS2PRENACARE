@@ -21,7 +21,7 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
     { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
-    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
+    { label: 'Prenatal Schedule (View Only)', href: '/dashboard/schedule' },
     { label: 'Risk Map (View Only)', href: '/dashboard/risk-map' },
     { label: 'Reports', href: '/dashboard/reports' },
   ],
