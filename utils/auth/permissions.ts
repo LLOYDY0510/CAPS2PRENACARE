@@ -15,6 +15,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: true,
     canViewReports: true,
     canManageReferrals: true,
+    canManageSchedules: true,
   },
   nurse: {
     canViewAllRecords: true,
@@ -29,6 +30,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: true,
     canViewReports: true,
     canManageReferrals: true,
+    canManageSchedules: true,
   },
   bhw_head: {
     canViewAllRecords: true,
@@ -43,6 +45,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: false,
     canViewReports: true,
     canManageReferrals: true,
+    canManageSchedules: true,
   },
   bhw_purok: {
     canViewAllRecords: false, // Only their purok
@@ -57,6 +60,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: false,
     canViewReports: true,
     canManageReferrals: true,
+    canManageSchedules: false, // Cannot create/edit schedules
   },
   pregnant_mother: {
     canViewAllRecords: false,
@@ -71,6 +75,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: false,
     canViewReports: false,
     canManageReferrals: false,
+    canManageSchedules: false,
   },
   pending: {
     canViewAllRecords: false,
@@ -85,6 +90,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: false,
     canViewReports: false,
     canManageReferrals: false,
+    canManageSchedules: false,
   },
 } as const;
 
