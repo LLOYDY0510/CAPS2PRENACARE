@@ -159,3 +159,8 @@ export function canViewReports(role: UserRole | string | null | undefined): bool
 export function canManageReferrals(role: UserRole | string | null | undefined): boolean {
   return hasPermission(role, 'canManageReferrals');
 }
+
+// Helper function to check if a user can manage schedules
+export function canManageSchedules(role: UserRole | string | null | undefined): boolean {
+  return hasPermission(role, 'canManageSchedules');
+}

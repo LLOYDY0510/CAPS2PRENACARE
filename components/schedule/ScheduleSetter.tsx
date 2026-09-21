@@ -23,9 +23,15 @@ type Mother = {
 export default function ScheduleSetter({
   currentSchedule,
   mothers,
+  canEdit = true,
+  role,
+  userPurok,
 }: {
   currentSchedule: Schedule;
   mothers: Mother[];
+  canEdit?: boolean;
+  role?: string;
+  userPurok?: string | null;
 }) {
   const supabase = createClient();
   const router = useRouter();
