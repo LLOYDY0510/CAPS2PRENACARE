@@ -32,7 +32,13 @@ export default async function PrenatalSchedulePage() {
           : 'View prenatal schedules and resend reminders for mothers in your assigned purok.'}
       </p>
  
-      <ScheduleSetter currentSchedule={currentSchedule ?? null} mothers={mothers ?? []} />
+      <ScheduleSetter 
+        currentSchedule={currentSchedule ?? null} 
+        mothers={mothers ?? []} 
+        canEdit={canEditSchedule}
+        role={role}
+        userPurok={profile?.purok}
+      />
     </div>
   );
 }
