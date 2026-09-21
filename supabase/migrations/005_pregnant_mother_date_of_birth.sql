@@ -1,5 +1,6 @@
-alter table public.pregnant_mothers
-  add column if not exists date_of_birth date;
-
-create index if not exists pregnant_mothers_date_of_birth_idx
-  on public.pregnant_mothers(date_of_birth);
+-- This migration is disabled because the actual database schema doesn't have date_of_birth column
+-- The system uses the age field directly instead
+-- alter table public.pregnant_mothers
+--   add column if not exists date_of_birth date;
+-- create index if not exists pregnant_mothers_date_of_birth_idx
+--   on public.pregnant_mothers(date_of_birth);

@@ -1,6 +1,17 @@
 export function calculateAge(dateOfBirth: string | null | undefined, today = new Date()): number | null {
   if (!dateOfBirth) return null;
-  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  
+  // Try parsing with different date formats
+  let birthDate: Date;
+  
+  // Try YYYY-MM-DD format first
+  if (dateOfBirth.includes('-')) {
+    birthDate = new Date(dateOfBirth);
+  } else {
+    // Try other formats
+    birthDate = new Date(dateOfBirth);
+  }
+  
   if (Number.isNaN(birthDate.getTime())) return null;
 
   let age = today.getFullYear() - birthDate.getFullYear();
@@ -10,5 +21,10 @@ export function calculateAge(dateOfBirth: string | null | undefined, today = new
 }
 
 export function getRecordAge(age: number | null | undefined, dateOfBirth?: string | null): number | null {
-  return calculateAge(dateOfBirth) ?? age ?? null;
+  // Prioritize date_of_birth calculation, fall back to age field
+  const calculatedAge = calculateAge(dateOfBirth);
+  if (calculatedAge !== null && calculatedAge > 0) {
+    return calculatedAge;
+  }
+  return age ?? null;
 }

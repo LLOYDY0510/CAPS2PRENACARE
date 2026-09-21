@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { calculateAge } from '@/utils/age';
 
 type Record = {
   id: string;
@@ -14,7 +13,6 @@ type Record = {
   address: string | null;
   purok: string | null;
   age: number | null;
-  date_of_birth: string | null;
   contact_number: string | null;
   lmp: string | null;
   gravida_para: string | null;
@@ -45,7 +43,6 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
     last_name: record.last_name ?? '',
     address: record.address ?? '',
     purok: record.purok ?? '',
-    date_of_birth: record.date_of_birth ?? '',
     age: record.age?.toString() ?? '',
     contact_number: record.contact_number ?? '',
     lmp: record.lmp ?? '',
@@ -102,8 +99,7 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
         full_name,
         address: form.address || null,
         purok: form.purok || null,
-        age: calculateAge(form.date_of_birth) ?? (form.age ? parseInt(form.age) : null),
-        date_of_birth: form.date_of_birth || null,
+        age: form.age ? parseInt(form.age) : null,
         contact_number: form.contact_number || null,
         lmp: form.lmp || null,
         gravida_para,
@@ -207,20 +203,10 @@ export default function EditPregnantMotherForm({ record }: { record: Record }) {
           />
         </div>
         <div>
-            <label className="block text-sm font-medium mb-1">Date of Birth</label>
-            <input
-              type="date"
-              value={form.date_of_birth}
-              onChange={(e) => updateField('date_of_birth', e.target.value)}
-              className="form-input"
-            />
-          </div>
-          <div>
           <label className="block text-sm font-medium mb-1">Age</label>
           <input
             type="number"
             value={form.age}
-              disabled={!!form.date_of_birth}
             onChange={(e) => updateField('age', e.target.value)}
             className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
           />

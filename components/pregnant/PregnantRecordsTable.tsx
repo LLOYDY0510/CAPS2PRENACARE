@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
-import { getRecordAge } from '@/utils/age';
 
 export type PregnantRecord = {
   id: string;
@@ -16,7 +15,6 @@ export type PregnantRecord = {
   address: string | null;
   purok: string | null;
   age: number | null;
-  date_of_birth: string | null;
   lmp: string | null;
   gravida_para: string | null;
   edd: string | null;
@@ -44,7 +42,7 @@ export default function PregnantRecordsTable({
     return records.filter((r) => {
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
-      const age = getRecordAge(r.age, r.date_of_birth);
+      const age = r.age;
       if (q && !name.includes(q) && !serial.includes(q)) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
       if (ageFilter === 'under-18' && (age == null || age >= 18)) return false;
@@ -158,7 +156,7 @@ export default function PregnantRecordsTable({
                   {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                 </td>
                 <td>{r.address ?? '—'}</td>
-                <td>{getRecordAge(r.age, r.date_of_birth) ?? '—'}</td>
+                <td>{r.age ?? '—'}</td>
                 <td>{r.lmp ?? '—'}</td>
                 <td>{r.gravida_para ?? '—'}</td>
                 <td>{r.edd ?? '—'}</td>

@@ -10,7 +10,7 @@ export default async function PregnantRecordsPage() {
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
   const recordsSelect =
-    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, date_of_birth, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level, checkup_recorded';
+    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level, checkup_recorded';
   const legacyRecordsSelect =
     'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level';
 
@@ -21,14 +21,14 @@ export default async function PregnantRecordsPage() {
   if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
   let { data: records, error } = await recordsQuery;
 
-  if (error?.message.includes('checkup_recorded') || error?.message.includes('date_of_birth')) {
+  if (error?.message.includes('checkup_recorded')) {
     let legacyQuery = supabase
       .from('pregnant_mothers')
       .select(legacyRecordsSelect)
       .order('serial_no', { ascending: true });
     if (role === 'bhw_purok' && profile?.purok) legacyQuery = legacyQuery.eq('purok', profile.purok);
     const legacyResult = await legacyQuery;
-    records = legacyResult.data?.map((record) => ({ ...record, date_of_birth: null, checkup_recorded: false })) ?? null;
+    records = legacyResult.data?.map((record) => ({ ...record, checkup_recorded: false })) ?? null;
     error = legacyResult.error;
   }
 
