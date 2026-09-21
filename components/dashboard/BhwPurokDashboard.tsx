@@ -81,8 +81,8 @@ export default async function BhwPurokDashboard() {
   const missedCheckupsInPurok = missedCheckups?.filter(
     (checkup) => {
       const motherPurok = Array.isArray(checkup.pregnant_mothers) 
-        ? checkup.pregnant_mothers[0]?.purok 
-        : checkup.pregnant_mothers?.purok;
+        ? (checkup.pregnant_mothers as any)[0]?.purok 
+        : (checkup.pregnant_mothers as any)?.purok;
       return motherPurok === purok;
     }
   ) ?? [];
