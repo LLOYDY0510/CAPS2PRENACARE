@@ -225,8 +225,8 @@ export default async function BhwPurokDashboard() {
           <div className="space-y-2">
             {upcomingCheckups.map((checkup) => {
               const mother = Array.isArray(checkup.pregnant_mothers) 
-                ? checkup.pregnant_mothers[0] 
-                : checkup.pregnant_mothers;
+                ? (checkup.pregnant_mothers as any)[0] 
+                : (checkup.pregnant_mothers as any);
               return (
                 <div
                   key={checkup.id}
