@@ -114,7 +114,8 @@ export async function requireRiskIndicatorsManagement() {
   
   const role = (result.profile?.role ?? 'pending') as UserRole;
   
-  if (!canManageRiskIndicators(role)) {
+  // Only nurses can manage risk indicators
+  if (role !== 'nurse') {
     redirect('/dashboard');
   }
   
