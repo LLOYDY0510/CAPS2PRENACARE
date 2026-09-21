@@ -25,7 +25,7 @@ export default async function RiskMapPage() {
         {!canEdit && ' (View Only)'}
       </p>
 
-      <RiskMapClient records={records ?? []} canEdit={canEdit} />
+      <RiskMapClient records={records ?? []} />
     </div>
   );
 }
