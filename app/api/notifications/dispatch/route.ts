@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { STAFF_ROLES } from '@/utils/auth/roles';
+import { canManageSchedules } from '@/utils/auth/permissions';
 import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
 

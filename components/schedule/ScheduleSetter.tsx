@@ -260,6 +260,16 @@ export default function ScheduleSetter({
           {saving ? 'Saving…' : `Set Schedule (${selected.size} recipients)`}
         </button>
       </form>
+      )}
+
+      {!canEdit && (
+        <div className="card p-6 bg-blue-50 border border-blue-100">
+          <h2 className="text-sm font-semibold text-gray-700 mb-2">Schedule Management</h2>
+          <p className="text-sm text-muted">
+            You have view-only access to prenatal schedules. Please contact your BHW Manager to create or modify schedules.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
