@@ -114,12 +114,14 @@ export function canAccessPurok(userRole: UserRole | string | null | undefined, u
 
 // Helper function to check if a user can manage users
 export function canManageUsers(role: UserRole | string | null | undefined): boolean {
-  return hasPermission(role, 'canManageUsers');
+  // Only admin can manage users
+  return role === 'admin';
 }
 
 // Helper function to check if a user can manage roles
 export function canManageRoles(role: UserRole | string | null | undefined): boolean {
-  return hasPermission(role, 'canManageRoles');
+  // Only admin can manage roles
+  return role === 'admin';
 }
 
 // Helper function to check if a user can edit the risk map
