@@ -23,9 +23,15 @@ type Mother = {
 export default function ScheduleSetter({
   currentSchedule,
   mothers,
+  canEdit = true,
+  role,
+  userPurok,
 }: {
   currentSchedule: Schedule;
   mothers: Mother[];
+  canEdit?: boolean;
+  role?: string;
+  userPurok?: string | null;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -37,6 +43,15 @@ export default function ScheduleSetter({
   const [error, setError] = useState('');
  
   const withContact = mothers.filter((m) => m.contact_number);
+  
+  // Filter mothers by purok for BHW purok users
+  const filteredMothers = role === 'bhw_purok' && userPurok 
+    ? mothers.filter((m) => m.purok === userPurok)
+    : mothers;
+  
+  const filteredWithContact = role === 'bhw_purok' && userPurok
+    ? withContact.filter((m) => m.purok === userPurok)
+    : withContact;
  
   function toggle(id: string) {
     setSelected((prev) => {
@@ -48,16 +63,21 @@ export default function ScheduleSetter({
   }
  
   function toggleAll() {
-    if (selected.size === withContact.length) {
+    if (selected.size === filteredWithContact.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(withContact.map((m) => m.id)));
+      setSelected(new Set(filteredWithContact.map((m) => m.id)));
     }
   }
  
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (!canEdit) {
+      setError('You do not have permission to create schedules.');
+      return;
+    }
  
     if (!visitDate) {
       setError('Please select a date.');
@@ -157,7 +177,8 @@ export default function ScheduleSetter({
       </div>
  
       {/* Set schedule + select recipients */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {canEdit && (
+        <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
  
         <div className="card p-6">
@@ -191,7 +212,7 @@ export default function ScheduleSetter({
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
             <p className="text-sm font-medium">
-              Select recipients ({selected.size}/{withContact.length})
+              Select recipients ({selected.size}/{filteredWithContact.length})
             </p>
             <button
               type="button"
@@ -199,17 +220,17 @@ export default function ScheduleSetter({
               className="btn-ghost"
               style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem' }}
             >
-              {selected.size === withContact.length ? 'Deselect all' : 'Select all'}
+              {selected.size === filteredWithContact.length ? 'Deselect all' : 'Select all'}
             </button>
           </div>
  
           <div className="max-h-[420px] overflow-y-auto">
-            {withContact.length === 0 && (
+            {filteredWithContact.length === 0 && (
               <p className="px-4 py-8 text-center text-muted-2 text-sm">
                 No pregnant mothers with a contact number found.
               </p>
             )}
-            {withContact.map((m) => (
+            {filteredWithContact.map((m) => (
               <label
                 key={m.id}
                 className="flex items-center gap-3 px-4 py-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer"
@@ -239,6 +260,16 @@ export default function ScheduleSetter({
           {saving ? 'Saving…' : `Set Schedule (${selected.size} recipients)`}
         </button>
       </form>
+      )}
+
+      {!canEdit && (
+        <div className="card p-6 bg-blue-50 border border-blue-100">
+          <h2 className="text-sm font-semibold text-gray-700 mb-2">Schedule Management</h2>
+          <p className="text-sm text-muted">
+            You have view-only access to prenatal schedules. Please contact your BHW Manager to create or modify schedules.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

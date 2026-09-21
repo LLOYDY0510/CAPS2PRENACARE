@@ -17,6 +17,14 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Manage BHW (Purok)', href: '/dashboard/bhw' },
     { label: 'Reports', href: '/dashboard/reports' },
   ],
+  bhw_purok: [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
+    { label: 'Prenatal Schedule (View Only)', href: '/dashboard/schedule' },
+    { label: 'Risk Map (View Only)', href: '/dashboard/risk-map' },
+    { label: 'Reports', href: '/dashboard/reports' },
+  ],
   admin: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Risk Map', href: '/dashboard/risk-map' },
@@ -66,20 +74,24 @@ export default async function DashboardLayout({
   if (isStaffRole(role)) await checkAndSendPrenatalReminders();
   const menuItems = MENUS[role] ?? [];
 
-  const { data: notificationRows } = await supabase
-    .from('maternal_notifications')
-    .select('id, pregnant_mother_id, recipient_user_id, recipient_role, recipient_purok, title, message, category, read_at, created_at')
-    .order('created_at', { ascending: false })
-    .limit(80);
-  const notifications = (notificationRows ?? [])
-    .filter((notification) => (
-      notification.recipient_user_id === user.id ||
-      notification.recipient_role === role ||
-      (role === 'bhw_purok' && notification.recipient_purok === profile?.purok) ||
-      (role === 'pregnant_mother' && notification.pregnant_mother_id === profile?.pregnant_mother_id)
-    ))
-    .slice(0, 40)
-    .map(({ id, title, message, category, read_at, created_at }) => ({ id, title, message, category, read_at, created_at }));
+  // BHW purok users do not receive notifications
+  let notifications: Array<{ id: string; title: string; message: string; category: string; read_at: string | null; created_at: string }> = [];
+  
+  if (role !== 'bhw_purok') {
+    const { data: notificationRows } = await supabase
+      .from('maternal_notifications')
+      .select('id, pregnant_mother_id, recipient_user_id, recipient_role, recipient_purok, title, message, category, read_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(80);
+    notifications = (notificationRows ?? [])
+      .filter((notification) => (
+        notification.recipient_user_id === user.id ||
+        notification.recipient_role === role ||
+        (role === 'pregnant_mother' && notification.pregnant_mother_id === profile?.pregnant_mother_id)
+      ))
+      .slice(0, 40)
+      .map(({ id, title, message, category, read_at, created_at }) => ({ id, title, message, category, read_at, created_at }));
+  }
 
   return (
     <Sidebar

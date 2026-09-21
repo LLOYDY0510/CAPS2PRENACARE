@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { STAFF_ROLES } from '@/utils/auth/roles';
+import { canManageSchedules } from '@/utils/auth/permissions';
 import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
 
@@ -23,13 +23,26 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profile?.role || !STAFF_ROLES.includes(profile.role as (typeof STAFF_ROLES)[number])) {
+  
+  // BHW purok users cannot create notifications
+  if (profile?.role === 'bhw_purok') {
+    return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
+  }
+  
+  // Only admin, nurse, and bhw_head can create notifications through this API
+  if (!profile?.role || !['admin', 'nurse', 'bhw_head'].includes(profile.role)) {
     return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
   }
 
   const body = await request.json() as DispatchBody;
   const notificationKey = (recipientKey: string, title: string, message: string) =>
     createHash('sha256').update(`${user.id}:${recipientKey}:${title}:${message}`).digest('hex');
+  
+  // BHW purok users cannot create appointment notifications (schedule-related)
+  if (body.type === 'appointment' && !canManageSchedules(profile.role)) {
+    return NextResponse.json({ error: 'You do not have permission to create appointment notifications.' }, { status: 403 });
+  }
+  
   if ((body.type === 'risk_alert' || body.type === 'role_alert') && profile.role !== 'nurse' && body.type === 'risk_alert') {
     return NextResponse.json({ error: 'Only Nurses can send risk-based health advice.' }, { status: 403 });
   }

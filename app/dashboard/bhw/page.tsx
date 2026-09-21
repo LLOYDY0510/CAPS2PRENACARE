@@ -1,10 +1,10 @@
 import BhwTable from '@/components/users/BhwTable';
-import { requireRoles } from '@/utils/auth/roles';
+import { requireBhwManagement } from '@/utils/auth/middleware';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ManageBhwPage() {
-  const { supabase } = await requireRoles(['admin', 'bhw_head']);
+  const { supabase } = await requireBhwManagement();
 
   // Get all users who are BHW (purok) or pending (candidates to promote)
   const { data: bhwUsers } = await supabase

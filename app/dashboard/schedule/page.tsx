@@ -1,10 +1,13 @@
 import ScheduleSetter from '@/components/schedule/ScheduleSetter';
 import { requireRoles } from '@/utils/auth/roles';
+import { canManageSchedules } from '@/utils/auth/permissions';
  
 export const dynamic = 'force-dynamic';
  
 export default async function PrenatalSchedulePage() {
   const { supabase, profile, role } = await requireRoles(['admin', 'bhw_head', 'bhw_purok']);
+
+  const canEditSchedule = canManageSchedules(role);
  
   const { data: currentSchedule } = await supabase
     .from('prenatal_schedules')
@@ -24,10 +27,18 @@ export default async function PrenatalSchedulePage() {
     <div>
       <h1 className="text-2xl font-semibold mb-1">Prenatal Schedule</h1>
       <p className="text-muted mb-6">
-        Set the next prenatal checkup date and choose who should receive the reminder.
+        {canEditSchedule 
+          ? 'Set the next prenatal checkup date and choose who should receive the reminder.'
+          : 'View prenatal schedules and resend reminders for mothers in your assigned purok.'}
       </p>
  
-      <ScheduleSetter currentSchedule={currentSchedule ?? null} mothers={mothers ?? []} />
+      <ScheduleSetter 
+        currentSchedule={currentSchedule ?? null} 
+        mothers={mothers ?? []} 
+        canEdit={canEditSchedule}
+        role={role}
+        userPurok={profile?.purok}
+      />
     </div>
   );
 }

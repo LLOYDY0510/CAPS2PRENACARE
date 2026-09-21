@@ -1,10 +1,10 @@
 import IndicatorManager from '@/components/tips/IndicatorManager';
-import { requireRoles } from '@/utils/auth/roles';
+import { requireRiskIndicatorsManagement } from '@/utils/auth/middleware';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RiskIndicatorsPage() {
-  const { supabase } = await requireRoles(['nurse']);
+  const { supabase } = await requireRiskIndicatorsManagement();
 
   const { data: indicators } = await supabase
     .from('risk_indicators')
