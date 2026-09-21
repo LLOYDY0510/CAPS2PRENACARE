@@ -39,6 +39,24 @@ export async function requireUserManagement() {
 }
 
 /**
+ * Middleware to protect routes that require BHW management access
+ * Admin and bhw_head can manage BHW assignments
+ */
+export async function requireBhwManagement() {
+  const result = await getCurrentProfile();
+  if (!result.user) redirect('/login');
+  
+  const role = (result.profile?.role ?? 'pending') as UserRole;
+  
+  // Only admin and bhw_head can manage BHW assignments
+  if (!['admin', 'bhw_head'].includes(role)) {
+    redirect('/dashboard');
+  }
+  
+  return { ...result, role };
+}
+
+/**
  * Middleware to protect routes that require role management access
  */
 export async function requireRoleManagement() {
