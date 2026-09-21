@@ -211,7 +211,7 @@ export default function ScheduleSetter({
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
             <p className="text-sm font-medium">
-              Select recipients ({selected.size}/{withContact.length})
+              Select recipients ({selected.size}/{filteredWithContact.length})
             </p>
             <button
               type="button"
@@ -219,7 +219,7 @@ export default function ScheduleSetter({
               className="btn-ghost"
               style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem' }}
             >
-              {selected.size === withContact.length ? 'Deselect all' : 'Select all'}
+              {selected.size === filteredWithContact.length ? 'Deselect all' : 'Select all'}
             </button>
           </div>
  
