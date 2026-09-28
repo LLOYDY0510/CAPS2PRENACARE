@@ -1,202 +1,417 @@
-import { createClient } from '@/utils/supabase/server';
-import { createMaternalNotification } from '@/utils/notifications';
+import 'server-only';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { createRoleNotification } from '@/utils/notifications';
 import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
- 
-function tomorrowDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
+import { sendSmsAndLog, type RecipientOutcome } from '@/utils/sms/sendSms';
+import { manilaDatePlusFor, manilaToday } from '@/utils/sms/clock';
+import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
+import { estimateCredits, missedVisitMessage, prenatalReminderMessage, prenatalReminderMessageToday } from '@/utils/sms/templates';
+
+export type ReminderRunReport = {
+  /** Schedules whose visit is within the reminder window. */
+  considered: number;
+  reminded: number;
+  alreadySent: number;
+  failed: number;
+  details: {
+    scheduleId: string;
+    visitDate: string;
+    sent: number;
+    skipped: number;
+    failed: number;
+    error: string | null;
+  }[];
+};
+
+/**
+ * Persists the attempt time so the cooldown survives a restart and applies
+ * across server instances. Silently skipped before migration 014 adds the
+ * column; the in-process guard still applies.
+ */
+async function recordReminderAttempt(
+  supabase: ReturnType<typeof createAdminClient>,
+  scheduleId: string,
+) {
+  const { hasAttemptedAt } = await getSmsSchemaCapabilities();
+  if (!hasAttemptedAt) return;
+  const { error } = await supabase
+    .from('prenatal_schedules')
+    .update({ reminder_attempted_at: new Date().toISOString() })
+    .eq('id', scheduleId);
+  if (error) console.error('could not record reminder attempt', error.message);
 }
- 
-export async function checkAndSendPrenatalReminders() {
-  try {
-    const supabase = await createClient();
-    const tomorrow = tomorrowDateString();
- 
-    const { data: schedules } = await supabase
-      .from('prenatal_schedules')
-      .select('id, visit_date, reminder_sent')
-      .eq('visit_date', tomorrow)
-      .eq('reminder_sent', false);
- 
-    for (const schedule of schedules ?? []) {
-      const { data: recipientLinks } = await supabase
-        .from('prenatal_schedule_recipients')
-        .select('pregnant_mother_id')
-        .eq('schedule_id', schedule.id);
- 
-      const motherIds = (recipientLinks ?? []).map((r) => r.pregnant_mother_id);
- 
-      let recipients: { id: string; full_name: string; contact_number: string | null; purok: string | null }[] = [];
-      if (motherIds.length > 0) {
-      const { data: mothers } = await supabase
-        .from('pregnant_mothers')
-        .select('id, full_name, contact_number, purok')
-        .in('id', motherIds)
-        .not('contact_number', 'is', null);
-      recipients = (mothers ?? []).filter((m) => m.contact_number);
-    }
- 
-      const message = `Paalala: Bukas (${schedule.visit_date}) po ang inyong prenatal checkup sa Barangay Health Center. Mangyaring pumunta sa nakatakdang oras. Salamat!`;
- 
-      if (recipients.length > 0) {
-      const apiKey = process.env.SEMAPHORE_API_KEY;
- 
-      if (apiKey) {
-        const numberList = recipients.map((m) => m.contact_number as string).join(',');
- 
-        try {
-          const response = await fetch('https://api.semaphore.co/api/v4/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              apikey: apiKey,
-              number: numberList,
-              message,
-            }),
-          });
- 
-          const rawText = await response.text();
-          let ok = response.ok;
-          try {
-            JSON.parse(rawText);
-          } catch {
-            ok = false;
-          }
- 
-          await supabase.from('sms_logs').insert({
-            recipient_count: recipients.length,
-            recipient_numbers: recipients.map((m) => m.contact_number),
-            message,
-            status: ok ? 'success' : 'failed',
-            delivery_status: ok ? 'sent' : 'failed',
-            message_type: 'prenatal_reminder',
-            recipient_mother_ids: recipients.map((m) => m.id),
-            error_message: ok ? null : rawText,
-            sent_by: null,
-          });
-        } catch (err) {
-          await supabase.from('sms_logs').insert({
-            recipient_count: recipients.length,
-            recipient_numbers: recipients.map((m) => m.contact_number),
-            message,
-            status: 'failed',
-            delivery_status: 'failed',
-            message_type: 'prenatal_reminder',
-            recipient_mother_ids: recipients.map((m) => m.id),
-            error_message: err instanceof Error ? err.message : String(err),
-            sent_by: null,
-          });
-        }
-      }
- 
-      // Log per-mother so it shows up on her own dashboard, regardless of SMS outcome
-      await supabase.from('prenatal_schedule_reminders').insert(
-        recipients.map((m) => ({
-          schedule_id: schedule.id,
-          pregnant_mother_id: m.id,
+
+/**
+ * Writes the per-mother reminder history for a schedule.
+ *
+ * The unique key used by the upsert arrives with migration 014. Before then the
+ * rows are deleted and re-inserted instead, which needs no index and produces
+ * the same end state.
+ */
+export async function recordReminderHistory(
+  supabase: ReturnType<typeof createAdminClient>,
+  scheduleId: string,
+  sent: RecipientOutcome[],
+  message: string,
+  sendKind: 'auto' | 'manual',
+) {
+  const motherIds = sent
+    .map((s) => s.pregnantMotherId)
+    .filter((id): id is string => !!id);
+  if (motherIds.length === 0) return;
+
+  const { hasReceipts } = await getSmsSchemaCapabilities();
+
+  if (hasReceipts) {
+    const { error } = await supabase
+      .from('prenatal_schedule_reminders')
+      .upsert(
+        motherIds.map((pregnant_mother_id) => ({
+          schedule_id: scheduleId,
+          pregnant_mother_id,
           message,
-        }))
+          send_kind: sendKind,
+        })),
+        { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true },
       );
-      await Promise.all(recipients.map((mother) => createMaternalNotification(supabase, {
-        pregnantMotherId: mother.id,
-        eventKey: `prenatal-reminder:${schedule.id}:${mother.id}`,
-        category: 'prenatal_reminder',
-        title: 'Prenatal schedule reminder',
-        message,
-      })));
-      await createRoleNotification(supabase, {
-        eventKey: `schedule-role-alert:${schedule.id}`,
-        category: 'appointment',
-        recipientRole: 'nurse',
-        title: 'Prenatal reminders sent',
-        message: `Prenatal reminders were sent for the ${schedule.visit_date} schedule.`,
+    if (error) console.error('prenatal_schedule_reminders upsert failed', error.message);
+    return;
+  }
+
+  await supabase
+    .from('prenatal_schedule_reminders')
+    .delete()
+    .eq('schedule_id', scheduleId)
+    .in('pregnant_mother_id', motherIds);
+  const { error } = await supabase
+    .from('prenatal_schedule_reminders')
+    .insert(motherIds.map((pregnant_mother_id) => ({ schedule_id: scheduleId, pregnant_mother_id, message })));
+  if (error) console.error('prenatal_schedule_reminders insert failed', error.message);
+}
+
+/** A failing send is not retried more often than this. */
+const RETRY_COOLDOWN_MS = 60 * 60 * 1000;
+
+/**
+ * In-process guard.
+ *
+ * Two browser tabs, or the layout plus the cron endpoint, can otherwise run the
+ * job at the same moment and both reach the provider. The unique dedupe key on
+ * sms_recipient_receipts is the durable guard; this removes the pointless work
+ * and log noise in the meantime.
+ */
+let running: Promise<unknown> | null = null;
+const lastAttempt = new Map<string, number>();
+
+function isInCooldown(schedule: { id: string; reminder_attempted_at?: string | null }): boolean {
+  const persisted = schedule.reminder_attempted_at
+    ? Date.parse(schedule.reminder_attempted_at)
+    : NaN;
+  const inMemory = lastAttempt.get(schedule.id) ?? 0;
+  const last = Math.max(Number.isNaN(persisted) ? 0 : persisted, inMemory);
+  return last > 0 && Date.now() - last < RETRY_COOLDOWN_MS;
+}
+
+function markAttempted(scheduleId: string) {
+  lastAttempt.set(scheduleId, Date.now());
+}
+
+/**
+ * Sends the automatic "one day before" prenatal reminder.
+ *
+ * Runs for visits dated today or tomorrow - today is included so a schedule
+ * created for the current day is not silently skipped, which is exactly what
+ * happened before. Re-running is harmless: sms_recipient_receipts holds a
+ * unique dedupe_key per (schedule, mother), so a second run reports the
+ * mothers as already sent instead of texting them again.
+ */
+export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunReport> {
+  const supabase = createAdminClient();
+  const report: ReminderRunReport = {
+    considered: 0,
+    reminded: 0,
+    alreadySent: 0,
+    failed: 0,
+    details: [],
+  };
+
+  const today = manilaToday();
+  const tomorrow = manilaDatePlusFor(1);
+
+  const { data: schedules, error } = await supabase
+    .from('prenatal_schedules')
+    .select(
+      `id, visit_date, trimester, reminder_sent${
+        (await getSmsSchemaCapabilities()).hasAttemptedAt ? ', reminder_attempted_at' : ''
+      }`,
+    )
+    .eq('status', 'scheduled')
+    .lte('visit_date', tomorrow)
+    .gte('visit_date', today)
+    .order('visit_date', { ascending: true });
+
+  if (error) {
+    console.error('automatic reminders: could not read schedules', error.message);
+    return report;
+  }
+
+  const scheduleRows = (schedules ?? []) as unknown as Array<{
+    id: string;
+    visit_date: string;
+    reminder_sent: boolean;
+    reminder_attempted_at?: string | null;
+  }>;
+
+  for (const schedule of scheduleRows) {
+    report.considered += 1;
+    const isToday = schedule.visit_date === today;
+
+    // A send that failed must not be retried on every single page view. The
+    // dashboard layout runs this job per request, so without this cooldown a
+    // permanently misconfigured provider (e.g. no registered sender name) would
+    // write a new failure row to the SMS Log each time anyone opened a page.
+    if (isInCooldown(schedule)) {
+      report.alreadySent += schedule.reminder_sent ? 1 : 0;
+      report.details.push({
+        scheduleId: schedule.id,
+        visitDate: schedule.visit_date,
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        error: 'Skipped: a reminder was already attempted recently.',
       });
-      }
- 
-    // Mark as processed either way, so we never retry/duplicate-send
+      continue;
+    }
+
+    const { data: links } = await supabase
+      .from('prenatal_schedule_recipients')
+      .select('pregnant_mother_id')
+      .eq('schedule_id', schedule.id);
+    const motherIds = (links ?? []).map((l) => l.pregnant_mother_id as string);
+
+    if (motherIds.length === 0) {
+      report.details.push({
+        scheduleId: schedule.id,
+        visitDate: schedule.visit_date,
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        error: 'No mothers assigned to this schedule.',
+      });
+      continue;
+    }
+
+    const { data: mothers } = await supabase
+      .from('pregnant_mothers')
+      .select('id, contact_number')
+      .in('id', motherIds);
+
+    const message = isToday
+      ? prenatalReminderMessageToday(schedule.visit_date)
+      : prenatalReminderMessage(schedule.visit_date);
+
+    const result = await sendSmsAndLog({
+      targets: (mothers ?? []).map((m) => ({
+        pregnantMotherId: m.id,
+        contactNumber: m.contact_number as string | null,
+      })),
+      message,
+      messageType: 'prenatal_reminder',
+      sendKind: 'auto',
+      scheduleId: schedule.id,
+      sentBy: null,
+      dedupeDay: today,
+    });
+
+    markAttempted(schedule.id);
+    await recordReminderAttempt(supabase, schedule.id);
+
+    report.reminded += result.sent.length;
+    report.alreadySent += result.skipped.length;
+    report.failed += result.failed.length;
+
+    report.details.push({
+      scheduleId: schedule.id,
+      visitDate: schedule.visit_date,
+      sent: result.sent.length,
+      skipped: result.skipped.length,
+      failed: result.failed.length,
+      error: result.batchError,
+    });
+
+    // Only mark the schedule reminded when something actually left. Marking it
+    // unconditionally was the original bug: a failed send looked successful and
+    // was never retried.
+    if (result.sent.length > 0) {
       await supabase
         .from('prenatal_schedules')
         .update({ reminder_sent: true, reminder_sent_at: new Date().toISOString() })
         .eq('id', schedule.id);
-    }
 
-    await createMissedVisitFollowUps(supabase);
-  } catch (err) {
-    console.error('checkAndSendPrenatalReminders error:', err);
+      await recordReminderHistory(supabase, schedule.id, result.sent, message, 'auto');
+
+      await createRoleNotification(supabase, {
+        eventKey: `schedule-reminder-sent:${schedule.id}:${today}`,
+        category: 'appointment',
+        recipientRole: 'nurse',
+        title: 'Prenatal reminders sent',
+        message: `${result.sent.length} reminder SMS were sent for the ${schedule.visit_date} visit (~${estimateCredits(message, result.sent.length)} credits).`,
+      });
+    } else if (result.failed.length > 0) {
+      // Surface the failure to staff so it can be retried by hand.
+      await createRoleNotification(supabase, {
+        eventKey: `schedule-reminder-failed:${schedule.id}:${today}`,
+        category: 'appointment',
+        recipientRole: 'nurse',
+        title: 'Prenatal reminder could not be sent',
+        message: `${result.failed.length} reminder SMS failed for the ${schedule.visit_date} visit. Open the Prenatal Schedule page to send them manually.`,
+      });
+    }
   }
+
+  return report;
 }
 
-async function createMissedVisitFollowUps(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const today = new Date().toISOString().slice(0, 10);
+/**
+ * Creates follow-up records for visits that were never attended and texts the
+ * mother once. Preserved from the original implementation so the missed-visit
+ * workflow keeps working.
+ */
+export async function createMissedVisitFollowUps(): Promise<number> {
+  const supabase = createAdminClient();
+  const today = manilaToday();
+
   const { data: schedules } = await supabase
     .from('prenatal_schedules')
     .select('id, visit_date')
     .lt('visit_date', today)
     .eq('status', 'scheduled')
     .eq('missed_follow_up_sent', false);
-  if (!schedules?.length) return;
 
-  for (const schedule of schedules) {
-    const { data: links } = await supabase.from('prenatal_schedule_recipients').select('pregnant_mother_id').eq('schedule_id', schedule.id);
-    const motherIds = (links ?? []).map((link) => link.pregnant_mother_id);
-    if (motherIds.length) {
-      const { data: completedCheckups } = await supabase
-        .from('prenatal_checkups')
-        .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status')
-        .in('pregnant_mother_id', motherIds)
-        .eq('status', 'completed');
-      const completedMotherIds = new Set(
-        (completedCheckups ?? [])
-          .filter((checkup) => (checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date) === schedule.visit_date)
-          .filter((checkup) => getPrenatalVisitStatus({ scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date, actualCheckupDate: checkup.actual_checkup_date, recordedStatus: checkup.status }) === 'completed')
-          .map((checkup) => checkup.pregnant_mother_id)
-      );
-      const missedMotherIds = motherIds.filter((id) => !completedMotherIds.has(id));
-      if (!missedMotherIds.length) {
-        await supabase.from('prenatal_schedules').update({ status: 'completed', missed_follow_up_sent: true }).eq('id', schedule.id);
-        continue;
-      }
+  let followUpCount = 0;
 
-      await supabase.from('prenatal_follow_ups').upsert(missedMotherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })), { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true });
-
-      const { data: mothers } = await supabase.from('pregnant_mothers').select('id, contact_number, purok').in('id', missedMotherIds).not('contact_number', 'is', null);
-      const recipients = (mothers ?? []).filter((mother) => mother.contact_number);
-      const apiKey = process.env.SEMAPHORE_API_KEY;
-      if (apiKey && recipients.length) {
-        const message = `Paalala: Hindi kayo nakadalo sa prenatal visit noong ${schedule.visit_date}. Mangyaring makipag-ugnayan sa Barangay Health Center para sa follow-up schedule. Salamat!`;
-        let smsStatus: 'sent' | 'failed' = 'failed';
-        try {
-          const response = await fetch('https://api.semaphore.co/api/v4/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ apikey: apiKey, number: recipients.map((mother) => mother.contact_number as string).join(','), message }),
-          });
-          smsStatus = response.ok ? 'sent' : 'failed';
-          await response.text();
-        } catch {
-          smsStatus = 'failed';
-        }
-        await supabase.from('prenatal_follow_ups').update({ sms_status: smsStatus, follow_up_sent_at: new Date().toISOString() }).eq('schedule_id', schedule.id).in('pregnant_mother_id', recipients.map((mother) => mother.id));
-        await supabase.from('sms_logs').insert({ recipient_count: recipients.length, recipient_numbers: recipients.map((mother) => mother.contact_number), recipient_mother_ids: recipients.map((mother) => mother.id), message, status: smsStatus === 'sent' ? 'success' : 'failed', delivery_status: smsStatus === 'sent' ? 'sent' : 'failed', message_type: 'missed_visit_follow_up', sent_by: null });
-      }
-      await createRoleNotification(supabase, {
-        eventKey: `missed-visit-role-alert:${schedule.id}`,
-        category: 'follow_up',
-        recipientRole: 'nurse',
-        title: 'Missed prenatal follow-up needed',
-        message: `Missed-visit follow-up records were created for the ${schedule.visit_date} schedule.`,
-      });
-      await Promise.all(missedMotherIds.map((pregnantMotherId) => createMaternalNotification(supabase, {
-        pregnantMotherId,
-        eventKey: `missed-visit:${schedule.id}:${pregnantMotherId}`,
-        category: 'missed_visit',
-        title: 'Missed prenatal visit follow-up',
-        message: `Our records show a missed prenatal visit on ${schedule.visit_date}. Please contact the Barangay Health Center to arrange a follow-up schedule.`,
-      })));
+  for (const schedule of schedules ?? []) {
+    const { data: links } = await supabase
+      .from('prenatal_schedule_recipients')
+      .select('pregnant_mother_id')
+      .eq('schedule_id', schedule.id);
+    const motherIds = (links ?? []).map((l) => l.pregnant_mother_id as string);
+    if (motherIds.length === 0) {
+      await supabase
+        .from('prenatal_schedules')
+        .update({ status: 'missed', missed_follow_up_sent: true })
+        .eq('id', schedule.id);
+      continue;
     }
-    await supabase.from('prenatal_schedules').update({ status: 'missed', missed_follow_up_sent: true }).eq('id', schedule.id);
+
+    const { data: completedCheckups } = await supabase
+      .from('prenatal_checkups')
+      .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status')
+      .in('pregnant_mother_id', motherIds)
+      .eq('status', 'completed');
+
+    const completedMotherIds = new Set(
+      (completedCheckups ?? [])
+        .filter(
+          (checkup) =>
+            (checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date) ===
+            schedule.visit_date,
+        )
+        .filter(
+          (checkup) =>
+            getPrenatalVisitStatus({
+              scheduledFor:
+                checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date,
+              actualCheckupDate: checkup.actual_checkup_date,
+              recordedStatus: checkup.status,
+            }) === 'completed',
+        )
+        .map((checkup) => checkup.pregnant_mother_id as string),
+    );
+
+    const missedMotherIds = motherIds.filter((id) => !completedMotherIds.has(id));
+
+    if (missedMotherIds.length === 0) {
+      await supabase
+        .from('prenatal_schedules')
+        .update({ status: 'completed', missed_follow_up_sent: true })
+        .eq('id', schedule.id);
+      continue;
+    }
+
+    await supabase.from('prenatal_follow_ups').upsert(
+      missedMotherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })),
+      { onConflict: 'schedule_id,pregnant_mother_id', ignoreDuplicates: true },
+    );
+    followUpCount += missedMotherIds.length;
+
+    const { data: mothers } = await supabase
+      .from('pregnant_mothers')
+      .select('id, contact_number')
+      .in('id', missedMotherIds);
+
+    const result = await sendSmsAndLog({
+      targets: (mothers ?? []).map((m) => ({
+        pregnantMotherId: m.id,
+        contactNumber: m.contact_number as string | null,
+      })),
+      message: missedVisitMessage(schedule.visit_date),
+      messageType: 'missed_visit_follow_up',
+      sendKind: 'auto',
+      scheduleId: schedule.id,
+      sentBy: null,
+      dedupeDay: today,
+    });
+
+    if (result.sent.length) {
+      await supabase
+        .from('prenatal_follow_ups')
+        .update({ sms_status: 'sent', follow_up_sent_at: new Date().toISOString() })
+        .eq('schedule_id', schedule.id)
+        .in('pregnant_mother_id', result.sent.map((s) => s.pregnantMotherId));
+    }
+
+    await createRoleNotification(supabase, {
+      eventKey: `missed-visit-role-alert:${schedule.id}`,
+      category: 'follow_up',
+      recipientRole: 'nurse',
+      title: 'Missed prenatal follow-up needed',
+      message: `Follow-up records were created for ${missedMotherIds.length} missed visit(s) on ${schedule.visit_date}.`,
+    });
+
+    await supabase
+      .from('prenatal_schedules')
+      .update({ status: 'missed', missed_follow_up_sent: true })
+      .eq('id', schedule.id);
   }
+
+  return followUpCount;
 }
- 
+
+/** Entry point used by the dashboard layout and the cron endpoint. */
+export async function checkAndSendPrenatalReminders(): Promise<ReminderRunReport | null> {
+  // Serialise concurrent callers: the dashboard layout runs this on every
+  // request, so two tabs would otherwise both reach the provider.
+  if (running) {
+    try {
+      return (await running) as ReminderRunReport | null;
+    } catch {
+      return null;
+    }
+  }
+
+  running = (async (): Promise<ReminderRunReport | null> => {
+    try {
+      const report = await sendAutomaticPrenatalReminders();
+      await createMissedVisitFollowUps();
+      return report;
+    } catch (error) {
+      console.error('checkAndSendPrenatalReminders error:', error);
+      return null;
+    } finally {
+      running = null;
+    }
+  })();
+
+  return running as Promise<ReminderRunReport | null>;
+}

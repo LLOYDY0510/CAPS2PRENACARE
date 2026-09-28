@@ -29,12 +29,16 @@ const MENUS: Record<string, { label: string; href: string }[]> = {
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Risk Map', href: '/dashboard/risk-map' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
     { label: 'Manage Users', href: '/dashboard/users' },
+    { label: 'SMS Log', href: '/dashboard/sms-log' },
     { label: 'Reports', href: '/dashboard/reports' },
   ],
   nurse: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Pregnant Records', href: '/dashboard/pregnant' },
+    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
     { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
     { label: 'Health Tips', href: '/dashboard/health-tips' },
     { label: 'Nutrition Tips', href: '/dashboard/nutrition-tips' },
@@ -71,12 +75,25 @@ export default async function DashboardLayout({
 
   const role = profile?.role ?? 'pending';
   if (!isStaffRole(role) && role !== 'pregnant_mother') redirect('/login');
-  if (isStaffRole(role)) await checkAndSendPrenatalReminders();
+  // The reminder job marks prenatal_schedules.reminder_sent, which is reserved
+  // for the roles that manage schedules (admin / nurse / BHW Head). A BHW
+  // (Purok) is read-only on schedules, so running it for them would attempt a
+  // write the database refuses and re-send the same SMS on every page view.
+  if (role === 'admin' || role === 'nurse' || role === 'bhw_head') {
+    // The reminder job only needs to run once per request, and only for the
+    // roles allowed to write prenatal_schedules.reminder_sent. A BHW (purok)
+    // is read-only there, so running it for them would attempt a write the
+    // database refuses.
+    await checkAndSendPrenatalReminders();
+  }
   const menuItems = MENUS[role] ?? [];
 
-  // BHW purok users do not receive notifications
+  // BHW purok users do not receive notifications (see 008_remove_bhw_purok_
+  // notifications.sql). For everyone else the rows are already scoped by
+  // RLS; the filter below only mirrors that rule so the bell can never render
+  // a row the database considered someone else's.
   let notifications: Array<{ id: string; title: string; message: string; category: string; read_at: string | null; created_at: string }> = [];
-  
+
   if (role !== 'bhw_purok') {
     const { data: notificationRows } = await supabase
       .from('maternal_notifications')
@@ -86,8 +103,11 @@ export default async function DashboardLayout({
     notifications = (notificationRows ?? [])
       .filter((notification) => (
         notification.recipient_user_id === user.id ||
-        notification.recipient_role === role ||
-        (role === 'pregnant_mother' && notification.pregnant_mother_id === profile?.pregnant_mother_id)
+        (isStaffRole(role) &&
+          (notification.recipient_role === null || notification.recipient_role === role)) ||
+        (role === 'pregnant_mother' &&
+          !!profile?.pregnant_mother_id &&
+          notification.pregnant_mother_id === profile.pregnant_mother_id)
       ))
       .slice(0, 40)
       .map(({ id, title, message, category, read_at, created_at }) => ({ id, title, message, category, read_at, created_at }));

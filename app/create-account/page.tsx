@@ -1,215 +1,226 @@
 'use client';
- 
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
+type Status = 'idle' | 'creating';
+
 export default function CreateAccountPage() {
   const router = useRouter();
   const supabase = createClient();
- 
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [serialNo, setSerialNo] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
- 
+  const [notice, setNotice] = useState('');
+  const [status, setStatus] = useState<Status>('idle');
+
+  const busy = status === 'creating';
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
- 
+    setNotice('');
+
+    if (!email.trim()) {
+      setError('Email is required.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
     if (!serialNo.trim() || !contactNumber.trim()) {
-      setError('Serial number and contact number are required.');
+      setError('Serial number and contact number are required to link your record.');
       return;
     }
- 
-    setLoading(true);
- 
-    // 1. Create the auth account
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
- 
-    if (signUpError || !signUpData.user) {
-      setError(signUpError?.message ?? 'Failed to create account.');
-      setLoading(false);
-      return;
-    }
- 
-    // 2. Find her existing maternal record using serial number + contact number
-    const { data: motherRecord, error: matchError } = await supabase
-      .from('pregnant_mothers')
-      .select('id, full_name')
-      .eq('serial_no', serialNo.trim())
-      .eq('contact_number', contactNumber.trim())
-      .maybeSingle();
- 
-    if (matchError || !motherRecord) {
-      setError(
-        'Account was created, but we could not find a matching record. Please double-check your Serial Number and Contact Number, or contact your BHW for help linking your account.'
-      );
-      setLoading(false);
-      return;
-    }
- 
-    // 3. Link the new account to her record
-    const { error: linkError } = await supabase
-      .from('profiles')
-      .update({
-        email: email.trim().toLowerCase(),
-        role: 'pregnant_mother',
-        pregnant_mother_id: motherRecord.id,
-        full_name: motherRecord.full_name,
-      })
-      .eq('id', signUpData.user.id);
- 
-    setLoading(false);
- 
-    if (linkError) {
-      setError(
-        'Account was created, but linking to your record failed. Please contact your BHW or admin for help.'
-      );
-      return;
-    }
- 
-    router.push('/dashboard');
-  }
- 
-    return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1E2228] px-6">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
-        .font-display { font-family: 'Fraunces', serif; }
-        .font-body { font-family: 'Inter', sans-serif; }
-      `}</style>
 
-      <div className="flex flex-col md:flex-row items-center gap-16 md:gap-20 max-w-4xl w-full py-10">
-        {/* Left — logo */}
+    setStatus('creating');
+
+    try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        setStatus('idle');
+        return;
+      }
+
+      if (!signUpData.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (signInError) {
+          setNotice(
+            'Your account was created. Please confirm your email address, then log in and finish linking your record.'
+          );
+          setStatus('idle');
+          return;
+        }
+      }
+
+      const response = await fetch('/api/account/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serialNo: serialNo.trim(), contactNumber: contactNumber.trim() }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? 'Your account was created, but linking your record failed. Please contact your BHW or admin.');
+        setStatus('idle');
+        return;
+      }
+
+      router.push('/dashboard');
+      router.refresh();
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setStatus('idle');
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 max-w-4xl w-full">
         <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
-          <div className="w-44 h-44 md:w-52 md:h-52 rounded-full overflow-hidden bg-[#1E2228] mb-5 relative ring-1 ring-white/10">
+          <div className="w-40 h-40 md:w-52 md:h-52 rounded-full overflow-hidden bg-brand-light mb-4 relative ring-1 ring-[#D0E9E7]">
             <Image
               src="/logo.jpg"
               alt="Prenatrack logo"
               fill
-              sizes="(max-width: 768px) 176px, 208px"
+              sizes="(max-width: 768px) 160px, 208px"
               className="object-contain"
               priority
             />
           </div>
-          <p className="font-body text-sm text-[#8A9099]">
-            Care for mothers &amp; babies
-          </p>
+          <p className="text-sm text-muted">Care for mothers &amp; babies</p>
         </div>
 
-        {/* Right — create account card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10 w-full max-w-sm">
-          <h2 className="font-display text-2xl font-semibold text-[#1B3A4B] text-center mb-7">
-            Create Account
-          </h2>
+        <div className="card p-7 md:p-9 w-full max-w-sm">
+          <h1 className="text-xl text-center mb-1">Create Account</h1>
+          <p className="text-sm text-muted text-center mb-6">
+            Link your prenatal record to sign in.
+          </p>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             {error && (
-              <p className="font-body text-sm text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-md mb-4">
+              <p className="alert-error mb-4" role="alert">
                 {error}
+              </p>
+            )}
+            {notice && (
+              <p className="alert-success mb-4" role="status">
+                {notice}
               </p>
             )}
 
             <div className="mb-4">
-              <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+              <label className="form-label" htmlFor="email">
                 Email
               </label>
               <input
+                id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="form-input"
                 required
-                className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                <label className="form-label" htmlFor="password">
                   Password
                 </label>
                 <input
+                  id="password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="form-input"
                   required
-                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
                 />
               </div>
               <div>
-                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                <label className="form-label" htmlFor="confirm-password">
                   Confirm
                 </label>
                 <input
+                  id="confirm-password"
+                  name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="form-input"
                   required
-                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
                 />
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4 mb-4">
-              <p className="font-body text-xs text-[#8A9099] mb-3">
+            <div className="border-t border-[#EEF1F4] pt-4 mb-4">
+              <p className="text-xs text-muted mb-3">
                 Enter the details from your registration slip to link your account to your record.
               </p>
               <div className="mb-3">
-                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                <label className="form-label" htmlFor="serial-no">
                   Serial Number
                 </label>
                 <input
+                  id="serial-no"
+                  name="serialNo"
                   type="text"
                   value={serialNo}
                   onChange={(e) => setSerialNo(e.target.value)}
                   placeholder="e.g. SPM-2026-0001"
+                  className="form-input"
                   required
-                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
                 />
               </div>
               <div>
-                <label className="font-body block text-xs font-medium text-[#6B7280] mb-1.5">
+                <label className="form-label" htmlFor="contact-number">
                   Contact Number
                 </label>
                 <input
-                  type="text"
+                  id="contact-number"
+                  name="contactNumber"
+                  type="tel"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
                   placeholder="The number you gave during registration"
+                  className="form-input"
                   required
-                  className="font-body w-full bg-[#F3F4F6] border border-transparent rounded-lg px-4 py-2.5 text-[#1B3A4B] focus:outline-none focus:ring-2 focus:ring-[#5EA8A0]/40 focus:bg-white focus:border-[#5EA8A0] transition"
                 />
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="font-body w-full bg-[#5EA8A0] text-white font-semibold py-2.5 rounded-lg hover:bg-[#4C948C] disabled:opacity-50 transition"
-            >
-              {loading ? 'Creating account…' : 'Create Account'}
+            <button type="submit" disabled={busy} className="btn-primary w-full">
+              {busy ? 'Creating account…' : 'Create Account'}
             </button>
 
-            <p className="font-body text-center text-sm text-[#6B7280] mt-5">
+            <p className="text-center text-sm text-muted mt-5">
               Already have an account?{' '}
-              <Link href="/login" className="text-[#5EA8A0] hover:underline font-medium">
+              <Link href="/login" className="text-brand font-medium">
                 Log in
               </Link>
             </p>

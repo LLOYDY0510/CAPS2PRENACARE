@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
       recorded_by: auth.user.id,
     };
     const query = existing
-      ? adminClient.from('prenatal_checkups').update(values).eq('id', existing.id)
-      : adminClient.from('prenatal_checkups').insert(values);
+      ? auth.supabase.from('prenatal_checkups').update(values).eq('id', existing.id)
+      : auth.supabase.from('prenatal_checkups').insert(values);
     const { data, error } = await query.select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -131,7 +131,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'You cannot manage records outside your assigned purok.' }, { status: 403 });
     }
 
-    const { error } = await createAdminClient()
+    // Written with the caller's own session so the database policy
+    // (can_manage_mother) is the enforcement boundary, not just this check.
+    const { error } = await auth.supabase
       .from('prenatal_checkups')
       .delete()
       .eq('id', body.id)

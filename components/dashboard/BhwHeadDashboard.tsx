@@ -1,4 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
+import RiskBadge from '@/components/ui/RiskBadge';
 import Link from 'next/link';
 
 const ZONE_COLORS: Record<string, string> = {
@@ -22,12 +24,33 @@ const AGE_GROUP_COLORS: Record<string, string> = {
 export default async function BhwHeadDashboard() {
   const supabase = await createClient();
 
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('pregnant_mothers')
     .select(
       'id, serial_no, full_name, purok, risk_level, age, lmp, gravida_para, date_registered'
     )
     .order('date_registered', { ascending: false });
+
+  // Counted with the service role: public.profiles RLS limits a signed-in user
+  // to their own row, so a staff-wide count is not readable otherwise.
+  const { count: bhwCount, error: bhwCountError } = await createAdminClient()
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'bhw_purok');
+
+  const loadError = recordsError ?? bhwCountError;
+  if (loadError) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1>BHW Head Dashboard</h1>
+        </div>
+        <div className="alert-error" role="alert">
+          Failed to load dashboard data: {loadError.message}
+        </div>
+      </div>
+    );
+  }
 
   const total    = records?.length ?? 0;
   const highRisk = records?.filter((r) => r.risk_level === 'high').length ?? 0;
@@ -53,11 +76,6 @@ export default async function BhwHeadDashboard() {
   const maxAgeCount = Math.max(1, ...Object.values(byAgeGroup));
 
   const recentRecords = (records ?? []).slice(0, 5);
-
-  const { count: bhwCount } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('role', 'bhw_purok');
 
   const highPct = total > 0 ? Math.round((highRisk / total) * 100) : 0;
   const lowPct  = total > 0 ? 100 - highPct : 0;
@@ -198,26 +216,23 @@ export default async function BhwHeadDashboard() {
           <tbody>
             {recentRecords.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
+                <td colSpan={8} className="text-center py-8 text-muted-2">
                   No records yet.
                 </td>
               </tr>
             )}
             {recentRecords.map((r) => (
               <tr key={r.id}>
-                <td>{r.serial_no ?? '—'}</td>
-                <td style={{ color: 'var(--ink)', fontWeight: 500 }}>{r.full_name ?? '—'}</td>
-                <td>{r.purok ?? '—'}</td>
-                <td>{r.age ?? '—'}</td>
-                <td>{r.lmp ?? '—'}</td>
-                <td>{r.gravida_para ?? '—'}</td>
-                <td>
-                  {r.risk_level === 'high'
-                    ? <span className="badge-high">High Risk</span>
-                    : <span className="badge-low">Low Risk</span>
-                  }
+                <td data-label="Serial No.">{r.serial_no ?? '—'}</td>
+                <td data-label="Name" className="font-medium text-ink">{r.full_name ?? '—'}</td>
+                <td data-label="Zone">{r.purok ?? '—'}</td>
+                <td data-label="Age">{r.age ?? '—'}</td>
+                <td data-label="LMP">{r.lmp ?? '—'}</td>
+                <td data-label="G-P">{r.gravida_para ?? '—'}</td>
+                <td data-label="Risk">
+                  <RiskBadge riskLevel={r.risk_level} />
                 </td>
-                <td>{r.date_registered ?? '—'}</td>
+                <td data-label="Date Registered">{r.date_registered ?? '—'}</td>
               </tr>
             ))}
           </tbody>

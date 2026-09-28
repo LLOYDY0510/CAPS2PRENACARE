@@ -1,24 +1,41 @@
 import UsersTable from '@/components/users/UsersTable';
 import { requireUserManagement } from '@/utils/auth/middleware';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ManageUsersPage() {
-  const { supabase } = await requireUserManagement();
+  // Authorised as admin above; profile administration needs the service role
+  // because public.profiles RLS limits signed-in users to their own row.
+  await requireUserManagement();
+  const supabase = createAdminClient();
 
   const { data: profiles, error } = await supabase
     .from('profiles')
     .select('id, email, full_name, role, purok, pregnant_mother_id, created_at')
     .order('created_at', { ascending: false });
 
-  const linkedIds = (profiles ?? [])
-    .map((p) => p.pregnant_mother_id)
-    .filter((id): id is string => !!id);
-
-  const { data: allMothers } = await supabase
+  const { data: allMothers, error: mothersError } = await supabase
     .from('pregnant_mothers')
     .select('id, full_name, serial_no')
     .order('serial_no', { ascending: true });
+
+  if (error || mothersError) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1>Manage Users</h1>
+        </div>
+        <div className="alert-error">
+          Failed to load accounts: {error?.message ?? mothersError?.message}
+        </div>
+      </div>
+    );
+  }
+
+  const linkedIds = (profiles ?? [])
+    .map((p) => p.pregnant_mother_id)
+    .filter((id): id is string => !!id);
 
   const availableMothers = (allMothers ?? []).filter((m) => !linkedIds.includes(m.id));
 
@@ -30,12 +47,6 @@ export default async function ManageUsersPage() {
           {profiles?.length ?? 0} account{profiles?.length === 1 ? '' : 's'}
         </p>
       </div>
-
-      {error && (
-        <div className="alert-error mb-4">
-          Failed to load users: {error.message}
-        </div>
-      )}
 
       <UsersTable
         profiles={profiles ?? []}

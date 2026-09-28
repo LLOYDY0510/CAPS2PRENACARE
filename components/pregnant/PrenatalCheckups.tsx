@@ -34,7 +34,9 @@ export default function PrenatalCheckups({
   const [showForm, setShowForm]           = useState(false);
   const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '' });
   const [saving, setSaving]               = useState(false);
+  const [deletingId, setDeletingId]       = useState<string | null>(null);
   const [error, setError]                 = useState('');
+  const [notice, setNotice]               = useState('');
 
   const grouped = TRIMESTERS.reduce((acc, tri) => {
     acc[tri] = checkups
@@ -46,6 +48,7 @@ export default function PrenatalCheckups({
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNotice('');
 
     const scheduledCheckupDate = scheduledDates[activeTrimester];
     if (!scheduledCheckupDate) {
@@ -66,45 +69,66 @@ export default function PrenatalCheckups({
 
     setSaving(true);
 
-    const response = await fetch('/api/prenatal-checkups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pregnantMotherId: motherId,
-        trimester: activeTrimester,
-        bloodPressure: form.blood_pressure,
-        weightKg: weight,
-        notes: form.notes,
-      }),
-    });
-    const result = await response.json() as { data?: Checkup; error?: string };
+    try {
+      const response = await fetch('/api/prenatal-checkups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pregnantMotherId: motherId,
+          trimester: activeTrimester,
+          bloodPressure: form.blood_pressure,
+          weightKg: weight,
+          notes: form.notes,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { data?: Checkup; error?: string };
 
-    setSaving(false);
+      if (!response.ok || !result.data) {
+        setError(result.error ?? 'Failed to save checkup.');
+        return;
+      }
 
-    if (!response.ok || !result.data) {
-      setError(result.error ?? 'Failed to save checkup.');
-      return;
+      // The API updates the existing row for this trimester when one exists,
+      // so replace by id. Filtering the whole trimester would hide the other
+      // visits recorded in the same trimester.
+      const saved = result.data;
+      setCheckups((prev) => [...prev.filter((checkup) => checkup.id !== saved.id), saved]);
+      setForm({ blood_pressure: '', weight_kg: '', notes: '' });
+      setShowForm(false);
+      setNotice('Checkup saved.');
+    } catch {
+      setError('Network error while saving. Please try again.');
+    } finally {
+      setSaving(false);
     }
-
-    setCheckups((prev) => [
-      ...prev.filter((checkup) => checkup.trimester !== result.data?.trimester),
-      result.data as Checkup,
-    ]);
-    setForm({ blood_pressure: '', weight_kg: '', notes: '' });
-    setShowForm(false);
   }
 
   async function handleDelete(id: string) {
     const confirmed = window.confirm('Delete this checkup record?');
     if (!confirmed) return;
 
-    const response = await fetch('/api/prenatal-checkups', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, pregnantMotherId: motherId }),
-    });
-    if (!response.ok) return;
-    setCheckups((prev) => prev.filter((c) => c.id !== id));
+    setError('');
+    setNotice('');
+    setDeletingId(id);
+
+    try {
+      const response = await fetch('/api/prenatal-checkups', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, pregnantMotherId: motherId }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? 'Failed to delete the checkup.');
+        return;
+      }
+      setCheckups((prev) => prev.filter((c) => c.id !== id));
+      setNotice('Checkup deleted.');
+    } catch {
+      setError('Network error while deleting. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -161,6 +185,17 @@ export default function PrenatalCheckups({
       </div>
 
       <div style={{ padding: '1rem' }}>
+        {error && (
+          <div className="alert-error mb-3" role="alert">
+            {error}
+          </div>
+        )}
+        {notice && !error && (
+          <div className="alert-success mb-3" role="status">
+            {notice}
+          </div>
+        )}
+
         {/* Checkup list */}
         {grouped[activeTrimester].length === 0 ? (
           <p
@@ -188,38 +223,54 @@ export default function PrenatalCheckups({
                 </tr>
               </thead>
               <tbody>
-                {grouped[activeTrimester].map((c) => (
-                  <tr key={c.id}>
-                    {(() => {
-                      const status = getPrenatalVisitStatus({
-                        scheduledFor: scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date,
-                        actualCheckupDate: c.actual_checkup_date,
-                        recordedStatus: c.status,
-                      });
-                      return (
-                        <>
-                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{scheduledDates[c.trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date}</td>
-                    <td>{c.actual_checkup_date ?? '—'}</td>
-                    <td>{c.blood_pressure ?? '—'}</td>
-                    <td>{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
-                    <td style={{ maxWidth: '240px', whiteSpace: 'normal' }}>{c.notes ?? '—'}</td>
-                    <td><span className={status === 'completed' ? 'badge-low' : status === 'missed' ? 'badge-high' : 'badge-neutral'}>{prenatalStatusLabel(status)}</span></td>
-                    {canEdit && (
-                      <td>
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          className="btn-danger"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                        >
-                          Delete
-                        </button>
+                {grouped[activeTrimester].map((c) => {
+                  const status = getPrenatalVisitStatus({
+                    scheduledFor:
+                      scheduledDates[c.trimester] ??
+                      c.scheduled_checkup_date ??
+                      c.scheduled_for ??
+                      c.checkup_date,
+                    actualCheckupDate: c.actual_checkup_date,
+                    recordedStatus: c.status,
+                  });
+                  const statusClass =
+                    status === 'completed'
+                      ? 'badge-low'
+                      : status === 'missed'
+                        ? 'badge-high'
+                        : 'badge-neutral';
+                  return (
+                    <tr key={c.id}>
+                      <td data-label="Scheduled Date" className="font-medium text-ink">
+                        {scheduledDates[c.trimester] ??
+                          c.scheduled_checkup_date ??
+                          c.scheduled_for ??
+                          c.checkup_date}
                       </td>
-                    )}
-                        </>
-                      );
-                    })()}
-                  </tr>
-                ))}
+                      <td data-label="Actual Date">{c.actual_checkup_date ?? '—'}</td>
+                      <td data-label="Blood Pressure">{c.blood_pressure ?? '—'}</td>
+                      <td data-label="Weight (kg)">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
+                      <td data-label="Notes" style={{ maxWidth: '240px' }}>
+                        {c.notes ?? '—'}
+                      </td>
+                      <td data-label="Status">
+                        <span className={statusClass}>{prenatalStatusLabel(status)}</span>
+                      </td>
+                      {canEdit && (
+                        <td data-label="Actions">
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(c.id)}
+                            disabled={deletingId === c.id}
+                            className="btn-danger"
+                          >
+                            {deletingId === c.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -261,12 +312,11 @@ export default function PrenatalCheckups({
                 <div className="alert-error mb-4" role="alert">{error}</div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="form-label" htmlFor="scheduled-checkup-date">Scheduled Checkup Date</label>
-                  <p id="scheduled-checkup-date" className="form-input bg-gray-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">                <div>
+                  <span className="form-label">Scheduled Checkup Date</span>
+                  <div className="form-input bg-surface-alt" style={{ color: 'var(--ink-secondary)' }}>
                     {scheduledDates[activeTrimester] ?? 'No schedule set'}
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <label className="form-label" htmlFor="blood-pressure">Blood Pressure</label>
