@@ -140,7 +140,6 @@ p { margin: 0; }
   --color-surface:     var(--surface);
   --color-surface-alt: var(--surface-alt);
   --color-ink:         var(--ink);
-  --color-ink-dark:    #0F1823;
   --color-muted:       var(--muted);
   --color-muted-2:     var(--muted-2);
   --color-border:      var(--border);
