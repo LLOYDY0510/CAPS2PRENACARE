@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Logo from '@/components/ui/Logo';
 import LogoutButton from '@/components/layout/LogoutButton';
 import NotificationBell, { type NotificationBellItem } from '@/components/layout/NotificationBell';
 
@@ -71,9 +71,7 @@ export default function Sidebar({
           <div className="w-64 h-full flex flex-col overflow-y-auto">
             <div className="p-5 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full overflow-hidden relative shrink-0">
-                  <Image src="/logo.jpg" alt="Prenatrack logo" fill sizes="36px" className="object-cover" />
-                </div>
+                <Logo variant="prenatrack" size={36} rounded />
                 <div>
                   <p className="font-semibold text-ink text-sm">
                     {ROLE_LABELS[role]?.title ?? role.replace('_', ' ')}
