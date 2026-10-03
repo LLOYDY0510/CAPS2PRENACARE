@@ -12,70 +12,108 @@ export default async function MySchedulePage() {
 
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('pregnant_mother_id')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="alert-error" role="alert">
+          Failed to load your account: {profileError.message}
+        </div>
+      </div>
+    );
+  }
 
   const pregnantMotherId = profile?.pregnant_mother_id;
 
   if (!pregnantMotherId) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 max-w-2xl mx-auto">
-        <h1 className="text-xl font-semibold mb-2 text-ink">Account not linked</h1>
-        <p className="text-muted">
-          Your account isn&apos;t linked to a record yet. Please contact your BHW or admin.
-        </p>
+      <div className="max-w-2xl mx-auto">
+        <div className="card p-6">
+          <h1 className="text-lg mb-2">Account not linked</h1>
+          <p className="text-muted">
+            Your account is not linked to a prenatal record yet. Please contact your BHW or the
+            administrator.
+          </p>
+        </div>
       </div>
     );
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const { data: upcomingSchedule } = await supabase
-    .from('prenatal_schedules')
-    .select('visit_date, prenatal_schedule_recipients!inner(pregnant_mother_id)')
-    .eq('prenatal_schedule_recipients.pregnant_mother_id', pregnantMotherId)
-    .gte('visit_date', today)
-    .order('visit_date', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const [scheduleResult, remindersResult] = await Promise.all([
+    supabase
+      .from('prenatal_schedules')
+      .select('id, visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .eq('prenatal_schedule_recipients.pregnant_mother_id', pregnantMotherId)
+      .gte('visit_date', today)
+      .order('visit_date', { ascending: true })
+      .limit(5),
+    supabase
+      .from('prenatal_schedule_reminders')
+      .select('id, message, sent_at')
+      .eq('pregnant_mother_id', pregnantMotherId)
+      .order('sent_at', { ascending: false })
+      .limit(20),
+  ]);
 
-  const { data: reminders } = await supabase
-    .from('prenatal_schedule_reminders')
-    .select('id, message, sent_at')
-    .eq('pregnant_mother_id', pregnantMotherId)
-    .order('sent_at', { ascending: false });
+  const { data: upcomingSchedules, error: scheduleError } = scheduleResult;
+  const { data: reminders, error: remindersError } = remindersResult;
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Prenatal Schedule</h2>
-        {upcomingSchedule ? (
-          <p className="text-lg font-semibold text-ink">{upcomingSchedule.visit_date}</p>
-        ) : (
-          <p className="text-sm text-muted-2">No prenatal schedule has been set yet.</p>
-        )}
+      {(scheduleError || remindersError) && (
+        <div className="alert-error" role="alert">
+          Failed to load your schedule: {(scheduleError ?? remindersError)?.message}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="section-header">
+          <h2>Prenatal Schedule</h2>
+        </div>
+        <div className="p-5">
+          {upcomingSchedules && upcomingSchedules.length > 0 ? (
+            <ul className="space-y-2">
+              {upcomingSchedules.map((schedule) => (
+                <li key={schedule.id} className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-ink">{schedule.visit_date}</span>
+                  {schedule.trimester && (
+                    <span className="badge-neutral">{schedule.trimester} trimester</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-2">No prenatal schedule has been set yet.</p>
+          )}
+        </div>
       </div>
 
-      <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          Reminders ({reminders?.length ?? 0})
-        </h2>
-        {!reminders || reminders.length === 0 ? (
-          <p className="text-sm text-muted-2">No reminders yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {reminders.map((r) => (
-              <div key={r.id} className="border rounded-lg p-3">
-                <p className="text-sm text-gray-700">{r.message}</p>
-                <p className="text-xs text-muted-2 mt-1">
-                  {new Date(r.sent_at).toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="card">
+        <div className="section-header">
+          <h2>Reminders ({reminders?.length ?? 0})</h2>
+        </div>
+        <div className="p-5">
+          {!reminders || reminders.length === 0 ? (
+            <p className="text-sm text-muted-2">No reminders yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {reminders.map((r) => (
+                <div key={r.id} className="border rounded-lg p-3">
+                  <p className="text-sm text-ink-secondary">{r.message}</p>
+                  <p className="text-xs text-muted-2 mt-1">
+                    {r.sent_at ? new Date(r.sent_at).toLocaleString() : 'Not sent yet'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

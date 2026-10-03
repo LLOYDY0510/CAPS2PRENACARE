@@ -5,6 +5,8 @@ import BhwPurokDashboard from '@/components/dashboard/BhwPurokDashboard';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 import NurseDashboard from '@/components/dashboard/NurseDashboard';
 import PatientMessages from '@/components/patient/PatientMessages';
+import { isUserRole } from '@/utils/auth/roles';
+
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
@@ -18,25 +20,16 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, full_name, purok, pregnant_mother_id')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   const role = profile?.role ?? 'pending';
 
   return (
     <div className="dashboard-page w-full">
-      {role === 'pending' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <h1 className="text-xl font-semibold mb-2 text-ink">Waiting for role assignment</h1>
-          <p className="text-muted">
-            Your account hasn&apos;t been assigned a role yet. Please contact the admin.
-          </p>
-        </div>
-      )}
-
       {role === 'bhw_head' && <BhwHeadDashboard />}
       {role === 'bhw_purok' && <BhwPurokDashboard />}
       {role === 'admin' && <AdminDashboard />}
@@ -46,12 +39,42 @@ export default async function DashboardPage() {
         <PatientMessages pregnantMotherId={profile.pregnant_mother_id} />
       )}
 
-      {role === 'pregnant_mother' && !profile?.pregnant_mother_id && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <h1 className="text-xl font-semibold mb-2 text-ink">Account not linked</h1>
+      {role === 'pending' && (
+        <div className="card p-6">
+          <h1 className="text-lg mb-2">Waiting for role assignment</h1>
           <p className="text-muted">
-            Your account isn&apos;t linked to a record yet. Please contact your BHW or admin.
+            Your account has not been assigned a role yet. Please contact the administrator to
+            request access.
           </p>
+        </div>
+      )}
+
+      {role === 'pregnant_mother' && !profile?.pregnant_mother_id && (
+        <div className="card p-6">
+          <h1 className="text-lg mb-2">Account not linked</h1>
+          <p className="text-muted">
+            Your account is not linked to a prenatal record yet. Please contact your BHW or the
+            administrator.
+          </p>
+        </div>
+      )}
+
+      {profileError && (
+        <div className="alert-error" role="alert">
+          Failed to load your account: {profileError.message}
+        </div>
+      )}
+
+      {!profile && !profileError && (
+        <div className="alert-error" role="alert">
+          No profile record was found for your account. Please contact the administrator.
+        </div>
+      )}
+
+      {profile && !isUserRole(role) && (
+        <div className="alert-error" role="alert">
+          Your account role ({String(profile.role)}) is not recognised. Please contact the
+          administrator.
         </div>
       )}
     </div>

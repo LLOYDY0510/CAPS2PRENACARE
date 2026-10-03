@@ -1,9 +1,14 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import type { Profile, UserRole } from '@/types';
+import type { Profile } from '@/types';
 
-export const STAFF_ROLES: UserRole[] = ['admin', 'nurse', 'bhw_head', 'bhw_purok'];
-export const EDIT_ROLES: UserRole[] = ['bhw_head', 'bhw_purok', 'nurse'];
+export {
+  STAFF_ROLES,
+  EDIT_ROLES,
+  USER_ROLES,
+  isUserRole,
+  isStaffRole,
+} from './role-constants';
 
 export async function getCurrentProfile() {
   const supabase = await createClient();
@@ -19,14 +24,10 @@ export async function getCurrentProfile() {
   return { supabase, user, profile: profile as Profile | null };
 }
 
-export async function requireRoles(roles: UserRole[]) {
+export async function requireRoles(roles: import('@/types').UserRole[]) {
   const result = await getCurrentProfile();
   if (!result.user) redirect('/login');
-  const role = (result.profile?.role ?? 'pending') as UserRole;
+  const role = (result.profile?.role ?? 'pending') as import('@/types').UserRole;
   if (!roles.includes(role)) redirect('/dashboard');
   return { ...result, profile: result.profile, role };
-}
-
-export function isStaffRole(role: string | null | undefined) {
-  return !!role && STAFF_ROLES.includes(role as UserRole);
 }

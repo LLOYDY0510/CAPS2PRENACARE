@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
+import { one } from '@/utils/embedded';
+import RiskBadge from '@/components/ui/RiskBadge';
 
 type MotherIndicatorRow = {
   pregnant_mother_id: string | null;
@@ -11,7 +13,7 @@ export default async function NurseDashboard() {
   const supabase = await createClient();
 
   // 1. Fetch pregnant mothers
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('pregnant_mothers')
     .select(
       'id, serial_no, first_name, middle_name, last_name, full_name, age, purok, risk_level, lmp, contact_number, blood_pressure, gravida_para'
@@ -19,14 +21,14 @@ export default async function NurseDashboard() {
     .order('serial_no', { ascending: true });
 
   // 2. Fetch active risk indicators
-  const { data: indicators } = await supabase
+  const { data: indicators, error: indicatorsError } = await supabase
     .from('risk_indicators')
     .select('id, label, indicator_type, threshold_value, active')
     .eq('active', true)
     .order('created_at', { ascending: true });
 
   // 3. Fetch matched indicators from junction table
-  const { data: motherIndicators } = await supabase
+  const { data: motherIndicators, error: linksError } = await supabase
     .from('pregnant_mother_indicators')
     .select(`
       pregnant_mother_id,
@@ -39,12 +41,26 @@ export default async function NurseDashboard() {
       )
     `);
 
+  const loadError = recordsError ?? indicatorsError ?? linksError;
+  if (loadError) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1>Nurse Dashboard</h1>
+        </div>
+        <div className="alert-error" role="alert">
+          Failed to load dashboard data: {loadError.message}
+        </div>
+      </div>
+    );
+  }
+
   const activeIndicatorsList = indicators ?? [];
 
   const indicatorsByMotherId: Record<string, RiskIndicatorInput[]> = {};
   motherIndicators?.forEach((item: MotherIndicatorRow) => {
     const motherId = item.pregnant_mother_id;
-    const ind = Array.isArray(item.risk_indicators) ? item.risk_indicators[0] : item.risk_indicators;
+    const ind = one(item.risk_indicators);
     if (motherId && ind) {
       if (!indicatorsByMotherId[motherId]) indicatorsByMotherId[motherId] = [];
       if (!indicatorsByMotherId[motherId].some((x) => x.id === ind.id)) {
@@ -84,6 +100,7 @@ export default async function NurseDashboard() {
   const total    = records?.length ?? 0;
   const highRisk = records?.filter((r) => r.risk_level === 'high').length ?? 0;
   const lowRisk  = records?.filter((r) => r.risk_level === 'low').length ?? 0;
+  const unassessed = records?.filter((r) => !r.risk_level).length ?? 0;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -98,7 +115,7 @@ export default async function NurseDashboard() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="stat-card">
           <p className="stat-label">Total Registered</p>
           <p className="stat-value">{total}</p>
@@ -110,6 +127,10 @@ export default async function NurseDashboard() {
         <div className="stat-card">
           <p className="stat-label">Low Risk</p>
           <p className="stat-value" style={{ color: 'var(--success)' }}>{lowRisk}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Unassessed</p>
+          <p className="stat-value" style={{ color: 'var(--muted)' }}>{unassessed}</p>
         </div>
       </div>
 
@@ -123,7 +144,7 @@ export default async function NurseDashboard() {
       <div className="card overflow-x-auto mt-4">
         <div className="section-header">
           <h2>Pregnant Women Records</h2>
-          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{total} registered</span>
+          <span className="text-xs text-muted">{total} registered</span>
         </div>
         <table className="data-table">
           <thead>
@@ -138,24 +159,21 @@ export default async function NurseDashboard() {
           <tbody>
             {(!records || records.length === 0) && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
+                <td colSpan={5} className="text-center py-8 text-muted-2">
                   No pregnant mothers registered yet.
                 </td>
               </tr>
             )}
             {records?.map((r) => (
               <tr key={r.id}>
-                <td>{r.serial_no ?? '—'}</td>
-                <td style={{ color: 'var(--ink)', fontWeight: 500 }}>
+                <td data-label="Serial No.">{r.serial_no ?? '—'}</td>
+                <td data-label="Name" className="font-medium text-ink">
                   {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                 </td>
-                <td>{r.age ?? '—'}</td>
-                <td>{r.purok ?? '—'}</td>
-                <td>
-                  {r.risk_level === 'high'
-                    ? <span className="badge-high">High Risk</span>
-                    : <span className="badge-low">Low Risk</span>
-                  }
+                <td data-label="Age">{r.age ?? '—'}</td>
+                <td data-label="Purok">{r.purok ?? '—'}</td>
+                <td data-label="Risk Level">
+                  <RiskBadge riskLevel={r.risk_level} />
                 </td>
               </tr>
             ))}

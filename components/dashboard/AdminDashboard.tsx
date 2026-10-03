@@ -1,5 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 import Link from 'next/link';
+import RiskBadge from '@/components/ui/RiskBadge';
 
 /* ─── Muted, clinical chart palette ─── */
 const ZONE_COLORS: Record<string, string> = {
@@ -23,12 +25,33 @@ const AGE_GROUP_COLORS: Record<string, string> = {
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const { data: records } = await supabase
+  const { data: records, error: recordsError } = await supabase
     .from('pregnant_mothers')
     .select(
       'id, serial_no, full_name, purok, risk_level, age, lmp, gravida_para, date_registered'
     )
     .order('date_registered', { ascending: false });
+
+  // Role distribution is an administrative aggregate across every account, so
+  // it is read with the service role: public.profiles RLS intentionally limits
+  // a signed-in user to their own row.
+  const { data: profiles, error: profilesError } = await createAdminClient()
+    .from('profiles')
+    .select('role');
+
+  const loadError = recordsError ?? profilesError;
+  if (loadError) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1>Admin Dashboard</h1>
+        </div>
+        <div className="alert-error" role="alert">
+          Failed to load dashboard data: {loadError.message}
+        </div>
+      </div>
+    );
+  }
 
   const total      = records?.length ?? 0;
   const highRisk   = records?.filter((r) => r.risk_level === 'high').length ?? 0;
@@ -55,7 +78,6 @@ export default async function AdminDashboard() {
 
   const recentRecords = (records ?? []).slice(0, 5);
 
-  const { data: profiles } = await supabase.from('profiles').select('role');
   const byRole: Record<string, number> = {};
   profiles?.forEach((p) => {
     const r = p.role || 'pending';
@@ -216,26 +238,23 @@ export default async function AdminDashboard() {
           <tbody>
             {recentRecords.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
+                <td colSpan={8} className="text-center py-8 text-muted-2">
                   No records yet.
                 </td>
               </tr>
             )}
             {recentRecords.map((r) => (
               <tr key={r.id}>
-                <td>{r.serial_no ?? '—'}</td>
-                <td style={{ color: 'var(--ink)', fontWeight: 500 }}>{r.full_name ?? '—'}</td>
-                <td>{r.purok ?? '—'}</td>
-                <td>{r.age ?? '—'}</td>
-                <td>{r.lmp ?? '—'}</td>
-                <td>{r.gravida_para ?? '—'}</td>
-                <td>
-                  {r.risk_level === 'high'
-                    ? <span className="badge-high">High Risk</span>
-                    : <span className="badge-low">Low Risk</span>
-                  }
+                <td data-label="Serial No.">{r.serial_no ?? '—'}</td>
+                <td data-label="Name" className="font-medium text-ink">{r.full_name ?? '—'}</td>
+                <td data-label="Zone">{r.purok ?? '—'}</td>
+                <td data-label="Age">{r.age ?? '—'}</td>
+                <td data-label="LMP">{r.lmp ?? '—'}</td>
+                <td data-label="G-P">{r.gravida_para ?? '—'}</td>
+                <td data-label="Risk">
+                  <RiskBadge riskLevel={r.risk_level} />
                 </td>
-                <td>{r.date_registered ?? '—'}</td>
+                <td data-label="Date Registered">{r.date_registered ?? '—'}</td>
               </tr>
             ))}
           </tbody>

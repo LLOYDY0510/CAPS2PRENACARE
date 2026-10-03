@@ -12,17 +12,35 @@ export default async function PrenatalCheckupsPage() {
     .select('id, serial_no, first_name, middle_name, last_name, purok, edd')
     .order('serial_no', { ascending: true });
   if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
-  const { data: records } = await recordsQuery;
+  const { data: records, error: recordsError } = await recordsQuery;
 
-  const checkupQuery = supabase
-    .from('prenatal_checkups')
-    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
-  const { data: checkups } = await checkupQuery;
-  const { data: scheduleRows } = await supabase
-    .from('prenatal_schedules')
-    .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
-    .not('trimester', 'is', null)
-    .order('created_at', { ascending: false });
+  const [checkupsResult, scheduleResult] = await Promise.all([
+    supabase
+      .from('prenatal_checkups')
+      .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status'),
+    supabase
+      .from('prenatal_schedules')
+      .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .not('trimester', 'is', null)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  const { data: checkups, error: checkupsError } = checkupsResult;
+  const { data: scheduleRows, error: schedulesError } = scheduleResult;
+
+  const loadError = recordsError ?? checkupsError ?? schedulesError;
+  if (loadError) {
+    return (
+      <div>
+        <div className="page-header">
+          <h1>Prenatal Checkups</h1>
+        </div>
+        <div className="alert-error" role="alert">
+          Failed to load checkup data: {loadError.message}
+        </div>
+      </div>
+    );
+  }
 
   const countsByMother: Record<string, number> = {};
   const statusByMother: Record<string, Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>> = {};

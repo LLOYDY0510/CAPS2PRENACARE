@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/utils/supabase/client';
+import {
+  BLOOD_PRESSURE_OPTIONS,
+  GRAVIDA_OPTIONS,
+  HEIGHT_OPTIONS_CM,
+  PARA_OPTIONS,
+  WEIGHT_OPTIONS_KG,
+  eddFromLmp,
+} from '@/utils/maternalForm';
 
 const LocationPicker = dynamic<{
   latitude: number | null;
@@ -71,16 +79,12 @@ export default function RegisterPregnantMotherPage() {
   }, [supabase]);
 
   function updateField(field: string, value: string) {
+    setError('');
     setForm((prev) => {
       const next = { ...prev, [field]: value };
 
-      if (field === 'lmp' && value) {
-        const lmpDate = new Date(value);
-        if (!isNaN(lmpDate.getTime())) {
-          const edcDate = new Date(lmpDate);
-          edcDate.setDate(edcDate.getDate() + 280);
-          next.edd = edcDate.toISOString().slice(0, 10);
-        }
+      if (field === 'lmp') {
+        next.edd = value ? (eddFromLmp(value) ?? '') : '';
       }
 
       return next;
@@ -99,6 +103,18 @@ export default function RegisterPregnantMotherPage() {
 
     if (!form.last_name.trim() || !form.first_name.trim()) {
       setError('First and last name are required.');
+      return;
+    }
+
+    const ageNum = form.age ? parseInt(form.age) : null;
+    if (ageNum != null && (!Number.isInteger(ageNum) || ageNum < 10 || ageNum > 55)) {
+      setError('Age must be a whole number between 10 and 55.');
+      return;
+    }
+    const gravidaNum = form.gravida ? parseInt(form.gravida) : null;
+    const paraNum = form.para ? parseInt(form.para) : null;
+    if (gravidaNum != null && paraNum != null && paraNum > gravidaNum) {
+      setError('Para cannot be greater than Gravida.');
       return;
     }
 
@@ -126,11 +142,7 @@ export default function RegisterPregnantMotherPage() {
       const gravida_para =
         form.gravida && form.para ? `G${form.gravida}P${form.para}` : null;
 
-      const ageNum = form.age ? parseInt(form.age) : null;
-      const gravidaNum = form.gravida ? parseInt(form.gravida) : null;
-
-      const { data: autoIndicators } = await supabase
-        .from('risk_indicators')
+      const { data: autoIndicators } = await supabase        .from('risk_indicators')
         .select('id, indicator_type, threshold_value')
         .eq('active', true)
         .in('indicator_type', ['age_below', 'first_pregnancy_age_above']);
@@ -432,7 +444,7 @@ export default function RegisterPregnantMotherPage() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
-              {Array.from({ length: 11 }, (_, i) => (
+              {GRAVIDA_OPTIONS.map((i) => (
                 <option key={i} value={i}>
                   G{i}
                 </option>
@@ -448,7 +460,7 @@ export default function RegisterPregnantMotherPage() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
-              {Array.from({ length: 11 }, (_, i) => (
+              {PARA_OPTIONS.map((i) => (
                 <option key={i} value={i}>
                   P{i}
                 </option>
@@ -467,11 +479,7 @@ export default function RegisterPregnantMotherPage() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
-              {[
-                '90/60', '100/60', '100/70', '110/70', '110/80',
-                '120/80', '120/90', '130/85', '130/90', '140/90',
-                '150/95', '160/100', '170/110', '180/120',
-              ].map((bp) => (
+              {BLOOD_PRESSURE_OPTIONS.map((bp) => (
                 <option key={bp} value={bp}>
                   {bp}
                 </option>
@@ -486,7 +494,7 @@ export default function RegisterPregnantMotherPage() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
-              {Array.from({ length: 61 }, (_, i) => 130 + i).map((cm) => (
+              {HEIGHT_OPTIONS_CM.map((cm) => (
                 <option key={cm} value={cm}>
                   {cm}
                 </option>
@@ -501,7 +509,7 @@ export default function RegisterPregnantMotherPage() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="">Select...</option>
-              {Array.from({ length: 91 }, (_, i) => 30 + i).map((kg) => (
+              {WEIGHT_OPTIONS_KG.map((kg) => (
                 <option key={kg} value={kg}>
                   {kg}
                 </option>

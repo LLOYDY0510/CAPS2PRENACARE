@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { STAFF_ROLES } from '@/utils/auth/roles';
+import { isStaffRole } from '@/utils/auth/roles';
+import { one } from '@/utils/embedded';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (!profile || !STAFF_ROLES.includes(profile.role as any)) {
+    if (!profile || !isStaffRole(profile.role)) {
       return NextResponse.json({ error: 'Only staff can create follow-ups.' }, { status: 403 });
     }
 
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (!profile || !STAFF_ROLES.includes(profile.role as any)) {
+    if (!profile || !isStaffRole(profile.role)) {
       return NextResponse.json({ error: 'Only staff can view follow-ups.' }, { status: 403 });
     }
 
@@ -163,7 +164,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (!profile || !STAFF_ROLES.includes(profile.role as any)) {
+    if (!profile || !isStaffRole(profile.role)) {
       return NextResponse.json({ error: 'Only staff can update follow-ups.' }, { status: 403 });
     }
 
@@ -185,16 +186,14 @@ export async function PATCH(req: NextRequest) {
         .eq('id', followUpId)
         .single();
 
-      const motherPurok = Array.isArray(followUp?.pregnant_mothers) 
-        ? (followUp.pregnant_mothers as any)[0]?.purok 
-        : (followUp?.pregnant_mothers as any)?.purok;
+      const motherPurok = one(followUp?.pregnant_mothers)?.purok ?? null;
 
       if (motherPurok !== profile.purok) {
         return NextResponse.json({ error: 'You can only update follow-ups for mothers in your purok.' }, { status: 403 });
       }
     }
 
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, string | null> = {};
     if (status) updateData.status = status;
     if (smsStatus) updateData.sms_status = smsStatus;
     if (nextContactDate !== undefined) updateData.next_contact_date = nextContactDate;

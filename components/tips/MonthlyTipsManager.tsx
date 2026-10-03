@@ -158,7 +158,7 @@ export default function MonthlyTipsManager({
   async function saveTemplate(tip: MonthlyTip) {
     await supabase
       .from('monthly_tips')
-      .update({ content: templateDraft, updated_at: new Date().toISOString() })
+      .update({ content: templateDraft })
       .eq('id', tip.id);
     setEditingTemplateId(null);
     router.refresh();

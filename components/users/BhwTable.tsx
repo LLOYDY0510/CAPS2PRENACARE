@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 
 type UserRow = {
@@ -19,24 +19,59 @@ export default function BhwTable({
   initialUsers: UserRow[];
   countsByPurok: Record<string, number>;
 }) {
-  const supabase = createClient();
+  const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [draftPurok, setDraftPurok] = useState<Record<string, string>>({});
+
+  // Account changes always go through the admin API: the browser session has no
+  // write access to public.profiles, and role changes must be validated there.
+  async function updateAccount(
+    id: string,
+    payload: Record<string, string | null>,
+    savingLabel: string
+  ): Promise<boolean> {
+    setSavingId(id);
+    setError(null);
+    setDraftPurok((prev) => ({ ...prev, [id]: savingLabel }));
+    try {
+      const response = await fetch('/api/admin/update-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, ...payload }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? 'Failed to save the account.');
+        return false;
+      }
+      setUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, ...(result.profile ?? payload) } : u))
+      );
+      router.refresh();
+      return true;
+    } catch {
+      setError('Network error while saving. Please try again.');
+      return false;
+    } finally {
+      setSavingId(null);
+      setDraftPurok((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  }
 
   async function promoteToBhw(id: string) {
-    setSavingId(id);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'bhw_purok' })
-      .eq('id', id);
-
-    if (!error) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, role: 'bhw_purok' } : u))
-      );
+    const purok = (draftPurok[id] ?? users.find((u) => u.id === id)?.purok ?? '').trim();
+    if (!purok) {
+      setError('Enter a purok first — a BHW (Purok) must be assigned to one purok.');
+      return;
     }
-    setSavingId(null);
+    await updateAccount(id, { role: 'bhw_purok', purok }, '');
   }
 
   async function demoteToPending(id: string) {
@@ -44,26 +79,12 @@ export default function BhwTable({
       'Remove this BHW? They will be set back to pending and lose their purok assignment.'
     );
     if (!confirmed) return;
-
-    setSavingId(id);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'pending', purok: null })
-      .eq('id', id);
-
-    if (!error) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, role: 'pending', purok: null } : u))
-      );
-    }
-    setSavingId(null);
+    await updateAccount(id, { role: 'pending', purok: null }, '');
   }
 
-  async function saveAssignment(id: string, purok: string) {
-    setSavingId(id);
-    await supabase.from('profiles').update({ purok }).eq('id', id);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, purok } : u)));
-    setSavingId(null);
+  async function saveAssignment(id: string) {
+    const purok = (draftPurok[id] ?? '').trim();
+    await updateAccount(id, { purok: purok || null }, '');
   }
 
   const filteredUsers = users.filter((u) => {
@@ -77,17 +98,22 @@ export default function BhwTable({
 
   return (
     <div>
-      {/* Filter bar */}
       <div className="flex flex-wrap gap-2 mb-4 items-center">
         <SearchBar
           value={search}
           onChange={setSearch}
           placeholder="Search by name, email, or purok…"
         />
-        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--muted)' }}>
+        <span className="ml-auto text-xs text-muted">
           {filteredUsers.length} of {users.length} users
         </span>
       </div>
+
+      {error && (
+        <div className="alert-error mb-4" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="card overflow-x-auto">
         <table className="data-table">
@@ -103,65 +129,89 @@ export default function BhwTable({
           <tbody>
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
+                <td colSpan={5} className="text-center py-8 text-muted-2">
                   No matching users found.
                 </td>
               </tr>
             )}
-            {filteredUsers.map((user) => (
-              <tr key={user.id}>
-                <td>
-                  <p style={{ fontWeight: 500, color: 'var(--ink)' }}>{user.full_name || 'No name set'}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{user.email}</p>
-                </td>
-                <td>
-                  <span className={user.role === 'bhw_purok' ? 'badge-low' : 'badge-warning'}>
-                    {user.role}
-                  </span>
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    defaultValue={user.purok ?? ''}
-                    placeholder="e.g. 1"
-                    className="form-input"
-                    style={{ width: '72px' }}
-                    onBlur={(e) => saveAssignment(user.id, e.target.value)}
-                  />
-                </td>
-                <td>
-                  {user.purok ? (
-                    <span style={{ color: 'var(--muted)' }}>
-                      {countsByPurok[user.purok] ?? 0}{' '}
-                      <span style={{ fontSize: '0.75rem', color: 'var(--muted-2)' }}>mothers</span>
+            {filteredUsers.map((user) => {
+              const isSaving = savingId === user.id;
+              const isBhw = user.role === 'bhw_purok';
+              return (
+                <tr key={user.id}>
+                  <td data-label="Name / Email">
+                    <p className="font-medium text-ink">{user.full_name || 'No name set'}</p>
+                    <p className="text-xs text-muted">{user.email}</p>
+                  </td>
+                  <td data-label="Role">
+                    <span className={isBhw ? 'badge-low' : 'badge-warning'}>
+                      {user.role === 'bhw_purok' ? 'BHW (Purok)' : user.role}
                     </span>
-                  ) : (
-                    <span style={{ color: 'var(--muted-2)' }}>—</span>
-                  )}
-                </td>
-                <td>
-                  {user.role === 'pending' ? (
-                    <button
-                      onClick={() => promoteToBhw(user.id)}
-                      disabled={savingId === user.id}
-                      className="btn-primary"
-                      style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem' }}
-                    >
-                      {savingId === user.id ? 'Saving…' : 'Make BHW'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => demoteToPending(user.id)}
-                      disabled={savingId === user.id}
-                      className="btn-danger"
-                      style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem' }}
-                    >
-                      {savingId === user.id ? 'Removing…' : 'Remove'}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td data-label="Purok">
+                    <label className="sr-only" htmlFor={`purok-${user.id}`}>
+                      Purok for {user.full_name || user.email}
+                    </label>
+                    <input
+                      id={`purok-${user.id}`}
+                      type="text"
+                      inputMode="numeric"
+                      value={draftPurok[user.id] ?? user.purok ?? ''}
+                      placeholder="e.g. 1"
+                      className="form-input"
+                      style={{ width: '84px' }}
+                      disabled={isSaving}
+                      onChange={(e) =>
+                        setDraftPurok((prev) => ({ ...prev, [user.id]: e.target.value }))
+                      }
+                      onBlur={() => {
+                        if ((draftPurok[user.id] ?? user.purok ?? '') !== (user.purok ?? '')) {
+                          void saveAssignment(user.id);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void saveAssignment(user.id);
+                        }
+                      }}
+                    />
+                    {isSaving && <span className="ml-2 text-xs text-muted">Saving…</span>}
+                  </td>
+                  <td data-label="Workload">
+                    {user.purok ? (
+                      <span className="text-muted">
+                        {countsByPurok[user.purok] ?? 0}{' '}
+                        <span className="text-xs text-muted-2">mothers</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-2">Not assigned</span>
+                    )}
+                  </td>
+                  <td data-label="Action">
+                    {user.role === 'pending' ? (
+                      <button
+                        type="button"
+                        onClick={() => void promoteToBhw(user.id)}
+                        disabled={isSaving}
+                        className="btn-primary"
+                      >
+                        {isSaving ? 'Saving…' : 'Make BHW'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void demoteToPending(user.id)}
+                        disabled={isSaving}
+                        className="btn-danger"
+                      >
+                        {isSaving ? 'Saving…' : 'Remove'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
