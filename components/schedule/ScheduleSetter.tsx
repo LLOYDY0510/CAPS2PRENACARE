@@ -461,7 +461,7 @@ function ScheduleCard({
       </div>
 
       {outcomes && outcomes.length > 0 && (
-        <div className="mt-4 border-t border-[#EEF1F4] pt-3">
+        <div className="mt-4 border-t border-[var(--border-light)] pt-3">
           <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
             Result of the last send
           </p>
@@ -500,7 +500,7 @@ function ScheduleCard({
       )}
 
       {canEdit && isOpen && (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EEF1F4] pt-4">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border-light)] pt-4">
           <button
             type="button"
             className="btn-primary"

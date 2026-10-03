@@ -122,7 +122,7 @@ export default function IndicatorManager({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. History of 3 or more miscarriages"
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-input w-full"
             />
           </div>
  
@@ -132,7 +132,7 @@ export default function IndicatorManager({
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                className="form-input w-full"
               >
                 <option value="checklist">Checklist (BHW ticks manually)</option>
                 <option value="age_below">Auto: Age below threshold</option>
@@ -151,20 +151,21 @@ export default function IndicatorManager({
                   value={threshold}
                   onChange={(e) => setThreshold(e.target.value)}
                   placeholder="e.g. 19"
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  className="form-input w-full"
                 />
               </div>
             )}
           </div>
  
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn-primary"
-            style={{ fontSize: '0.8125rem' }}
-          >
-            {saving ? 'Saving…' : 'Save Indicator'}
-          </button>
+          <div className="form-actions">
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn btn-primary"
+            >
+              <span className="btn-label">{saving ? 'Saving…' : 'Save Indicator'}</span>
+            </button>
+          </div>
         </form>
       )}
  

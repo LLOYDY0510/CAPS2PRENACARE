@@ -201,12 +201,12 @@ export default function UserRoleEditor({
       </td>
       <td data-label="Action" className="text-right">
         {error && (
-          <p className="text-xs text-[#B91C1C] mb-1" role="alert">
+          <p className="text-xs text-[var(--danger)] mb-1" role="alert">
             {error}
           </p>
         )}
         {notice && !error && (
-          <p className="text-xs text-[#15803D] mb-1" role="status">
+          <p className="text-xs text-[var(--success)] mb-1" role="status">
             {notice}
           </p>
         )}

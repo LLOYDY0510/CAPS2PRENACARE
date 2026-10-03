@@ -355,13 +355,13 @@ export default function PrenatalCheckups({
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="form-actions">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="btn-primary"
+                  className="btn btn-primary"
                 >
-                  {saving ? 'Saving…' : 'Save Checkup'}
+                  <span className="btn-label">{saving ? 'Saving…' : 'Save Checkup'}</span>
                 </button>
                 <button
                   type="button"
