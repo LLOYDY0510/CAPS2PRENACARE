@@ -1,9 +1,12 @@
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import Link from 'next/link';
+import { Users, AlertTriangle, ShieldCheck, UserCog, Calendar, ArrowRight } from 'lucide-react';
 import RiskBadge from '@/components/ui/RiskBadge';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
 
-/* ─── Muted, clinical chart palette ─── */
+/* ─── Chart palette ─── */
 const ZONE_COLORS: Record<string, string> = {
   '1': '#4A90D9',
   '2': '#2A7A74',
@@ -32,9 +35,6 @@ export default async function AdminDashboard() {
     )
     .order('date_registered', { ascending: false });
 
-  // Role distribution is an administrative aggregate across every account, so
-  // it is read with the service role: public.profiles RLS intentionally limits
-  // a signed-in user to their own row.
   const { data: profiles, error: profilesError } = await createAdminClient()
     .from('profiles')
     .select('role');
@@ -43,9 +43,7 @@ export default async function AdminDashboard() {
   if (loadError) {
     return (
       <div>
-        <div className="page-header">
-          <h1>Admin Dashboard</h1>
-        </div>
+        <PageHeader title="Admin Dashboard" icon={UserCog} />
         <div className="alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
         </div>
@@ -107,44 +105,85 @@ export default async function AdminDashboard() {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="page-header">
-        <h1>Admin Dashboard</h1>
-        <p className="page-date">{today}</p>
-      </div>
+      <PageHeader
+        title="Admin Dashboard"
+        subtitle={`System-wide overview for ${today}`}
+        icon={UserCog}
+        badge="System Admin"
+      />
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Total Registered" value={total}      color="var(--brand)"   href="/dashboard/pregnant"      footer="View all records" />
-        <KpiCard label="High Risk"        value={highRisk}   color="var(--danger)"  href="/dashboard/risk-list/high" />
-        <KpiCard label="Low Risk"         value={lowRisk}    color="var(--success)" href="/dashboard/risk-list/low"  />
-        <KpiCard label="Staff Accounts"   value={totalStaff} color="#B45309"        href="/dashboard/users"          />
+      {/* KPI row with StatCard */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Registered"
+          value={total}
+          trend="+100% active coverage"
+          icon={Users}
+          variant="brand"
+          href="/dashboard/pregnant"
+          footerText="View all records"
+        />
+        <StatCard
+          title="High Risk Cases"
+          value={highRisk}
+          trend={`${highPct}% of total mothers`}
+          icon={AlertTriangle}
+          variant="danger"
+          href="/dashboard/risk-list/high"
+          footerText="View high risk list"
+        />
+        <StatCard
+          title="Low Risk Cases"
+          value={lowRisk}
+          trend={`${lowPct}% of total mothers`}
+          icon={ShieldCheck}
+          variant="success"
+          href="/dashboard/risk-list/low"
+          footerText="View low risk list"
+        />
+        <StatCard
+          title="Staff Accounts"
+          value={totalStaff}
+          trend="Active health workers"
+          icon={UserCog}
+          variant="warning"
+          href="/dashboard/users"
+          footerText="Manage staff users"
+        />
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar chart — records per zone */}
-        <div className="card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-5">
-            <h2>Records per Zone</h2>
-            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{total} total</span>
+        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+            <div>
+              <h2 className="text-base font-bold text-[var(--ink)]">Records per Zone</h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">Barangay purok distribution</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--surface-alt)] text-[var(--muted)] border border-[var(--border-light)]">
+              {total} total
+            </span>
           </div>
+
           {purokEntries.length === 0 ? (
             <EmptyChart />
           ) : (
-            <div className="flex items-end gap-3" style={{ height: '160px' }}>
+            <div className="flex items-end gap-3 sm:gap-4 pt-4" style={{ height: '180px' }}>
               {purokEntries.map(([purok, count]) => {
-                const barH = Math.max(8, (count / maxPurokCount) * 130);
+                const barH = Math.max(12, (count / maxPurokCount) * 140);
                 return (
-                  <div key={purok} className="flex-1 flex flex-col items-center justify-end h-full gap-1.5">
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)', fontWeight: 500 }}>{count}</span>
+                  <div key={purok} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group">
+                    <span className="text-xs font-bold text-[var(--ink)] opacity-90 group-hover:scale-110 transition-transform">
+                      {count}
+                    </span>
                     <div
-                      className="w-full max-w-[36px] rounded-sm"
-                      style={{ height: `${barH}px`, background: ZONE_COLORS[purok] ?? UNASSIGNED_COLOR, opacity: 0.85 }}
+                      className="w-full max-w-[42px] rounded-t-lg transition-all duration-300 group-hover:brightness-110 shadow-xs"
+                      style={{ height: `${barH}px`, background: ZONE_COLORS[purok] ?? UNASSIGNED_COLOR }}
                     />
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--muted)' }}>P{purok}</span>
+                    <span className="text-xs font-medium text-[var(--muted)]">P{purok}</span>
                   </div>
                 );
               })}
@@ -153,33 +192,48 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Donut — risk distribution */}
-        <div className="card p-5 flex flex-col">
-          <h2 className="mb-5">Risk Distribution</h2>
+        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+            <div>
+              <h2 className="text-base font-bold text-[var(--ink)]">Risk Breakdown</h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">Clinical risk ratio</p>
+            </div>
+          </div>
+
           {total === 0 ? (
             <EmptyChart />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
-                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--border)" strokeWidth="13"/>
-                <circle
-                  cx="50" cy="50" r="38" fill="none"
-                  stroke="var(--success)" strokeWidth="13"
-                  strokeDasharray={`${(lowPct / 100) * 238.8} 238.8`}
-                  strokeLinecap={lowPct === 100 ? 'butt' : 'round'}
-                />
-                {highPct > 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center py-2">
+              <div className="relative flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-32 h-32 -rotate-90">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="var(--border-light)" strokeWidth="12"/>
                   <circle
                     cx="50" cy="50" r="38" fill="none"
-                    stroke="var(--danger)" strokeWidth="13"
-                    strokeDasharray={`${(highPct / 100) * 238.8} 238.8`}
-                    strokeDashoffset={`${-(lowPct / 100) * 238.8}`}
-                    strokeLinecap="round"
+                    stroke="var(--success)" strokeWidth="12"
+                    strokeDasharray={`${(lowPct / 100) * 238.8} 238.8`}
+                    strokeLinecap={lowPct === 100 ? 'butt' : 'round'}
+                    className="transition-all duration-500"
                   />
-                )}
-              </svg>
-              <div className="flex gap-5 mt-4" style={{ fontSize: '0.75rem' }}>
-                <Legend color="var(--success)" label={`Low — ${lowPct}%`}  />
-                <Legend color="var(--danger)"  label={`High — ${highPct}%`} />
+                  {highPct > 0 && (
+                    <circle
+                      cx="50" cy="50" r="38" fill="none"
+                      stroke="var(--danger)" strokeWidth="12"
+                      strokeDasharray={`${(highPct / 100) * 238.8} 238.8`}
+                      strokeDashoffset={`${-(lowPct / 100) * 238.8}`}
+                      strokeLinecap="round"
+                      className="transition-all duration-500"
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xl font-extrabold text-[var(--ink)]">{total}</span>
+                  <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Mothers</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-6 mt-6 w-full pt-4 border-t border-[var(--border-light)]">
+                <Legend color="var(--success)" label="Low Risk" pct={`${lowPct}%`} />
+                <Legend color="var(--danger)" label="High Risk" pct={`${highPct}%`} />
               </div>
             </div>
           )}
@@ -187,26 +241,32 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Age group chart */}
-      <div className="card p-5 mb-4">
-        <div className="flex items-center justify-between mb-5">
-          <h2>Registered by Age Group</h2>
-          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{total} total</span>
+      <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card">
+        <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+          <div>
+            <h2 className="text-base font-bold text-[var(--ink)]">Registered by Age Group</h2>
+            <p className="text-xs text-[var(--muted)] mt-0.5">Demographic risk profiling</p>
+          </div>
+          <span className="text-xs font-medium text-[var(--muted)]">{total} total</span>
         </div>
+
         {total === 0 ? (
           <EmptyChart />
         ) : (
-          <div className="flex items-end gap-10 justify-center" style={{ height: '160px' }}>
+          <div className="flex items-end gap-8 sm:gap-16 justify-center py-4" style={{ height: '180px' }}>
             {AGE_GROUPS.map((group) => {
               const count = byAgeGroup[group];
-              const barH  = Math.max(8, (count / maxAgeCount) * 130);
+              const barH  = Math.max(12, (count / maxAgeCount) * 140);
               return (
-                <div key={group} className="flex flex-col items-center justify-end h-full gap-1.5" style={{ width: '72px' }}>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-secondary)' }}>{count}</span>
+                <div key={group} className="flex flex-col items-center justify-end h-full gap-2 group" style={{ width: '80px' }}>
+                  <span className="text-xs font-bold text-[var(--ink)] opacity-90 group-hover:scale-110 transition-transform">
+                    {count}
+                  </span>
                   <div
-                    className="w-12 rounded-sm"
-                    style={{ height: `${barH}px`, background: AGE_GROUP_COLORS[group], opacity: 0.85 }}
+                    className="w-14 rounded-t-lg transition-all duration-300 group-hover:brightness-110 shadow-xs"
+                    style={{ height: `${barH}px`, background: AGE_GROUP_COLORS[group] }}
                   />
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--muted)' }}>{group} yrs</span>
+                  <span className="text-xs font-medium text-[var(--muted)]">{group} yrs</span>
                 </div>
               );
             })}
@@ -215,57 +275,67 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Recent records table */}
-      <div className="card overflow-x-auto mb-4">
-        <div className="section-header">
-          <h2>Recent Registrations</h2>
-          <Link href="/dashboard/pregnant" style={{ fontSize: '0.75rem', color: 'var(--brand)' }}>
-            View all →
+      <div className="rounded-[16px] bg-white border border-[var(--border-light)] shadow-card overflow-hidden">
+        <div className="p-5 border-b border-[var(--border-light)] flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[var(--ink)]">Recent Registrations</h2>
+            <p className="text-xs text-[var(--muted)] mt-0.5">Latest maternal records logged</p>
+          </div>
+          <Link
+            href="/dashboard/pregnant"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors"
+          >
+            <span>View all</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Serial No.</th>
-              <th>Name</th>
-              <th>Zone</th>
-              <th>Age</th>
-              <th>LMP</th>
-              <th>G-P</th>
-              <th>Risk</th>
-              <th>Date Registered</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentRecords.length === 0 && (
+
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={8} className="text-center py-8 text-muted-2">
-                  No records yet.
-                </td>
+                <th>Serial No.</th>
+                <th>Name</th>
+                <th>Zone</th>
+                <th>Age</th>
+                <th>LMP</th>
+                <th>G-P</th>
+                <th>Risk</th>
+                <th>Date Registered</th>
               </tr>
-            )}
-            {recentRecords.map((r) => (
-              <tr key={r.id}>
-                <td data-label="Serial No.">{r.serial_no ?? '—'}</td>
-                <td data-label="Name" className="font-medium text-ink">{r.full_name ?? '—'}</td>
-                <td data-label="Zone">{r.purok ?? '—'}</td>
-                <td data-label="Age">{r.age ?? '—'}</td>
-                <td data-label="LMP">{r.lmp ?? '—'}</td>
-                <td data-label="G-P">{r.gravida_para ?? '—'}</td>
-                <td data-label="Risk">
-                  <RiskBadge riskLevel={r.risk_level} />
-                </td>
-                <td data-label="Date Registered">{r.date_registered ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recentRecords.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-muted-2">
+                    No records yet.
+                  </td>
+                </tr>
+              )}
+              {recentRecords.map((r) => (
+                <tr key={r.id} className="hover:bg-[var(--surface-alt)] transition-colors">
+                  <td data-label="Serial No." className="font-mono text-xs text-[var(--muted)]">{r.serial_no ?? '—'}</td>
+                  <td data-label="Name" className="font-semibold text-[var(--ink)]">{r.full_name ?? '—'}</td>
+                  <td data-label="Zone">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                  <td data-label="Age">{r.age ?? '—'}</td>
+                  <td data-label="LMP">{r.lmp ?? '—'}</td>
+                  <td data-label="G-P">{r.gravida_para ?? '—'}</td>
+                  <td data-label="Risk">
+                    <RiskBadge riskLevel={r.risk_level} />
+                  </td>
+                  <td data-label="Date Registered" className="text-xs text-[var(--muted)]">{r.date_registered ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Staff by role */}
-      <div className="card p-5">
-        <h2 className="mb-4">Staff by Role</h2>
+      <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card">
+        <h2 className="text-base font-bold text-[var(--ink)] mb-4">Health Staff Roster</h2>
         {Object.keys(byRole).length === 0 ? (
-          <p style={{ fontSize: '0.8125rem', color: 'var(--muted-2)' }}>No accounts yet.</p>
+          <p className="text-xs text-[var(--muted-2)]">No accounts yet.</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(byRole)
@@ -274,13 +344,12 @@ export default async function AdminDashboard() {
               .map(([r, count]) => (
                 <div
                   key={r}
-                  className="flex items-center justify-between rounded px-3 py-2.5"
-                  style={{ border: '1px solid var(--border)', background: 'var(--surface-alt)' }}
+                  className="flex items-center justify-between rounded-xl px-4 py-3 bg-[var(--surface-alt)] border border-[var(--border-light)]"
                 >
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>
+                  <span className="text-xs font-medium text-[var(--muted)]">
                     {roleLabels[r] ?? r}
                   </span>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)' }}>
+                  <span className="text-base font-bold text-[var(--ink)]">
                     {count}
                   </span>
                 </div>
@@ -292,45 +361,20 @@ export default async function AdminDashboard() {
   );
 }
 
-/* ─────────── Sub-components ─────────── */
-
-function KpiCard({
-  label, value, color, href, footer = 'View details',
-}: {
-  label: string; value: number; color: string; href?: string; footer?: string;
-}) {
-  const inner = (
-    <div className="stat-card h-full">
-      <p className="stat-label">{label}</p>
-      <p className="stat-value" style={{ color }}>{value}</p>
-      {href && (
-        <p className="stat-footer flex items-center gap-1">
-          {footer} <span aria-hidden>→</span>
-        </p>
-      )}
-    </div>
-  );
-  return href
-    ? <Link href={href} className="block hover:opacity-90 transition-opacity">{inner}</Link>
-    : <>{inner}</>;
-}
-
 function EmptyChart() {
   return (
-    <div
-      className="flex items-center justify-center"
-      style={{ height: '160px', fontSize: '0.8125rem', color: 'var(--muted-2)' }}
-    >
+    <div className="flex items-center justify-center h-40 text-xs font-medium text-[var(--muted-2)]">
       No data available.
     </div>
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function Legend({ color, label, pct }: { color: string; label: string; pct: string }) {
   return (
-    <span className="flex items-center gap-1.5" style={{ color: 'var(--muted)' }}>
-      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-      {label}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
+      <span className="text-xs font-bold text-[var(--ink)]">{pct}</span>
+    </div>
   );
 }

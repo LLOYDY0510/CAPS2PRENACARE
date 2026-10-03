@@ -12,9 +12,11 @@ import AuthIllustration from '@/components/auth/AuthIllustration';
 export default function AuthLayout({
   children,
   illustration,
+  brand,
 }: {
   children: ReactNode;
   illustration?: ReactNode;
+  brand?: ReactNode;
 }) {
   const leftSidePanel = illustration ?? <AuthIllustration />;
 
