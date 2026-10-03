@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import AuthLayout from '@/components/auth/AuthLayout';
-import BrandPanel from '@/components/auth/BrandPanel';
+import AuthIllustration from '@/components/auth/AuthIllustration';
 import LoginForm from '@/components/auth/LoginForm';
 
 export const metadata: Metadata = {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <AuthLayout brand={<BrandPanel />}>
+    <AuthLayout illustration={<AuthIllustration />}>
       <LoginForm />
     </AuthLayout>
   );

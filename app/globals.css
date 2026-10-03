@@ -1585,14 +1585,82 @@ canvas {
   max-width: 100%;
 }
 
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes float-gentle-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes green-pulse-ambient {
+  0%, 100% {
+    transform: scale(1) translate(0px, 0px);
+    opacity: 0.5;
+  }
+  33% {
+    transform: scale(1.15) translate(25px, -15px);
+    opacity: 0.75;
+  }
+  66% {
+    transform: scale(0.9) translate(-20px, 20px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes green-pulse-ambient-alt {
+  0%, 100% {
+    transform: scale(1) translate(0px, 0px);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2) translate(-30px, 15px);
+    opacity: 0.7;
+  }
+}
+
+.anim-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-bounce-gentle {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+.animate-bounce-gentle-delayed {
+  animation: float-gentle-delayed 4s ease-in-out infinite 1.5s;
+}
+
+.animate-green-pulse {
+  animation: green-pulse-ambient 10s ease-in-out infinite;
+}
+
+.animate-green-pulse-alt {
+  animation: green-pulse-ambient-alt 12s ease-in-out infinite 2s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar-scrim,
   .modal-backdrop,
   .modal,
   .anim-fade-in,
   .anim-fade-up,
+  .anim-slide-up,
   .anim-scale-in,
+  .animate-bounce-gentle,
+  .animate-bounce-gentle-delayed,
+  .animate-green-pulse,
+  .animate-green-pulse-alt,
   .anim-stagger > * {
     animation: none !important;
   }
 }
+
+
