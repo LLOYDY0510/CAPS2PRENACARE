@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
 import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
+import InfoRow from '@/components/ui/InfoRow';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 
@@ -112,15 +113,6 @@ export default async function ViewPregnantMotherPage({
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | number | null }) {
-  return (
-    <div>
-      <p className="text-muted-2 text-xs mb-0.5">{label}</p>
-      <p className="text-gray-800">{value ?? '—'}</p>
     </div>
   );
 }
