@@ -1,5 +1,5 @@
 import 'server-only';
-import { createAdminClient } from '@/utils/supabase/admin';
+import { createAdminClient, describeServiceKeyError } from '@/utils/supabase/admin';
 import { createRoleNotification } from '@/utils/notifications';
 import { manilaDatePlusFor, manilaToday } from '@/utils/sms/clock';
 import { getSemaphoreAccount } from '@/utils/sms/semaphore';
@@ -70,6 +70,24 @@ export async function listMothersForScheduling(): Promise<SchedulingMother[]> {
     .order('full_name', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as SchedulingMother[];
+}
+
+/**
+ * Non-throwing mother lookup for pages. Logs one clear message and hands the
+ * caller a ServiceResult so the page can render an error state instead of
+ * crashing. The throwing `listMothersForScheduling()` stays for internal
+ * callers that already handle the throw.
+ */
+export async function tryListMothersForScheduling(): Promise<
+  ServiceResult<SchedulingMother[]>
+> {
+  try {
+    return { ok: true, data: await listMothersForScheduling() };
+  } catch (error) {
+    const message = describeServiceKeyError(error);
+    console.error('scheduling mothers: could not be read.', message);
+    return { ok: false, error: message };
+  }
 }
 
 export type SmsStatusSummary = {
@@ -160,6 +178,24 @@ export async function listSchedules(limit = 25): Promise<ScheduleWithRecipients[
         };
       }),
   }));
+}
+
+/**
+ * Non-throwing schedule list for pages and routes that must stay up when the
+ * database is unreachable. Logs one clear, actionable message (once per call)
+ * and hands the caller a ServiceResult. The throwing `listSchedules()` stays
+ * for internal callers that already handle the throw.
+ */
+export async function tryListSchedules(
+  limit = 25,
+): Promise<ServiceResult<ScheduleWithRecipients[]>> {
+  try {
+    return { ok: true, data: await listSchedules(limit) };
+  } catch (error) {
+    const message = describeServiceKeyError(error);
+    console.error('prenatal schedules: could not be read.', message);
+    return { ok: false, error: message };
+  }
 }
 
 export async function createSchedule(input: ScheduleInput): Promise<ServiceResult<ScheduleWithRecipients>> {
