@@ -8,17 +8,20 @@ import {
   BarChart3,
   Baby,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   FileText,
   HeartPulse,
   LayoutDashboard,
+  LogOut,
   Map as MapIcon,
   Menu,
   MessageSquare,
   Salad,
   Search,
   Send,
+  User,
   UserCog,
   Users,
   X,
@@ -77,12 +80,13 @@ export default function Sidebar({
   const pathname = usePathname();
   const asideRef = useRef<HTMLElement | null>(null);
   const burgerRef = useRef<HTMLButtonElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [openAt, setOpenAt] = useState<string | null>(null);
   const mobileOpen = openAt === pathname;
-  const [collapsed, setCollapsed] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia(DESKTOP_QUERY);
@@ -123,191 +127,236 @@ export default function Sidebar({
     };
   }, [mobileOpen]);
 
-  function handleToggle() {
-    if (isDesktop) setCollapsed((current) => !current);
-    else setOpenAt(mobileOpen ? null : pathname);
-  }
-
-  const expanded = isDesktop ? !collapsed : mobileOpen;
-  const hideLabels = isDesktop && collapsed;
+  // Click outside user dropdown to close it
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userDropdownOpen]);
 
   const displayName = fullName || email?.split('@')[0] || 'User';
   const roleInfo = ROLE_LABELS[role] ?? { title: role.replace('_', ' '), subtitle: '', badge: 'Staff' };
   const initials = displayName.charAt(0).toUpperCase();
 
+  // Determine Page Title based on route
+  const activeItem = menuItems.find((item) => item.href === pathname);
+  let pageTitle = activeItem?.label ?? 'Overview';
+  if (pathname.includes('/pregnant/new')) pageTitle = 'New Pregnant Record';
+  else if (pathname.includes('/pregnant/')) pageTitle = 'Record Details';
+  else if (pathname.includes('/risk-list')) pageTitle = 'Risk List';
+
   return (
-    <div className="dashboard-shell h-screen flex flex-col overflow-hidden bg-[var(--background)]">
-      {/* Top Bar */}
-      <header className="topbar shrink-0 flex items-center justify-between px-4 sm:px-6 h-16 border-b border-[var(--border)] bg-white z-30 shadow-xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            ref={burgerRef}
-            type="button"
-            onClick={handleToggle}
-            aria-label={expanded ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={expanded}
-            aria-controls="app-sidebar"
-            className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-[var(--surface-alt)] text-[var(--ink-secondary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-          >
-            {expanded ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
-          </button>
-          <div className="flex items-center gap-2 lg:hidden">
-            <Logo variant="prenatrack" size={32} priority className="rounded-lg shadow-xs" />
-            <span className="font-bold text-base text-[var(--ink)] tracking-tight">Prenatrack</span>
-          </div>
+    <div className="relative w-screen h-screen overflow-hidden bg-[#eef3f7] font-sans text-slate-800 flex items-center justify-center p-0 md:p-3 lg:p-5">
+      {/* Soft Blurred Background Decorative Circles */}
+      <div
+        aria-hidden="true"
+        className="fixed -top-32 -left-32 w-96 h-96 rounded-full bg-teal-200/40 blur-3xl pointer-events-none z-0"
+      />
+      <div
+        aria-hidden="true"
+        className="fixed -bottom-40 -right-40 w-[32rem] h-[32rem] rounded-full bg-indigo-200/35 blur-3xl pointer-events-none z-0"
+      />
+      <div
+        aria-hidden="true"
+        className="fixed top-1/3 -right-20 w-80 h-80 rounded-full bg-amber-100/50 blur-3xl pointer-events-none z-0"
+      />
 
-          {/* Search Bar Input */}
-          <div className="hidden sm:flex items-center relative min-w-[220px] max-w-xs ml-2">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-2)] pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search records, schedules..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 text-xs bg-[var(--surface-alt)] hover:bg-[var(--surface-sunken)] focus:bg-white border border-[var(--border-light)] focus:border-[var(--brand)] rounded-xl text-[var(--ink)] placeholder-[var(--placeholder)] transition-all outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Top Right Bar Controls */}
-        <div className="flex items-center gap-3 shrink-0">
-          <NotificationBell initialNotifications={notifications} />
-
-          <div className="h-6 w-px bg-[var(--border-light)] hidden sm:block" />
-
-          {/* User Profile Dropdown Display */}
-          <div className="flex items-center gap-2.5 pl-1">
-            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-dark)] text-white text-xs font-bold flex items-center justify-center shadow-xs">
-              {initials}
-            </span>
-            <div className="hidden sm:block text-left min-w-0">
-              <p className="text-xs font-semibold text-[var(--ink)] truncate max-w-[130px]">
-                {displayName}
-              </p>
-              <p className="text-[10px] text-[var(--muted)] font-medium truncate max-w-[130px]">
-                {roleInfo.badge}
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="relative flex flex-1 min-h-0">
+      {/* Main Big Bubbly Container */}
+      <div className="relative z-10 w-full h-full max-w-[1680px] bg-[#f4f7f6]/95 backdrop-blur-xl border-0 md:border md:border-white/80 rounded-none md:rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row p-2 sm:p-4 lg:p-5 gap-3 lg:gap-5">
+        
         {/* Mobile Scrim */}
-        {mobileOpen && !isDesktop && <div className="sidebar-scrim lg:hidden" aria-hidden="true" />}
+        {mobileOpen && !isDesktop && (
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
+            onClick={() => setOpenAt(null)}
+            aria-hidden="true"
+          />
+        )}
 
-        {/* Sidebar */}
+        {/* ── DESKTOP FLOATING PILL SIDEBAR ── */}
         <aside
           id="app-sidebar"
           ref={asideRef}
           tabIndex={-1}
           aria-label="Main navigation"
           className={[
-            'dashboard-sidebar bg-white border-r border-[var(--border-light)]',
-            'flex flex-col shrink-0 outline-none z-40',
-            // Mobile off-canvas drawer
-            'max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[260px] max-lg:shadow-2xl',
-            'max-lg:transition-transform max-lg:duration-200 max-lg:ease-out',
+            'z-40 shrink-0 flex flex-col items-center justify-between bg-white border border-white/90 shadow-xl shadow-slate-200/50',
+            // Mobile Drawer
+            'max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-64 max-lg:rounded-r-[32px] max-lg:p-5 max-lg:transition-transform max-lg:duration-300 max-lg:ease-out',
             mobileOpen
               ? 'max-lg:translate-x-0 max-lg:visible'
               : 'max-lg:-translate-x-full max-lg:invisible max-lg:pointer-events-none',
-            // Desktop collapsible rail
-            'lg:visible lg:relative lg:transition-[width] lg:duration-200 lg:ease-out',
-            hideLabels ? 'lg:w-[76px]' : 'lg:w-[250px]',
+            // Desktop Pill
+            'lg:visible lg:relative lg:translate-x-0 lg:w-[84px] lg:h-full lg:rounded-[36px] lg:py-6 lg:px-3 lg:my-auto',
           ].join(' ')}
         >
-          <div className="flex-1 h-full flex flex-col overflow-y-auto">
-            {/* App Header & Logo */}
-            <div className="p-4 border-b border-[var(--border-light)] shrink-0">
-              <div className="flex items-center gap-3">
-                <Logo variant="prenatrack" size={38} rounded priority className="shadow-xs shrink-0" />
-                {!hideLabels && (
-                  <div className="min-w-0">
-                    <p className="font-bold text-[var(--ink)] text-base leading-tight tracking-tight truncate">
-                      Prenatrack
-                    </p>
-                    <p className="text-[11px] text-[var(--muted)] truncate font-medium mt-0.5">
-                      Barangay Maternal Care
-                    </p>
-                  </div>
-                )}
+          {/* Logo at Top */}
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <Link href="/dashboard" className="w-13 h-13 rounded-full bg-teal-50/80 hover:bg-teal-100/80 text-[var(--brand)] flex items-center justify-center transition-all duration-200 shadow-xs">
+              <Logo variant="prenatrack" size={32} priority />
+            </Link>
+            {!isDesktop && (
+              <div className="text-center mt-2 border-b border-slate-100 pb-3 w-full">
+                <p className="font-bold text-slate-800 text-base">Prenatrack</p>
+                <p className="text-xs text-slate-500 font-medium">{roleInfo.title}</p>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Profile Block Under Logo */}
-            {!hideLabels && (
-              <div className="p-3.5 m-3 rounded-2xl bg-gradient-to-br from-[var(--brand-light)]/60 via-[var(--surface-alt)] to-white border border-[var(--brand-subtle)]/70 shadow-xs shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="w-10 h-10 rounded-full bg-[var(--brand)] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                    {initials}
+          {/* Navigation Items */}
+          <nav className="flex-1 my-4 flex flex-col items-center gap-3 w-full overflow-y-auto no-scrollbar py-2" aria-label="Main menu">
+            {menuItems.map((item) => {
+              const Icon = ICONS[item.icon ?? ''] ?? FileText;
+              const active = pathname === item.href;
+              return isDesktop ? (
+                /* Desktop Icon Button with Tooltip */
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative group w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+                    active
+                      ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/30 scale-105'
+                      : 'bg-slate-100/80 text-slate-500 hover:bg-teal-50 hover:text-[var(--brand)] hover:scale-105'
+                  }`}
+                >
+                  <Icon size={20} className="stroke-[2.2]" />
+                  <span className="absolute left-16 px-3 py-1.5 bg-slate-900/90 text-white text-xs font-semibold rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+                    {item.label}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[var(--ink)] truncate">
-                      {displayName}
-                    </p>
-                    <p className="text-[10px] text-[var(--muted)] truncate font-medium">
-                      {roleInfo.subtitle || roleInfo.title}
-                    </p>
-                    <span className="inline-flex items-center gap-1 mt-1 text-[9px] font-bold uppercase tracking-wider text-[var(--brand-dark)] bg-white/80 px-2 py-0.5 rounded-full border border-[var(--brand-subtle)]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
-                      {roleInfo.badge}
-                    </span>
-                  </div>
-                </div>
+                </Link>
+              ) : (
+                /* Mobile Drawer Item with Text */
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpenAt(null)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+                    active
+                      ? 'bg-[var(--brand)] text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Bottom Logout */}
+          <div className="shrink-0 flex items-center justify-center w-full pt-2">
+            {isDesktop ? (
+              <div className="relative group">
+                <LogoutButton collapsed={true} />
+              </div>
+            ) : (
+              <div className="w-full">
+                <LogoutButton collapsed={false} />
               </div>
             )}
-
-            {!hideLabels && (
-              <p className="px-5 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-2)] shrink-0">
-                Navigation
-              </p>
-            )}
-
-            {/* Menu Items */}
-            <nav className="px-3 space-y-1 pb-4" aria-label="Main menu">
-              {menuItems.map((item) => {
-                const Icon = ICONS[item.icon ?? ''] ?? FileText;
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    title={hideLabels ? item.label : undefined}
-                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                      active
-                        ? 'bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold shadow-xs'
-                        : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)]'
-                    }`}
-                  >
-                    <Icon
-                      size={18}
-                      className={`shrink-0 transition-colors ${
-                        active ? 'text-[var(--brand)]' : 'text-[var(--muted-2)] group-hover:text-[var(--ink)]'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    {!hideLabels && (
-                      <span className="flex-1 truncate tracking-tight">{item.label}</span>
-                    )}
-                    {!hideLabels && active && (
-                      <ChevronRight size={14} className="text-[var(--brand)] shrink-0 stroke-[2.5]" />
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="px-3 pb-4 mt-auto shrink-0 border-t border-[var(--border-light)] pt-3">
-              <LogoutButton collapsed={hideLabels} />
-            </div>
           </div>
         </aside>
 
-        {/* Main Content Scroll Container */}
-        <main className="dashboard-main flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[var(--background)]">
-          {children}
-        </main>
+        {/* ── MAIN CONTENT CANVAS ── */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          
+          {/* ── FLOATING HEADER ── */}
+          <header className="shrink-0 flex items-center justify-between gap-4 px-2 sm:px-4 py-3 z-30">
+            
+            {/* Left: Burger (Mobile) + Bold Page Title */}
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                ref={burgerRef}
+                type="button"
+                onClick={() => setOpenAt(mobileOpen ? null : pathname)}
+                aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+                className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-white border border-slate-100 shadow-xs text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight truncate">
+                  {pageTitle}
+                </h1>
+              </div>
+            </div>
+
+            {/* Center: Wide Pill Search Bar */}
+            <div className="hidden md:flex items-center relative max-w-md w-full mx-4">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search records, schedules, patients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 pl-11 pr-4 bg-white/90 hover:bg-white focus:bg-white text-xs sm:text-sm font-medium rounded-full border border-slate-200/80 focus:border-[var(--brand)] text-slate-800 placeholder:text-slate-400 shadow-xs transition-all outline-none"
+              />
+            </div>
+
+            {/* Right: Notifications & User Profile Dropdown */}
+            <div className="flex items-center gap-3 shrink-0">
+              
+              {/* Notification Bell */}
+              <NotificationBell initialNotifications={notifications} />
+
+              {/* User Dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full bg-white border border-slate-100 shadow-xs hover:shadow-md transition-all text-left"
+                  aria-expanded={userDropdownOpen}
+                >
+                  <span className="w-8 h-8 rounded-full bg-[var(--brand)] text-white text-xs font-bold flex items-center justify-center shadow-xs shrink-0">
+                    {initials}
+                  </span>
+                  <span className="hidden sm:block text-xs font-bold text-slate-800 truncate max-w-[110px]">
+                    {displayName}
+                  </span>
+                  <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {userDropdownOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-56 bg-white border border-slate-100 rounded-3xl shadow-xl p-2 anim-scale-in">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-xs font-bold text-slate-800 truncate">{displayName}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{roleInfo.badge} • {roleInfo.title}</p>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        href={role === 'pregnant_mother' ? '/dashboard/my-info' : '/dashboard'}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <User size={16} className="text-slate-400" />
+                        <span>Profile & Info</span>
+                      </Link>
+                    </div>
+                    <div className="border-t border-slate-100 pt-1">
+                      <LogoutButton collapsed={false} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </header>
+
+          {/* ── SCROLLABLE CANVAS CONTENT ── */}
+          <main className="dashboard-main flex-1 min-w-0 overflow-y-auto p-2 sm:p-4 lg:p-6 space-y-6">
+            {children}
+          </main>
+
+        </div>
       </div>
     </div>
   );

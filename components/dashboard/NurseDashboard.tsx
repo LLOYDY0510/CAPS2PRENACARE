@@ -5,7 +5,9 @@ import { one } from '@/utils/embedded';
 import RiskBadge from '@/components/ui/RiskBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
-import { HeartPulse, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
+import Link from 'next/link';
+import { HeartPulse, Users, AlertTriangle, ShieldCheck, HelpCircle, ArrowRight, ChevronRight } from 'lucide-react';
 
 type MotherIndicatorRow = {
   pregnant_mother_id: string | null;
@@ -44,7 +46,7 @@ export default async function NurseDashboard() {
   const loadError = recordsError ?? indicatorsError ?? linksError;
   if (loadError) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Nurse Dashboard" icon={HeartPulse} />
         <div className="alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
@@ -105,13 +107,22 @@ export default async function NurseDashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 anim-fade-up">
       {/* Page header */}
       <PageHeader
         title="Nurse Dashboard"
         subtitle={`Clinical monitoring and risk management for ${today}`}
         icon={HeartPulse}
         badge="Clinical Staff"
+      />
+
+      {/* Highlighted Banner Card */}
+      <HighlightedBannerCard
+        title="Clinical Assessment & Care Management"
+        description="Review active risk indicators, manage clinical protocols, and evaluate registered pregnant mothers across all barangay puroks."
+        buttonText="Manage Risk Indicators"
+        href="/dashboard/risk-indicators"
+        badgeText="Clinical Care"
       />
 
       {/* KPI row */}
@@ -161,46 +172,56 @@ export default async function NurseDashboard() {
       />
 
       {/* Records table */}
-      <div className="rounded-[16px] bg-white border border-[var(--border-light)] shadow-card overflow-hidden">
-        <div className="p-5 border-b border-[var(--border-light)] flex items-center justify-between">
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold text-[var(--ink)]">Pregnant Women Records</h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5">Comprehensive patient list</p>
+            <h2 className="text-lg font-bold text-slate-900">Pregnant Women Records</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Comprehensive patient list and clinical status</p>
           </div>
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--surface-alt)] text-[var(--muted)] border border-[var(--border-light)]">
-            {total} registered
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-[var(--brand)] border border-teal-200/60 self-start sm:self-auto">
+            {total} Registered
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr>
-                <th>Serial No.</th>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Purok</th>
-                <th>Risk Level</th>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Serial No.</th>
+                <th className="py-3.5 px-4">Name</th>
+                <th className="py-3.5 px-4">Age</th>
+                <th className="py-3.5 px-4">Purok</th>
+                <th className="py-3.5 px-4">Risk Level</th>
+                <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {(!records || records.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-muted-2">
+                  <td colSpan={6} className="text-center py-10 text-slate-400 font-medium">
                     No pregnant mothers registered yet.
                   </td>
                 </tr>
               )}
               {records?.map((r) => (
-                <tr key={r.id} className="hover:bg-[var(--surface-alt)] transition-colors">
-                  <td data-label="Serial No." className="font-mono text-xs text-[var(--muted)]">{r.serial_no ?? '—'}</td>
-                  <td data-label="Name" className="font-semibold text-[var(--ink)]">
+                <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
+                  <td className="py-3.5 px-4 font-bold text-slate-800">
                     {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
                   </td>
-                  <td data-label="Age">{r.age ?? '—'}</td>
-                  <td data-label="Purok">{r.purok ? `Zone ${r.purok}` : '—'}</td>
-                  <td data-label="Risk Level">
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.age ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                  <td className="py-3.5 px-4">
                     <RiskBadge riskLevel={r.risk_level} />
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <Link
+                      href={`/dashboard/pregnant/${r.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors"
+                    >
+                      View Details
+                      <ChevronRight size={14} />
+                    </Link>
                   </td>
                 </tr>
               ))}

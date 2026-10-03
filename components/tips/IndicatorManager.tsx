@@ -1,9 +1,12 @@
 'use client';
- 
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
- 
+import Button from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import { Activity, Plus, Edit, Trash2, Power } from 'lucide-react';
+
 type Indicator = {
   id: string;
   label: string;
@@ -11,13 +14,13 @@ type Indicator = {
   threshold_value: number | null;
   active: boolean;
 };
- 
+
 const TYPE_LABELS: Record<string, string> = {
   checklist: 'Checklist (BHW ticks manually)',
   age_below: 'Auto: Age below threshold',
   first_pregnancy_age_above: 'Auto: First pregnancy + age above threshold',
 };
- 
+
 export default function IndicatorManager({
   initialIndicators,
 }: {
@@ -25,7 +28,7 @@ export default function IndicatorManager({
 }) {
   const supabase = createClient();
   const router = useRouter();
- 
+
   const [showForm, setShowForm] = useState(false);
   const [label, setLabel] = useState('');
   const [type, setType] = useState('checklist');
@@ -34,11 +37,11 @@ export default function IndicatorManager({
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
- 
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
- 
+
     if (!label.trim()) {
       setError('Label is required.');
       return;
@@ -47,13 +50,13 @@ export default function IndicatorManager({
       setError('Threshold value is required for this type.');
       return;
     }
- 
+
     setSaving(true);
- 
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
- 
+
     const { error: insertError } = await supabase.from('risk_indicators').insert({
       label: label.trim(),
       indicator_type: type,
@@ -61,21 +64,21 @@ export default function IndicatorManager({
       active: true,
       created_by: user?.id ?? null,
     });
- 
+
     setSaving(false);
- 
+
     if (insertError) {
       setError(insertError.message);
       return;
     }
- 
+
     setLabel('');
     setType('checklist');
     setThreshold('');
     setShowForm(false);
     router.refresh();
   }
- 
+
   async function toggleActive(indicator: Indicator) {
     await supabase
       .from('risk_indicators')
@@ -90,131 +93,128 @@ export default function IndicatorManager({
     setEditingId(null);
     router.refresh();
   }
- 
+
   async function handleDelete(id: string) {
     const confirmed = window.confirm('Delete this indicator? This cannot be undone.');
     if (!confirmed) return;
     await supabase.from('risk_indicators').delete().eq('id', id);
     router.refresh();
   }
- 
+
   return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-700">High-Risk Indicators</h2>
-        <button
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Activity size={20} className="text-[var(--brand)]" />
+            <span>Configured Risk Indicators</span>
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage risk rules and clinical checklists</p>
+        </div>
+        <Button
+          variant={showForm ? 'outline' : 'primary'}
+          size="sm"
           onClick={() => setShowForm((s) => !s)}
-          className={showForm ? 'btn-ghost' : 'btn-secondary'}
-          style={{ fontSize: '0.8125rem', padding: '0.3125rem 0.75rem' }}
+          leftIcon={showForm ? undefined : <Plus size={16} />}
         >
-          {showForm ? 'Cancel' : '+ Add Indicator'}
-        </button>
+          {showForm ? 'Cancel' : 'Add Indicator'}
+        </Button>
       </div>
- 
+
       {showForm && (
-        <form onSubmit={handleAdd} className="border rounded-lg p-4 space-y-3 bg-gray-50 mb-4">
-          {error && <p className="text-sm text-red-600">{error}</p>}
- 
-          <div>
-            <label className="block text-xs font-medium mb-1">Label / Description</label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. History of 3 or more miscarriages"
-              className="form-input w-full"
+        <form onSubmit={handleAdd} className="bg-slate-50/90 rounded-2xl border border-slate-200/80 p-5 space-y-4">
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">New Risk Indicator Protocol</h3>
+          {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+
+          <Input
+            label="Label / Description"
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. History of 3 or more miscarriages"
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Evaluation Method / Type"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              options={[
+                { value: 'checklist', label: 'Checklist (BHW ticks manually)' },
+                { value: 'age_below', label: 'Auto: Age below threshold' },
+                { value: 'first_pregnancy_age_above', label: 'Auto: First pregnancy + age above threshold' },
+              ]}
             />
-          </div>
- 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium mb-1">Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="form-input w-full"
-              >
-                <option value="checklist">Checklist (BHW ticks manually)</option>
-                <option value="age_below">Auto: Age below threshold</option>
-                <option value="first_pregnancy_age_above">
-                  Auto: First pregnancy + age above threshold
-                </option>
-              </select>
-            </div>
             {type !== 'checklist' && (
-              <div>
-                <label className="block text-xs font-medium mb-1">
-                  Threshold (age in years)
-                </label>
-                <input
-                  type="number"
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                  placeholder="e.g. 19"
-                  className="form-input w-full"
-                />
-              </div>
+              <Input
+                label="Threshold (Age in years)"
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                placeholder="e.g. 19"
+              />
             )}
           </div>
- 
-          <div className="form-actions">
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn btn-primary"
-            >
-              <span className="btn-label">{saving ? 'Saving…' : 'Save Indicator'}</span>
-            </button>
+
+          <div className="pt-2">
+            <Button type="submit" isLoading={saving}>
+              Save Indicator
+            </Button>
           </div>
         </form>
       )}
- 
-      <div className="space-y-2">
+
+      <div className="space-y-3">
         {initialIndicators.length === 0 && (
-          <p className="text-sm text-muted-2 py-4 text-center">No indicators configured yet.</p>
+          <p className="text-xs text-slate-400 font-medium py-8 text-center">No indicators configured yet.</p>
         )}
         {initialIndicators.map((ind) => (
           <div
             key={ind.id}
-            className={`flex items-center justify-between border rounded-lg px-4 py-3 ${
-              !ind.active ? 'opacity-50' : ''
+            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border transition-all ${
+              !ind.active ? 'opacity-50 bg-slate-50 border-slate-200/60' : 'bg-white border-slate-100 hover:border-slate-200 shadow-xs'
             }`}
           >
-            <div>
+            <div className="flex-1 min-w-0">
               {editingId === ind.id ? (
                 <div className="flex items-center gap-2">
-                  <input className="form-input" value={editLabel} onChange={(e) => setEditLabel(e.target.value)} aria-label="Edit indicator label" />
-                  <button onClick={() => saveLabel(ind)} className="btn-primary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Save</button>
-                  <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Cancel</button>
+                  <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+                  <Button size="sm" onClick={() => saveLabel(ind)}>Save</Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
                 </div>
-              ) : <p className="text-sm font-medium">{ind.label}</p>}
-              <p className="text-xs text-muted-2 mt-0.5">
+              ) : (
+                <p className="text-xs sm:text-sm font-bold text-slate-800">{ind.label}</p>
+              )}
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
                 {TYPE_LABELS[ind.indicator_type] ?? ind.indicator_type}
-                {ind.threshold_value != null ? ` · Threshold: ${ind.threshold_value}` : ''}
+                {ind.threshold_value != null ? ` · Threshold: ${ind.threshold_value} yrs` : ''}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { setEditingId(ind.id); setEditLabel(ind.label); }}
-                className="btn-secondary"
-                style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
+                leftIcon={<Edit size={14} />}
               >
                 Edit
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={ind.active ? 'danger' : 'secondary'}
+                size="sm"
                 onClick={() => toggleActive(ind)}
-                className={ind.active ? 'btn-danger' : 'btn-primary'}
-                style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
+                leftIcon={<Power size={14} />}
               >
                 {ind.active ? 'Deactivate' : 'Activate'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleDelete(ind.id)}
-                className="btn-danger"
-                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                leftIcon={<Trash2 size={14} />}
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         ))}
@@ -222,4 +222,3 @@ export default function IndicatorManager({
     </div>
   );
 }
- 

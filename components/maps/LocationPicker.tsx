@@ -51,7 +51,7 @@ export default function LocationPicker({
   return (
     <div>
       <div
-        className="rounded-lg overflow-hidden border"
+        className="rounded-3xl overflow-hidden border border-slate-200/60 shadow-sm"
         style={{ height: '300px' }}
       >
         <MapContainer
@@ -67,7 +67,7 @@ export default function LocationPicker({
           {position && <Marker position={position} icon={defaultIcon} />}
         </MapContainer>
       </div>
-      <p className="text-xs text-muted mt-2">
+      <p className="text-xs text-slate-500 mt-2">
         {position
           ? `Selected: ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`
           : 'Click on the map to set this mother\'s location.'}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { USER_ROLES } from '@/utils/auth/role-constants';
+import { Check } from 'lucide-react';
 
 type Profile = {
   id: string;
@@ -126,14 +127,18 @@ export default function UserRoleEditor({
   }
 
   return (
-    <tr>
-      <td data-label="Name" className="font-medium text-ink">
-        {profile.full_name || '—'}
+    <tr className="hover:bg-slate-50/50 transition-colors">
+      <td className="px-6 py-4">
+        <div className="font-semibold text-slate-800">
+          {profile.full_name || '—'}
+        </div>
       </td>
-      <td data-label="Email" className="text-muted">
-        {profile.email || '—'}
+      <td className="px-6 py-4">
+        <div className="text-sm text-slate-600">
+          {profile.email || '—'}
+        </div>
       </td>
-      <td data-label="Role">
+      <td className="px-6 py-4">
         <label className="sr-only" htmlFor={`role-${profile.id}`}>
           Role for {profile.full_name || profile.email}
         </label>
@@ -155,7 +160,7 @@ export default function UserRoleEditor({
           ))}
         </select>
       </td>
-      <td data-label="Purok / Record">
+      <td className="px-6 py-4">
         {role === 'bhw_purok' ? (
           <>
             <label className="sr-only" htmlFor={`purok-${profile.id}`}>
@@ -193,31 +198,36 @@ export default function UserRoleEditor({
             </select>
           </>
         ) : (
-          <span className="text-muted-2">—</span>
+          <span className="text-slate-400">—</span>
         )}
       </td>
-      <td data-label="Joined" className="text-muted text-xs">
-        {new Date(profile.created_at).toLocaleDateString()}
+      <td className="px-6 py-4">
+        <div className="text-sm text-slate-500">
+          {new Date(profile.created_at).toLocaleDateString()}
+        </div>
       </td>
-      <td data-label="Action" className="text-right">
-        {error && (
-          <p className="text-xs text-[var(--danger)] mb-1" role="alert">
-            {error}
-          </p>
-        )}
-        {notice && !error && (
-          <p className="text-xs text-[var(--success)] mb-1" role="status">
-            {notice}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={!isDirty || saving}
-          className="btn-primary"
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+      <td className="px-6 py-4 text-right">
+        <div className="flex flex-col items-end gap-1.5">
+          {error && (
+            <p className="text-xs text-red-600 font-medium" role="alert">
+              {error}
+            </p>
+          )}
+          {notice && !error && (
+            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1" role="status">
+              <Check size={12} />
+              {notice}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!isDirty || saving}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </td>
     </tr>
   );

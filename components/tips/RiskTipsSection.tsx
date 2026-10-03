@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Copy, Send, Check, ArrowRight } from 'lucide-react';
 
 export type MatchedIndicatorDetail = {
   id: string;
@@ -94,43 +95,39 @@ export default function RiskTipsSection({
   );
 
   return (
-    <div className="card mb-4">
+    <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 mb-4">
 
       {/* ── Section header ── */}
       <div
-        className="section-header"
-        style={{ padding: '0.875rem 1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}
+        className="section-header px-5 py-4 flex-wrap gap-3"
       >
         <div>
           <div className="flex items-center gap-2">
-            <h2 style={{ fontSize: '0.875rem' }}>Automatic Risk Tips &amp; Clinical Advice</h2>
-            <span className="badge-high" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>
+            <h2 className="text-sm font-bold text-slate-800">Automatic Risk Tips &amp; Clinical Advice</h2>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-red-100 text-red-700 border border-red-200">
               LIVE
             </span>
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.125rem' }}>
+          <p className="text-xs text-slate-500 mt-0.5">
             Tips are generated automatically when a registered mother matches an active Risk Indicator.
           </p>
         </div>
 
         {/* Summary counters */}
-        <div className="flex items-center gap-4" style={{ fontSize: '0.75rem' }}>
-          <Stat label="Flagged" value={mothers.length} color="var(--danger)" />
-          <div style={{ width: '1px', height: '28px', background: 'var(--border)' }} />
-          <Stat label="Active Tips" value={totalMatchedTips} color="var(--ink)" />
-          <div style={{ width: '1px', height: '28px', background: 'var(--border)' }} />
-          <Stat label="High Priority" value={highPriorityCount} color="var(--warning)" />
+        <div className="flex items-center gap-4 text-xs">
+          <Stat label="Flagged" value={mothers.length} color="text-red-600" />
+          <div className="w-px h-7 bg-slate-200" />
+          <Stat label="Active Tips" value={totalMatchedTips} color="text-slate-800" />
+          <div className="w-px h-7 bg-slate-200" />
+          <Stat label="High Priority" value={highPriorityCount} color="text-amber-600" />
         </div>
       </div>
 
       {/* ── Filter bar ── */}
       <div
-        className="grid gap-3"
+        className="grid gap-3 px-5 py-4 border-b border-slate-200/60 bg-slate-50/50"
         style={{
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          padding: '0.875rem 1.25rem',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--surface-alt)',
         }}
       >
         <input
@@ -138,14 +135,12 @@ export default function RiskTipsSection({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, serial, or zone…"
-          className="form-input"
-          style={{ fontSize: '0.8125rem' }}
+          className="form-input text-xs"
         />
         <select
           value={selectedIndicator}
           onChange={(e) => setSelectedIndicator(e.target.value)}
-          className="form-select"
-          style={{ fontSize: '0.8125rem' }}
+          className="form-select text-xs"
         >
           <option value="all">All Risk Indicators</option>
           {availableIndicators.map((ind) => (
@@ -155,8 +150,7 @@ export default function RiskTipsSection({
         <select
           value={selectedUrgency}
           onChange={(e) => setSelectedUrgency(e.target.value)}
-          className="form-select"
-          style={{ fontSize: '0.8125rem' }}
+          className="form-select text-xs"
         >
           <option value="all">All Urgency Levels</option>
           <option value="high">High Priority</option>
@@ -165,30 +159,22 @@ export default function RiskTipsSection({
       </div>
 
       {/* ── Content ── */}
-      <div style={{ padding: '1rem 1.25rem' }}>
+      <div className="p-5">
         {filteredMothers.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '2.5rem 1rem',
-              border: '1px dashed var(--border)',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--surface-alt)',
-            }}
-          >
-            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+          <div className="text-center py-10 px-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+            <p className="text-sm font-semibold text-slate-800 mb-1">
               {mothers.length === 0
                 ? 'No mothers currently match active Risk Indicators.'
                 : 'No results for the selected filter criteria.'}
             </p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', maxWidth: '420px', margin: '0 auto' }}>
+            <p className="text-xs text-slate-500 max-w-[420px] mx-auto">
               {mothers.length === 0
                 ? 'When a pregnant mother is tagged with an active Risk Indicator, clinical advice will appear here automatically.'
                 : 'Try clearing the search or selecting "All Risk Indicators".'}
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <div className="flex flex-col gap-3.5">
             {filteredMothers.map((mother) => (
               <MotherCard
                 key={mother.id}
@@ -226,57 +212,24 @@ function MotherCard({
   onSend: (mother: AtRiskMother, item: MatchedIndicatorDetail) => void;
 }) {
   return (
-    <div
-      style={{
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-md)',
-        background: 'var(--surface)',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden">
       {/* Mother meta */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-          padding: '0.75rem 1rem',
-          borderBottom: '1px solid var(--border-light)',
-          background: 'var(--surface-alt)',
-        }}
-      >
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-200/60 bg-slate-50/50">
         <div>
-          <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--ink)' }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm text-slate-800">
               {mother.fullName}
             </span>
             {mother.serialNo && (
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  fontFamily: 'monospace',
-                  background: 'var(--border)',
-                  color: 'var(--muted)',
-                  padding: '0.125rem 0.4rem',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
+              <span className="text-[11px] font-mono bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md">
                 {mother.serialNo}
               </span>
             )}
-            <span className="badge-high">High Risk</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+              High Risk
+            </span>
           </div>
-          <div
-            className="flex gap-4"
-            style={{
-              marginTop: '0.25rem',
-              fontSize: '0.75rem',
-              color: 'var(--muted)',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="flex gap-4 mt-1 text-xs text-slate-500 flex-wrap">
             <span>Zone: {mother.purok ? `${mother.purok}` : '—'}</span>
             <span>Age: {mother.age ?? '—'}</span>
             <span>BP: {mother.bloodPressure ?? '—'}</span>
@@ -287,19 +240,14 @@ function MotherCard({
         <Link
           href={`/dashboard/pregnant/${mother.id}`}
           className="btn-secondary"
-          style={{
-            fontSize: '0.75rem',
-            padding: '0.25rem 0.625rem',
-            whiteSpace: 'nowrap',
-            alignSelf: 'flex-start',
-          }}
         >
-          View Record →
+          <ArrowRight size={12} className="mr-1" />
+          View Record
         </Link>
       </div>
 
       {/* Matched indicators */}
-      <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+      <div className="p-4 flex flex-col gap-2.5">
         {mother.matchedIndicators.map((item, idx) => {
           const copyKey  = `${mother.id}-${item.id || idx}`;
           const isCopied = copiedId === copyKey;
@@ -346,92 +294,63 @@ function TipCard({
 
   return (
     <div
-      style={{
-        border: `1px solid ${isHigh ? 'var(--danger-border)' : 'var(--warning-border)'}`,
-        borderLeft: `3px solid ${isHigh ? 'var(--danger)' : 'var(--warning)'}`,
-        borderRadius: 'var(--radius)',
-        background: isHigh ? 'var(--danger-bg)' : 'var(--warning-bg)',
-        padding: '0.75rem 0.875rem',
-        fontSize: '0.8125rem',
-      }}
+      className={`border-l-4 rounded-xl p-3 text-xs ${
+        isHigh
+          ? 'border-red-500 bg-red-50/50'
+          : 'border-amber-500 bg-amber-50/50'
+      }`}
     >
       {/* Tip header row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-          marginBottom: '0.5rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '0.8125rem' }}>
+      <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-slate-800">
             {item.tipTitle}
           </span>
-          <span
-            style={{
-              fontSize: '0.6875rem',
-              color: 'var(--muted)',
-              background: 'rgba(0,0,0,0.04)',
-              padding: '0.125rem 0.4rem',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
+          <span className="text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
             Indicator: {item.label}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span
-            className={isHigh ? 'badge-high' : 'badge-warning'}
-          >
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+            isHigh
+              ? 'bg-red-100 text-red-700 border border-red-200'
+              : 'bg-amber-100 text-amber-700 border border-amber-200'
+          }`}>
             {isHigh ? 'High Priority' : 'Moderate'}
           </span>
           <button
             type="button"
             onClick={onCopy}
-            className="btn-ghost"
-            style={{ padding: '0.1875rem 0.5rem', fontSize: '0.6875rem' }}
+            className="btn-ghost text-[11px]"
             title="Copy advisory text"
           >
-            {isCopied ? 'Copied' : 'Copy'}
+            {isCopied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
           </button>
           <button
             type="button"
             onClick={onSend}
-            className="btn-secondary"
-            style={{ padding: '0.1875rem 0.5rem', fontSize: '0.6875rem' }}
+            className="btn-secondary text-[11px]"
             disabled={isSending}
             title="Send this health advice to the pregnant mother"
           >
-            {isSending ? 'Sending…' : isSent ? 'Sent' : 'Send'}
+            {isSending ? 'Sending…' : isSent ? <><Check size={10} /> Sent</> : <><Send size={10} /> Send</>}
           </button>
         </div>
       </div>
 
       {/* Advice */}
-      <p style={{ color: 'var(--ink-secondary)', lineHeight: 1.55, marginBottom: '0.5rem' }}>
-        <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>Clinical Advice: </strong>
+      <p className="text-slate-700 leading-relaxed mb-2">
+        <strong className="text-slate-800 font-semibold">Clinical Advice: </strong>
         {item.tipAdvice}
       </p>
 
       {/* Action */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '0.4375rem 0.625rem',
-          display: 'flex',
-          gap: '0.5rem',
-        }}
-      >
-        <span style={{ fontWeight: 600, color: 'var(--brand)', whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+      <div className="bg-white border border-slate-200 rounded-lg p-2 flex gap-2">
+        <span className="font-semibold text-teal-600 whitespace-nowrap">
           Nurse Action:
         </span>
-        <span style={{ color: 'var(--ink-secondary)', fontSize: '0.75rem', lineHeight: 1.5 }}>
+        <span className="text-slate-600 leading-relaxed">
           {item.clinicalAction}
         </span>
       </div>
@@ -444,9 +363,9 @@ function TipCard({
    ───────────────────────────────────── */
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div style={{ textAlign: 'right' }}>
-      <p style={{ color: 'var(--muted-2)', fontSize: '0.6875rem', marginBottom: '0.125rem' }}>{label}</p>
-      <p style={{ color, fontSize: '1.125rem', fontWeight: 700, lineHeight: 1 }}>{value}</p>
+    <div className="text-right">
+      <p className="text-[11px] text-slate-400 mb-0.5">{label}</p>
+      <p className={`text-lg font-bold leading-none ${color}`}>{value}</p>
     </div>
   );
 }

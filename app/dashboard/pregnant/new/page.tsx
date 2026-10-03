@@ -12,6 +12,10 @@ import {
   WEIGHT_OPTIONS_KG,
   eddFromLmp,
 } from '@/utils/maternalForm';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import { ShieldCheck, UserPlus, MapPin, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
 
 const LocationPicker = dynamic<{
   latitude: number | null;
@@ -20,8 +24,8 @@ const LocationPicker = dynamic<{
 }>(() => import('@/components/maps/LocationPicker'), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] flex items-center justify-center bg-gray-100 rounded-lg border">
-      <p className="text-muted text-sm">Loading map...</p>
+    <div className="h-[280px] flex items-center justify-center bg-slate-50 rounded-2xl border border-slate-100">
+      <p className="text-slate-400 text-xs font-semibold">Loading map location picker...</p>
     </div>
   ),
 });
@@ -142,7 +146,8 @@ export default function RegisterPregnantMotherPage() {
       const gravida_para =
         form.gravida && form.para ? `G${form.gravida}P${form.para}` : null;
 
-      const { data: autoIndicators } = await supabase        .from('risk_indicators')
+      const { data: autoIndicators } = await supabase
+        .from('risk_indicators')
         .select('id, indicator_type, threshold_value')
         .eq('active', true)
         .in('indicator_type', ['age_below', 'first_pregnancy_age_above']);
@@ -245,65 +250,53 @@ export default function RegisterPregnantMotherPage() {
 
   if (!showForm) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-1">Data Privacy Notice</h1>
-        <p className="text-muted mb-6">
-          Please read and agree before proceeding to the registration form.
-        </p>
+      <div className="max-w-3xl mx-auto space-y-6 anim-fade-up">
+        <PageHeader
+          title="Data Privacy Notice"
+          subtitle="Please read and agree before proceeding to registration"
+          icon={ShieldCheck}
+          badge="RA 10173 Compliant"
+        />
 
-        <div className="card p-6">
-          <div className="prose prose-sm max-w-none text-gray-700 space-y-3 mb-6">
-            <p>
-              In compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>,
-              this health system collects personal and health-related information
-              (such as name, address, contact number, and prenatal health details)
-              for the purpose of prenatal care monitoring, scheduling, and reporting
-              by authorized barangay health workers, midwives, and nurses.
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
+          <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-600 space-y-4 leading-relaxed font-medium">
+            <p className="bg-teal-50/60 p-4 rounded-2xl border border-teal-100 text-teal-900 font-semibold">
+              In compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>, this health system collects personal and health-related information for prenatal care monitoring, scheduling, and reporting by authorized barangay health workers, midwives, and nurses.
             </p>
             <p>
-              By proceeding, the pregnant mother (or her authorized representative)
-              consents to the collection, use, storage, and processing of this
-              information solely for maternal and community health purposes. Her
-              information will not be shared with third parties outside of this
-              health program without her consent, except as required by law.
+              By proceeding, the pregnant mother (or her authorized representative) consents to the collection, use, storage, and processing of this information solely for maternal and community health purposes. Her information will not be shared with third parties outside of this health program without her consent, except as required by law.
             </p>
             <p>
-              She may request access to, correction of, or deletion of her
-              personal data at any time by coordinating with her assigned
-              barangay health worker or midwife.
+              She may request access to, correction of, or deletion of her personal data at any time by coordinating with her assigned barangay health worker or midwife.
             </p>
           </div>
 
-          <label className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer mb-6">
+          <label className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer text-xs sm:text-sm font-semibold text-slate-700 hover:bg-teal-50/50 transition-colors">
             <input
               type="checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 rounded border-gray-300"
+              className="mt-0.5 rounded-lg border-slate-300 text-[var(--brand)] focus:ring-[var(--brand)] w-4 h-4"
             />
             <span>
-              I confirm that the pregnant mother (or her authorized representative)
-              has been informed of and agrees to the collection and processing of
-              her personal information as described above.
+              I confirm that the pregnant mother (or her authorized representative) has been informed of and agrees to the collection and processing of her personal information as described above.
             </span>
           </label>
 
-          <div className="flex gap-3">
-            <button
-              type="button"
+          <div className="flex items-center gap-3 pt-2">
+            <Button
               disabled={!agreed}
               onClick={() => setShowForm(true)}
-              className="btn-primary"
+              leftIcon={<CheckCircle size={18} />}
             >
               Agree &amp; Proceed
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => router.push('/dashboard/pregnant')}
-              className="btn-secondary"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -311,248 +304,218 @@ export default function RegisterPregnantMotherPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold">Register Pregnant Woman</h1>
-        <p className="text-muted">Fill in the details below to add a new record.</p>
-      </div>
+    <div className="max-w-5xl mx-auto space-y-6 anim-fade-up">
+      <PageHeader
+        title="Register Pregnant Woman"
+        subtitle="Fill in the maternal record details below"
+        icon={UserPlus}
+        badge="New Record"
+      />
 
-      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+            {error}
+          </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date of Registration</label>
-            <input
+        {/* Section 1: Personal & Demographics */}
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+            <FileText size={18} className="text-[var(--brand)]" />
+            <span>Personal Information</span>
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Date of Registration"
               type="date"
               value={form.date_registered}
               onChange={(e) => updateField('date_registered', e.target.value)}
               required
-              className="form-input w-full"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Name * (Middle Initial only)</label>
-            <div className="grid grid-cols-3 gap-3">
-              <input
-                type="text"
-                value={form.first_name}
-                onChange={(e) => updateField('first_name', e.target.value)}
-                placeholder="First name"
-                required
-                className="form-input"
-              />
-              <input
-                type="text"
-                value={form.middle_name}
-                onChange={(e) => updateField('middle_name', e.target.value)}
-                placeholder="M.I."
-                maxLength={2}
-                className="form-input"
-              />
-              <input
-                type="text"
-                value={form.last_name}
-                onChange={(e) => updateField('last_name', e.target.value)}
-                placeholder="Last name"
-                required
-                className="form-input"
-              />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                Full Name * (First, M.I., Last)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={form.first_name}
+                  onChange={(e) => updateField('first_name', e.target.value)}
+                  placeholder="First name"
+                  required
+                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                />
+                <input
+                  type="text"
+                  value={form.middle_name}
+                  onChange={(e) => updateField('middle_name', e.target.value)}
+                  placeholder="M.I."
+                  maxLength={2}
+                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                />
+                <input
+                  type="text"
+                  value={form.last_name}
+                  onChange={(e) => updateField('last_name', e.target.value)}
+                  placeholder="Last name"
+                  required
+                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Address</label>
-          <input
+          <Input
+            label="Address"
             type="text"
             value={form.address}
             onChange={(e) => updateField('address', e.target.value)}
-            placeholder="Enter complete address"
-            className="form-input w-full"
+            placeholder="Enter complete residential address"
           />
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Zone</label>
-            <select
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select
+              label="Purok / Zone"
               value={form.purok}
               onChange={(e) => updateField('purok', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {Array.from({ length: 8 }, (_, i) => i + 1).map((z) => (
-                <option key={z} value={z}>
-                  Zone {z}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Age</label>
-            <input
+              options={[
+                { value: '', label: 'Select Zone...' },
+                ...Array.from({ length: 8 }, (_, i) => ({ value: String(i + 1), label: `Zone ${i + 1}` })),
+              ]}
+            />
+            <Input
+              label="Age"
               type="number"
               value={form.age}
               onChange={(e) => updateField('age', e.target.value)}
-              placeholder="Enter age"
-              className="form-input w-full"
+              placeholder="Enter age (10-55)"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Contact Number</label>
-            <input
+            <Input
+              label="Contact Number"
               type="text"
               value={form.contact_number}
               onChange={(e) => updateField('contact_number', e.target.value)}
-              placeholder="Enter contact number"
-              className="form-input w-full"
+              placeholder="09xx xxx xxxx"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-          <div>
-            <label className="block text-sm font-medium mb-1">LMP (Last Menstrual Period)</label>
-            <input
+        {/* Section 2: Obstetric Details */}
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+            <FileText size={18} className="text-indigo-600" />
+            <span>Obstetric History &amp; Measurements</span>
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input
+              label="LMP (Last Menstrual Period)"
               type="date"
               value={form.lmp}
               onChange={(e) => updateField('lmp', e.target.value)}
-              className="form-input w-full"
             />
-            <p className="text-xs text-transparent mt-1 select-none">.</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              EDC (Expected Date of Confinement)
-            </label>
-            <input
+            <Input
+              label="EDC (Expected Date)"
               type="date"
               value={form.edd}
               readOnly
-              className="form-input w-full"
+              helperText="Auto-computed from LMP"
             />
-            <p className="text-xs text-muted-2 mt-1">Auto-computed from LMP</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Gravida (G)</label>
-            <select
+            <Select
+              label="Gravida (G)"
               value={form.gravida}
               onChange={(e) => updateField('gravida', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {GRAVIDA_OPTIONS.map((i) => (
-                <option key={i} value={i}>
-                  G{i}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-transparent mt-1 select-none">.</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Para (P)</label>
-            <select
+              options={[
+                { value: '', label: 'Select...' },
+                ...GRAVIDA_OPTIONS.map((i) => ({ value: String(i), label: `G${i}` })),
+              ]}
+            />
+            <Select
+              label="Para (P)"
               value={form.para}
               onChange={(e) => updateField('para', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {PARA_OPTIONS.map((i) => (
-                <option key={i} value={i}>
-                  P{i}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-transparent mt-1 select-none">.</p>
+              options={[
+                { value: '', label: 'Select...' },
+                ...PARA_OPTIONS.map((i) => ({ value: String(i), label: `P${i}` })),
+              ]}
+            />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Blood Pressure</label>
-            <select
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select
+              label="Blood Pressure"
               value={form.blood_pressure}
               onChange={(e) => updateField('blood_pressure', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {BLOOD_PRESSURE_OPTIONS.map((bp) => (
-                <option key={bp} value={bp}>
-                  {bp}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Height (cm)</label>
-            <select
+              options={[
+                { value: '', label: 'Select BP...' },
+                ...BLOOD_PRESSURE_OPTIONS.map((bp) => ({ value: bp, label: bp })),
+              ]}
+            />
+            <Select
+              label="Height (cm)"
               value={form.height_cm}
               onChange={(e) => updateField('height_cm', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {HEIGHT_OPTIONS_CM.map((cm) => (
-                <option key={cm} value={cm}>
-                  {cm}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Weight (kg)</label>
-            <select
+              options={[
+                { value: '', label: 'Select height...' },
+                ...HEIGHT_OPTIONS_CM.map((cm) => ({ value: String(cm), label: `${cm} cm` })),
+              ]}
+            />
+            <Select
+              label="Weight (kg)"
               value={form.weight_kg}
               onChange={(e) => updateField('weight_kg', e.target.value)}
-              className="form-select w-full"
-            >
-              <option value="">Select...</option>
-              {WEIGHT_OPTIONS_KG.map((kg) => (
-                <option key={kg} value={kg}>
-                  {kg}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Select weight...' },
+                ...WEIGHT_OPTIONS_KG.map((kg) => ({ value: String(kg), label: `${kg} kg` })),
+              ]}
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 border rounded-lg p-4">
-            <label className="block text-sm font-medium mb-3">
-              High-Risk Indicators (tick all that apply)
-            </label>
+        {/* Section 3: Risk Indicators & Location */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+              <AlertTriangle size={18} className="text-amber-500" />
+              <span>High-Risk Indicators</span>
+            </h3>
             {indicators.length === 0 ? (
-              <p className="text-xs text-muted-2">No active checklist indicators configured.</p>
+              <p className="text-xs text-slate-400 font-medium">No active checklist indicators configured.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 items-start">
-                {indicators.map((ind) => (
-                  <label
-                    key={ind.id}
-                    className="flex items-start gap-2 text-sm cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedIndicatorIds.includes(ind.id)}
-                      onChange={() => toggleIndicator(ind.id)}
-                      className="mt-0.5 rounded border-gray-300"
-                    />
-                    <span>{ind.label}</span>
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {indicators.map((ind) => {
+                  const checked = selectedIndicatorIds.includes(ind.id);
+                  return (
+                    <label
+                      key={ind.id}
+                      className={`flex items-start gap-3 p-3 rounded-2xl border transition-colors cursor-pointer ${
+                        checked ? 'bg-amber-50/70 border-amber-200/80 text-amber-900' : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleIndicator(ind.id)}
+                        className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-xs font-semibold">{ind.label}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
-            <p className="text-xs text-muted-2 mt-3">
-              Risk level (High/Low) is automatically determined by the system based on age,
-              first pregnancy status, and the indicators selected above.
+            <p className="text-[11px] text-slate-400 font-medium pt-2">
+              Risk level (High/Low) is automatically evaluated based on age, first pregnancy status, and checked indicators.
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Location (pin the mother&apos;s home)
-            </label>
+          <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+              <MapPin size={18} className="text-emerald-600" />
+              <span>Map Pin (Residence)</span>
+            </h3>
             <LocationPicker
               latitude={location.lat}
               longitude={location.lng}
@@ -561,21 +524,22 @@ export default function RegisterPregnantMotherPage() {
           </div>
         </div>
 
-        <div className="form-actions form-actions-sticky">
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            <span className="btn-label">{loading ? 'Saving…' : 'Save Record'}</span>
-          </button>
-          <button
+        {/* Submit Bar */}
+        <div className="flex items-center gap-3 justify-end pt-4 border-t border-slate-200/60">
+          <Button
             type="button"
+            variant="outline"
             onClick={() => router.push('/dashboard/pregnant')}
-            className="btn-secondary"
           >
             Cancel
-          </button>
+          </Button>
+          <Button
+            type="submit"
+            isLoading={loading}
+            leftIcon={<UserPlus size={18} />}
+          >
+            Save Record
+          </Button>
         </div>
       </form>
     </div>

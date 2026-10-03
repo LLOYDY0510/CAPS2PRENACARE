@@ -1,5 +1,7 @@
 import MonthlyTipsManager from '@/components/tips/MonthlyTipsManager';
 import { requireRoles } from '@/utils/auth/roles';
+import PageHeader from '@/components/ui/PageHeader';
+import { Salad } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,13 +33,13 @@ export default async function NutritionTipsPage() {
     : { data: [] };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Nutrition Tips</h1>
-        <p className="text-muted">
-          Manage monthly pregnancy nutrition tips, review messages, and broadcast them to pregnant mothers.
-        </p>
-      </div>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Nutrition &amp; Monthly Tips"
+        subtitle="Manage gestational month guidance, review clinical broadcasts, and send notifications"
+        icon={Salad}
+        badge="Maternal Care"
+      />
 
       <MonthlyTipsManager
         monthlyTips={monthlyTips ?? []}

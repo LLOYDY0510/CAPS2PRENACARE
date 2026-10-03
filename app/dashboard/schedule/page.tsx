@@ -6,6 +6,8 @@ import {
   tryListMothersForScheduling,
   tryListSchedules,
 } from '@/utils/schedules/service';
+import PageHeader from '@/components/ui/PageHeader';
+import { CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,14 +16,6 @@ export default async function PrenatalSchedulePage() {
 
   const canEditSchedule = canManageSchedules(role);
 
-  // The schedule service uses the service-role client: the reminder receipts a
-  // manager needs to see are written by the server-side sender, and a schedule
-  // the manager cannot see is worse than a schedule they can.
-  //
-  // These reads must never crash the route (e.g. when the service key in the
-  // server .env is wrong or stale and Supabase answers "Invalid API key").
-  // The safe variants log one clear message each and let the page render an
-  // error state instead.
   const [schedulesResult, mothersResult] = await Promise.all([
     tryListSchedules(),
     tryListMothersForScheduling(),
@@ -42,18 +36,22 @@ export default async function PrenatalSchedulePage() {
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-1">Prenatal Schedule</h1>
-      <p className="text-muted mb-6">
-        {canEditSchedule
-          ? 'Create and change prenatal visits, and send the reminder SMS immediately or let it go out automatically the day before.'
-          : 'View the prenatal schedules for your purok.'}
-      </p>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Prenatal Schedule"
+        subtitle={
+          canEditSchedule
+            ? 'Create and manage prenatal visits, dispatch instant SMS reminders, or rely on automated dispatch'
+            : 'View scheduled prenatal visits for your assigned purok'
+        }
+        icon={CalendarDays}
+        badge="Appointment Management"
+      />
 
       {loadError && (
-        <div className="alert-error mb-6" role="alert">
-          <p className="font-semibold">The prenatal schedules could not be loaded.</p>
-          <p className="text-sm mt-1">{loadError}</p>
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+          <p className="font-bold">The prenatal schedules could not be loaded.</p>
+          <p className="text-xs mt-0.5">{loadError}</p>
         </div>
       )}
 

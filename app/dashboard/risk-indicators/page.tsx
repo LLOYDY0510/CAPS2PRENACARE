@@ -1,5 +1,7 @@
 import IndicatorManager from '@/components/tips/IndicatorManager';
 import { requireRiskIndicatorsManagement } from '@/utils/auth/middleware';
+import PageHeader from '@/components/ui/PageHeader';
+import { Activity } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,13 +14,13 @@ export default async function RiskIndicatorsPage() {
     .order('created_at', { ascending: true });
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Risk Indicators</h1>
-        <p className="text-muted">
-          Manage checklist indicators and automated thresholds used to determine pregnancy risk levels.
-        </p>
-      </div>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Risk Indicators"
+        subtitle="Manage checklist indicators and automated thresholds used to evaluate pregnancy risk levels"
+        icon={Activity}
+        badge="Clinical Protocol"
+      />
 
       <IndicatorManager initialIndicators={indicators ?? []} />
     </div>

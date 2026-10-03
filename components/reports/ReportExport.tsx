@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Button from '@/components/ui/Button';
+import { Download, FileSpreadsheet } from 'lucide-react';
 
 export type ReportRow = {
   serial_no: string | number | null;
@@ -20,20 +22,20 @@ export type ReportRow = {
 };
 
 const COLUMNS: { key: keyof ReportRow; label: string }[] = [
-  { key: 'serial_no',       label: 'Serial No.' },
+  { key: 'serial_no', label: 'Serial No.' },
   { key: 'date_registered', label: 'Date Registered' },
-  { key: 'name',            label: 'Name' },
-  { key: 'address',         label: 'Address' },
-  { key: 'purok',           label: 'Purok' },
-  { key: 'age',             label: 'Age' },
-  { key: 'contact_number',  label: 'Contact Number' },
-  { key: 'lmp',             label: 'LMP' },
-  { key: 'edd',             label: 'EDC' },
-  { key: 'gravida_para',    label: 'Gravida-Para' },
-  { key: 'blood_pressure',  label: 'Blood Pressure' },
-  { key: 'height_cm',       label: 'Height (cm)' },
-  { key: 'weight_kg',       label: 'Weight (kg)' },
-  { key: 'risk_level',      label: 'Risk Level' },
+  { key: 'name', label: 'Name' },
+  { key: 'address', label: 'Address' },
+  { key: 'purok', label: 'Purok' },
+  { key: 'age', label: 'Age' },
+  { key: 'contact_number', label: 'Contact Number' },
+  { key: 'lmp', label: 'LMP' },
+  { key: 'edd', label: 'EDC' },
+  { key: 'gravida_para', label: 'Gravida-Para' },
+  { key: 'blood_pressure', label: 'Blood Pressure' },
+  { key: 'height_cm', label: 'Height (cm)' },
+  { key: 'weight_kg', label: 'Weight (kg)' },
+  { key: 'risk_level', label: 'Risk Level' },
 ];
 
 function cell(value: unknown): string {
@@ -47,8 +49,8 @@ function filename(ext: string): string {
 
 function downloadBlob(blob: Blob, name: string): void {
   const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
-  a.href     = url;
+  const a = document.createElement('a');
+  a.href = url;
   a.download = name;
   document.body.appendChild(a);
   a.click();
@@ -63,13 +65,12 @@ export default function ReportExport({ records }: { records: ReportRow[] }) {
     setExporting('csv');
     try {
       const header = COLUMNS.map((c) => c.label).join(',');
-      const rows   = records.map((r) =>
+      const rows = records.map((r) =>
         COLUMNS.map((c) => {
           const v = cell(r[c.key]);
           return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
         }).join(',')
       );
-      // UTF-8 BOM so Excel opens Filipino characters correctly
       const blob = new Blob(['\ufeff' + [header, ...rows].join('\n')], {
         type: 'text/csv;charset=utf-8;',
       });
@@ -104,20 +105,26 @@ export default function ReportExport({ records }: { records: ReportRow[] }) {
 
   return (
     <div className="flex items-center gap-2 no-print">
-      <button
+      <Button
         onClick={exportCsv}
         disabled={disabled}
-        className="btn-primary"
+        isLoading={exporting === 'csv'}
+        variant="outline"
+        size="sm"
+        leftIcon={<Download size={14} />}
       >
-        {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
-      </button>
-      <button
+        Export CSV
+      </Button>
+      <Button
         onClick={exportXlsx}
         disabled={disabled}
-        className="btn-secondary"
+        isLoading={exporting === 'xlsx'}
+        variant="primary"
+        size="sm"
+        leftIcon={<FileSpreadsheet size={14} />}
       >
-        {exporting === 'xlsx' ? 'Exporting…' : 'Export Excel (.xlsx)'}
-      </button>
+        Export Excel (.xlsx)
+      </Button>
     </div>
   );
 }

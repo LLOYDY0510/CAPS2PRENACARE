@@ -4,6 +4,10 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
+import RiskBadge from '@/components/ui/RiskBadge';
+import Button from '@/components/ui/Button';
+import { Select } from '@/components/ui/Input';
+import { ChevronRight, Filter, RotateCcw } from 'lucide-react';
 
 export type PregnantRecord = {
   id: string;
@@ -56,141 +60,125 @@ export default function PregnantRecordsTable({
   const hasFilters = search || risk !== 'all' || ageFilter !== 'all';
 
   return (
-    <div>
-      {/* Filter bar */}
-      <div
-        className="flex flex-wrap gap-2 mb-4 items-center"
-        style={{ rowGap: '0.5rem' }}
-      >
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search by name or serial no."
-        />
+    <div className="space-y-4">
+      {/* Filter Card */}
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[240px]">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by name or serial no..."
+          />
+        </div>
 
-        <select
-          value={risk}
-          onChange={(e) => setRisk(e.target.value)}
-          className="form-select"
-          style={{ width: 'auto', minWidth: '130px' }}
-          aria-label="Filter by risk level"
-        >
-          <option value="all">All Risk Levels</option>
-          <option value="high">High Risk</option>
-          <option value="low">Low Risk</option>
-        </select>
+        <div className="w-40">
+          <Select
+            value={risk}
+            onChange={(e) => setRisk(e.target.value)}
+            options={[
+              { value: 'all', label: 'All Risk Levels' },
+              { value: 'high', label: 'High Risk' },
+              { value: 'low', label: 'Low Risk' },
+            ]}
+          />
+        </div>
 
-        <select
-          value={ageFilter}
-          onChange={(e) => setAgeFilter(e.target.value)}
-          className="form-select"
-          style={{ width: 'auto', minWidth: '130px' }}
-          aria-label="Filter by age"
-        >
-          <option value="all">All Ages</option>
-          <option value="under-18">Under 18</option>
-          <option value="18-24">18-24</option>
-          <option value="25-34">25-34</option>
-          <option value="35-plus">35 and older</option>
-        </select>
+        <div className="w-40">
+          <Select
+            value={ageFilter}
+            onChange={(e) => setAgeFilter(e.target.value)}
+            options={[
+              { value: 'all', label: 'All Ages' },
+              { value: 'under-18', label: 'Under 18' },
+              { value: '18-24', label: '18-24' },
+              { value: '25-34', label: '25-34' },
+              { value: '35-plus', label: '35 and older' },
+            ]}
+          />
+        </div>
 
         {hasFilters && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { setSearch(''); setRisk('all'); setAgeFilter('all'); }}
-            className="btn-ghost"
-            style={{ fontSize: '0.75rem' }}
+            leftIcon={<RotateCcw size={14} />}
           >
-            Clear filters
-          </button>
+            Clear
+          </Button>
         )}
 
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: '0.75rem',
-            color: 'var(--muted)',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <div className="ml-auto text-xs font-bold text-slate-500 whitespace-nowrap px-2">
           {filtered.length} of {records.length} records
-        </span>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-x-auto">
-        <table className="data-table whitespace-nowrap">
-          <thead>
-            <tr>
-              <th>Serial No.</th>
-              <th>Date Registered</th>
-              <th>Name</th>
-              <th>Address</th>
-              <th>Age</th>
-              <th>LMP</th>
-              <th>G-P</th>
-              <th>EDC</th>
-              <th>Checkups Recorded</th>
-              <th>BP</th>
-              <th>Height (cm)</th>
-              <th>Weight (kg)</th>
-              <th>Risk</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={14}
-                  style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}
-                >
-                  {hasFilters ? 'No records match the current filters.' : 'No pregnant mothers registered yet.'}
-                </td>
+      {/* Main Table Card */}
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Serial No.</th>
+                <th className="py-3.5 px-4">Date Registered</th>
+                <th className="py-3.5 px-4">Name</th>
+                <th className="py-3.5 px-4">Address / Purok</th>
+                <th className="py-3.5 px-4">Age</th>
+                <th className="py-3.5 px-4">LMP</th>
+                <th className="py-3.5 px-4">G-P</th>
+                <th className="py-3.5 px-4">EDC</th>
+                <th className="py-3.5 px-4">Visits</th>
+                <th className="py-3.5 px-4">BP</th>
+                <th className="py-3.5 px-4">Risk</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
-            )}
-            {filtered.map((r) => (
-              <tr key={r.id}>
-                <td>{r.serial_no ?? '—'}</td>
-                <td>{r.date_registered ?? '—'}</td>
-                <td style={{ color: 'var(--ink)', fontWeight: 500 }}>
-                  {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
-                </td>
-                <td>{r.address ?? '—'}</td>
-                <td>{r.age ?? '—'}</td>
-                <td>{r.lmp ?? '—'}</td>
-                <td>{r.gravida_para ?? '—'}</td>
-                <td>{r.edd ?? '—'}</td>
-                <td>
-                  <span style={{ fontWeight: r.checkupCount > 0 ? 600 : 400, color: r.checkupCount > 0 ? 'var(--brand)' : 'var(--muted-2)' }}>
-                    {r.checkupCount}
-                  </span>
-                </td>
-                <td>{r.blood_pressure ?? '—'}</td>
-                <td>{r.height_cm ?? '—'}</td>
-                <td>{r.weight_kg ?? '—'}</td>
-                <td>
-                  {r.risk_level === 'high'
-                    ? <span className="badge-high">High Risk</span>
-                    : <span className="badge-low">Low Risk</span>}
-                </td>
-                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <Link
-                    href={`/dashboard/pregnant/${r.id}?view=details`}
-                    className="btn-secondary"
-                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
-                  >
-                    View
-                  </Link>
-                  {canEdit && (
-                    <span style={{ marginLeft: '0.5rem' }}>
-                      <DeleteRecordButton id={r.id} />
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={12} className="text-center py-10 text-slate-400 font-medium">
+                    {hasFilters ? 'No records match the current filters.' : 'No pregnant mothers registered yet.'}
+                  </td>
+                </tr>
+              )}
+              {filtered.map((r) => (
+                <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-slate-500 text-xs">{r.date_registered ?? '—'}</td>
+                  <td className="py-3.5 px-4 font-bold text-slate-800">
+                    {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">
+                    {r.purok ? `Zone ${r.purok}` : r.address ?? '—'}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.age ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.edd ?? '—'}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${r.checkupCount > 0 ? 'bg-teal-50 text-[var(--brand)]' : 'bg-slate-100 text-slate-400'}`}>
+                      {r.checkupCount} visits
                     </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.blood_pressure ?? '—'}</td>
+                  <td className="py-3.5 px-4">
+                    <RiskBadge riskLevel={r.risk_level} />
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/dashboard/pregnant/${r.id}?view=details`}>
+                        <Button variant="secondary" size="sm" rightIcon={<ChevronRight size={14} />}>
+                          View
+                        </Button>
+                      </Link>
+                      {canEdit && <DeleteRecordButton id={r.id} />}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
