@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { Bell } from 'lucide-react';
 
 export default async function PatientMessages({
   pregnantMotherId,
@@ -52,8 +53,9 @@ export default async function PatientMessages({
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          🔔 System Notifications ({notifications?.length ?? 0})
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+          <Bell size={16} aria-hidden="true" className="text-brand" />
+          System Notifications ({notifications?.length ?? 0})
         </h2>
         {!notifications || notifications.length === 0 ? (
           <p className="text-sm text-muted-2">No system notifications yet.</p>
@@ -78,13 +80,9 @@ export default async function PatientMessages({
         <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>
         <div className="mt-3">
           {record.risk_level === 'high' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
-              High Risk
-            </span>
+            <span className="risk-pill risk-pill-high">High Risk</span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              Low Risk
-            </span>
+            <span className="risk-pill risk-pill-low">Low Risk</span>
           )}
         </div>
       </div>

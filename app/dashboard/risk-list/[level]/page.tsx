@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import RiskListTable from '@/components/pregnant/RiskListTable';
 import { requireRoles } from '@/utils/auth/roles';
 
@@ -37,8 +38,12 @@ export default async function RiskListPage({
 
   return (
     <div>
-      <Link href="/dashboard" style={{ fontSize: '0.8125rem', color: 'var(--brand)' }}>
-        ← Back to Dashboard
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline"
+      >
+        <ArrowLeft size={16} aria-hidden="true" />
+        Back to Dashboard
       </Link>
 
       <div className="flex items-center gap-3 mt-3 mb-6">

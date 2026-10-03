@@ -35,13 +35,9 @@ export default async function MyRecordsPage() {
         <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>
         <div className="mt-3">
           {record.risk_level === 'high' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
-              High Risk
-            </span>
+            <span className="risk-pill risk-pill-high">High Risk</span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              Low Risk
-            </span>
+            <span className="risk-pill risk-pill-low">Low Risk</span>
           )}
         </div>
       </div>

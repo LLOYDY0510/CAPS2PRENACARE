@@ -127,11 +127,11 @@ export default function RiskMap({
               <div style={{ fontSize: '13px', lineHeight: 1.5, minWidth: '200px' }}>
                 <p style={{ fontWeight: 600, marginBottom: '2px' }}>{point.full_name}</p>
                 {point.serial_no && (
-                  <p style={{ color: '#9CA3AF', fontSize: '11px', marginBottom: '6px' }}>
+                  <p style={{ color: 'var(--muted-2)', fontSize: '11px', marginBottom: '6px' }}>
                     {point.serial_no}
                   </p>
                 )}
-                <div style={{ color: '#374151', marginBottom: '8px' }}>
+                <div style={{ color: 'var(--ink-secondary)', marginBottom: '8px' }}>
                   <p>Zone: {point.purok ?? '—'}</p>
                   {point.age != null && <p>Age: {point.age}</p>}
                   {point.address && <p>Address: {point.address}</p>}
