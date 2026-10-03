@@ -160,7 +160,7 @@ export default function CreateAccountForm() {
           />
         </div>
 
-        <div className="border-t border-[#EEF1F4] pt-4 space-y-3">
+        <div className="border-t border-[var(--border-light)] pt-4 space-y-3">
           <p className="text-xs text-muted">
             Enter the details from your registration slip to link your account to your record.
           </p>
@@ -196,8 +196,12 @@ export default function CreateAccountForm() {
           </div>
         </div>
 
-        <button type="submit" disabled={busy} className="btn-primary w-full">
-          {busy ? 'Creating account…' : 'Create Account'}
+        <button
+          type="submit"
+          disabled={busy}
+          className={`btn btn-primary w-full ${busy ? 'is-loading' : ''}`}
+        >
+          <span className="btn-label">{busy ? 'Creating account…' : 'Create Account'}</span>
         </button>
       </form>
 

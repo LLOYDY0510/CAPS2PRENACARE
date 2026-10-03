@@ -20,10 +20,12 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
-      <div className="order-1 w-full lg:w-[380px] lg:shrink-0">{brand}</div>
+      <div className="order-1 w-full lg:w-[420px] lg:shrink-0 anim-fade-up lg:border-r lg:border-[var(--border-light)]">
+        {brand}
+      </div>
 
       <div className="order-2 flex-1 min-w-0 flex items-start lg:items-center justify-center px-4 sm:px-6 py-8 lg:py-12">
-        <div className="w-full max-w-sm min-w-0">{children}</div>
+        <div className="w-full max-w-sm min-w-0 anim-scale-in">{children}</div>
       </div>
     </div>
   );

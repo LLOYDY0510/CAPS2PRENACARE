@@ -85,10 +85,9 @@ export default function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full"
-          style={{ padding: '0.5625rem 1rem', fontSize: '0.9375rem' }}
+          className={`btn btn-primary w-full ${loading ? 'is-loading' : ''}`}
         >
-          {loading ? 'Saving…' : 'Save new password'}
+          <span className="btn-label">{loading ? 'Saving…' : 'Save new password'}</span>
         </button>
       </form>
     </div>

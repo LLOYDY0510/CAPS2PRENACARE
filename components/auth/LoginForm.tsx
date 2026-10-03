@@ -184,10 +184,18 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full"
+          className={`btn btn-primary w-full ${loading ? 'is-loading' : ''}`}
           style={{ padding: '0.5625rem 1rem', fontSize: '0.9375rem' }}
         >
-          {mode === 'signin' ? (loading ? 'Signing in…' : 'Sign in') : loading ? 'Sending…' : 'Send reset link'}
+          <span className="btn-label">
+            {mode === 'signin'
+              ? loading
+                ? 'Signing in…'
+                : 'Sign in'
+              : loading
+                ? 'Sending…'
+                : 'Send reset link'}
+          </span>
         </button>
 
         {mode === 'forgot' && (

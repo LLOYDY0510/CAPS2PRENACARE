@@ -61,7 +61,7 @@ export default function PasswordInput({
             aria-label={visible ? 'Hide password' : 'Show password'}
             aria-pressed={visible}
             disabled={disabled}
-            className="btn-ghost absolute inset-y-0 right-1 my-auto h-7 px-2 text-xs"
+            className="btn-ghost pw-toggle absolute inset-y-0 right-1 my-auto h-7 px-2 text-xs"
           >
             {visible ? 'Hide' : 'Show'}
           </button>

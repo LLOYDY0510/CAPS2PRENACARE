@@ -16,7 +16,7 @@ export default function BrandPanel({
   tagline?: string;
 }) {
   return (
-    <div className="h-full flex flex-col gap-8 p-8 lg:p-10">
+    <div className="h-full flex flex-col gap-8 p-8 lg:p-10 anim-stagger">
       <div className="flex items-center gap-3">
         <Logo variant="prenatrack" size={44} priority />
         <Logo variant="barangay" size={44} rounded priority />
