@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { clearRememberPreference } from '@/utils/auth/session-persistence';
 
 export default function LogoutButton() {
   const router   = useRouter();
@@ -9,6 +10,7 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    clearRememberPreference();
     router.push('/login');
     router.refresh();
   }

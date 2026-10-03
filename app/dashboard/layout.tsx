@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
+import SessionPersistenceGuard from '@/components/auth/SessionPersistenceGuard';
 import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
 import { isStaffRole } from '@/utils/auth/roles';
 
@@ -114,14 +115,18 @@ export default async function DashboardLayout({
   }
 
   return (
-    <Sidebar
-      role={role}
-      menuItems={menuItems}
-      fullName={profile?.full_name}
-      email={user.email}
-      notifications={notifications}
-    >
-      {children}
-    </Sidebar>
+    <>
+      {/* Enforces the "remember me" choice made at sign-in; renders nothing. */}
+      <SessionPersistenceGuard />
+      <Sidebar
+        role={role}
+        menuItems={menuItems}
+        fullName={profile?.full_name}
+        email={user.email}
+        notifications={notifications}
+      >
+        {children}
+      </Sidebar>
+    </>
   );
 }
