@@ -8,7 +8,12 @@ import PageHeader from '@/components/ui/PageHeader';
 import { Baby, Plus } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
-export default async function PregnantRecordsPage() {
+export default async function PregnantRecordsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string; search?: string }>;
+}) {
+  const { q, search } = (await searchParams) ?? {};
   const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
@@ -83,6 +88,7 @@ export default async function PregnantRecordsPage() {
       <PregnantRecordsTable
         records={recordsWithCheckupCount}
         canEdit={canEdit}
+        initialSearch={q || search || ''}
       />
     </div>
   );
