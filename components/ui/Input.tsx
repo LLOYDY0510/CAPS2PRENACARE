@@ -8,10 +8,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  autoFilled?: boolean;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, leftIcon, rightIcon, className = '', id, ...props }, ref) => {
+  ({ label, error, helperText, leftIcon, rightIcon, className = '', id, autoFilled, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
@@ -40,7 +41,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && <p className="text-xs font-semibold text-red-600 mt-1">{error}</p>}
-        {!error && helperText && <p className="text-xs text-slate-500 mt-1">{helperText}</p>}
+        {!error && helperText && (
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+            {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
+            {helperText}
+          </p>
+        )}
       </div>
     );
   }
@@ -52,10 +58,11 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   error?: string;
   helperText?: string;
   options?: Array<{ value: string; label: string }>;
+  autoFilled?: boolean;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, options, children, className = '', id, ...props }, ref) => {
+  ({ label, error, helperText, options, children, className = '', id, autoFilled, ...props }, ref) => {
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
@@ -82,7 +89,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             : children}
         </select>
         {error && <p className="text-xs font-semibold text-red-600 mt-1">{error}</p>}
-        {!error && helperText && <p className="text-xs text-slate-500 mt-1">{helperText}</p>}
+        {!error && helperText && (
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+            {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
+            {helperText}
+          </p>
+        )}
       </div>
     );
   }
