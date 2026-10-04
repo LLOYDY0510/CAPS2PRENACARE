@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import Link from 'next/link';
-import { Users, AlertTriangle, ShieldCheck, UserCog, Calendar, ArrowRight, ChevronRight, MoreVertical } from 'lucide-react';
+import { Users, AlertTriangle, ShieldCheck, UserCog, Calendar, ArrowRight, ChevronRight } from 'lucide-react';
 import RiskBadge from '@/components/ui/RiskBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
@@ -129,7 +129,7 @@ export default async function AdminDashboard() {
         <StatCard
           title="Total Registered"
           value={total}
-          trend="+100% active coverage"
+          trend={`${total} total registered`}
           icon={Users}
           variant="brand"
           href="/dashboard/pregnant"
@@ -156,7 +156,7 @@ export default async function AdminDashboard() {
         <StatCard
           title="Staff Accounts"
           value={totalStaff}
-          trend="Active health workers"
+          trend={`${totalStaff} active staff`}
           icon={UserCog}
           variant="warning"
           href="/dashboard/users"
@@ -177,9 +177,6 @@ export default async function AdminDashboard() {
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
                 {total} total
               </span>
-              <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-                <MoreVertical size={16} />
-              </button>
             </div>
           </div>
 
@@ -213,9 +210,6 @@ export default async function AdminDashboard() {
               <h3 className="text-base font-extrabold text-slate-800">Risk Breakdown</h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Clinical risk ratio</p>
             </div>
-            <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-              <MoreVertical size={16} />
-            </button>
           </div>
 
           {total === 0 ? (
