@@ -13,8 +13,8 @@ export default function InfoRow({
 }) {
   return (
     <div>
-      <p className="text-muted-2 text-xs mb-0.5">{label}</p>
-      <p className="text-gray-800">{value ?? '—'}</p>
+      <p className="text-slate-400 text-xs font-medium mb-0.5">{label}</p>
+      <p className="text-slate-800 font-medium">{value ?? '—'}</p>
     </div>
   );
 }

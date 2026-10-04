@@ -3,25 +3,26 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import RiskBadge from '@/components/ui/RiskBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
+import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
 import Link from 'next/link';
-import { Users, AlertTriangle, ShieldCheck, UserCheck, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Users, AlertTriangle, ShieldCheck, UserCheck, ArrowRight, LayoutDashboard, ChevronRight, MoreVertical } from 'lucide-react';
 
 const ZONE_COLORS: Record<string, string> = {
-  '1': '#4A90D9',
+  '1': '#3B82F6',
   '2': '#2A7A74',
-  '3': '#7B68EE',
-  '4': '#E67E22',
-  '5': '#C0392B',
-  '6': '#8E44AD',
-  '7': '#16A085',
-  '8': '#D35400',
+  '3': '#8B5CF6',
+  '4': '#F59E0B',
+  '5': '#EF4444',
+  '6': '#EC4899',
+  '7': '#10B981',
+  '8': '#F97316',
 };
 const UNASSIGNED_COLOR = '#CBD5E1';
 
 const AGE_GROUP_COLORS: Record<string, string> = {
-  '10-14': '#E67E22',
+  '10-14': '#F59E0B',
   '15-19': '#2A7A74',
-  '20-49': '#4A90D9',
+  '20-49': '#3B82F6',
 };
 
 export default async function BhwHeadDashboard() {
@@ -42,7 +43,7 @@ export default async function BhwHeadDashboard() {
   const loadError = recordsError ?? bhwCountError;
   if (loadError) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="BHW Head Dashboard" icon={LayoutDashboard} />
         <div className="alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
@@ -84,13 +85,22 @@ export default async function BhwHeadDashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 anim-fade-up">
       {/* Page header */}
       <PageHeader
         title="BHW Head Dashboard"
         subtitle={`Barangay health worker management overview for ${today}`}
         icon={LayoutDashboard}
         badge="Manager"
+      />
+
+      {/* Highlighted Banner Card */}
+      <HighlightedBannerCard
+        title="Barangay Care Operations"
+        description="Coordinate BHW purok visits, schedule upcoming prenatal checkups, and monitor high-risk pregnancies across all zones."
+        buttonText="View Schedule"
+        href="/dashboard/schedule"
+        badgeText="Manager Portal"
       />
 
       {/* KPI row */}
@@ -136,33 +146,38 @@ export default async function BhwHeadDashboard() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar chart — records per zone */}
-        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+        <div className="card rounded-[24px] bg-white p-6 shadow-card border border-slate-100 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-[var(--ink)]">Records per Zone</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Barangay purok distribution</p>
+              <h3 className="text-base font-extrabold text-slate-800">Records per Zone</h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Barangay purok distribution</p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--surface-alt)] text-[var(--muted)] border border-[var(--border-light)]">
-              {total} total
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                {total} total
+              </span>
+              <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+                <MoreVertical size={16} />
+              </button>
+            </div>
           </div>
 
           {purokEntries.length === 0 ? (
             <EmptyChart />
           ) : (
-            <div className="flex items-end gap-3 sm:gap-4 pt-4" style={{ height: '180px' }}>
+            <div className="flex items-end gap-3 sm:gap-4 pt-4" style={{ height: '200px' }}>
               {purokEntries.map(([purok, count]) => {
-                const barH = Math.max(12, (count / maxPurokCount) * 140);
+                const barH = Math.max(16, (count / maxPurokCount) * 150);
                 return (
                   <div key={purok} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group">
-                    <span className="text-xs font-bold text-[var(--ink)] opacity-90 group-hover:scale-110 transition-transform">
+                    <span className="text-xs font-bold text-slate-700 opacity-90 group-hover:scale-110 transition-transform">
                       {count}
                     </span>
                     <div
-                      className="w-full max-w-[42px] rounded-t-lg transition-all duration-300 group-hover:brightness-110 shadow-xs"
+                      className="w-full max-w-[44px] rounded-t-2xl transition-all duration-300 group-hover:brightness-110 shadow-xs"
                       style={{ height: `${barH}px`, background: ZONE_COLORS[purok] ?? UNASSIGNED_COLOR }}
                     />
-                    <span className="text-xs font-medium text-[var(--muted)]">P{purok}</span>
+                    <span className="text-xs font-bold text-slate-500">P{purok}</span>
                   </div>
                 );
               })}
@@ -171,12 +186,15 @@ export default async function BhwHeadDashboard() {
         </div>
 
         {/* Donut — risk distribution */}
-        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+        <div className="card rounded-[24px] bg-white p-6 shadow-card border border-slate-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-[var(--ink)]">Risk Breakdown</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Clinical risk ratio</p>
+              <h3 className="text-base font-extrabold text-slate-800">Risk Breakdown</h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Clinical risk ratio</p>
             </div>
+            <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
+              <MoreVertical size={16} />
+            </button>
           </div>
 
           {total === 0 ? (
@@ -184,8 +202,8 @@ export default async function BhwHeadDashboard() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center py-2">
               <div className="relative flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 -rotate-90">
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="var(--border-light)" strokeWidth="12"/>
+                <svg viewBox="0 0 100 100" className="w-36 h-36 -rotate-90">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="12"/>
                   <circle
                     cx="50" cy="50" r="38" fill="none"
                     stroke="var(--success)" strokeWidth="12"
@@ -205,14 +223,14 @@ export default async function BhwHeadDashboard() {
                   )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-extrabold text-[var(--ink)]">{total}</span>
-                  <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Mothers</span>
+                  <span className="text-2xl font-extrabold text-slate-800">{total}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mothers</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-6 mt-6 w-full pt-4 border-t border-[var(--border-light)]">
-                <Legend color="var(--success)" label="Low Risk" pct={`${lowPct}%`} />
-                <Legend color="var(--danger)" label="High Risk" pct={`${highPct}%`} />
+              <div className="w-full mt-6 space-y-2 pt-4 border-t border-slate-100">
+                <LegendRow color="var(--success)" label="Low Risk" pct={`${lowPct}%`} count={lowRisk} href="/dashboard/risk-list/low" />
+                <LegendRow color="var(--danger)" label="High Risk" pct={`${highPct}%`} count={highRisk} href="/dashboard/risk-list/high" />
               </div>
             </div>
           )}
@@ -220,32 +238,32 @@ export default async function BhwHeadDashboard() {
       </div>
 
       {/* Age group chart */}
-      <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card">
-        <div className="flex items-center justify-between mb-6 pb-3 border-b border-[var(--border-light)]">
+      <div className="card rounded-[24px] bg-white p-6 shadow-card border border-slate-100">
+        <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-bold text-[var(--ink)]">Registered by Age Group</h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5">Demographic risk profiling</p>
+            <h3 className="text-base font-extrabold text-slate-800">Registered by Age Group</h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Demographic risk profiling</p>
           </div>
-          <span className="text-xs font-medium text-[var(--muted)]">{total} total</span>
+          <span className="text-xs font-bold text-slate-500">{total} total</span>
         </div>
 
         {total === 0 ? (
           <EmptyChart />
         ) : (
-          <div className="flex items-end gap-8 sm:gap-16 justify-center py-4" style={{ height: '180px' }}>
+          <div className="flex items-end gap-8 sm:gap-16 justify-center py-4" style={{ height: '190px' }}>
             {AGE_GROUPS.map((group) => {
               const count = byAgeGroup[group];
-              const barH  = Math.max(12, (count / maxAgeCount) * 140);
+              const barH  = Math.max(16, (count / maxAgeCount) * 140);
               return (
                 <div key={group} className="flex flex-col items-center justify-end h-full gap-2 group" style={{ width: '80px' }}>
-                  <span className="text-xs font-bold text-[var(--ink)] opacity-90 group-hover:scale-110 transition-transform">
+                  <span className="text-xs font-bold text-slate-700 opacity-90 group-hover:scale-110 transition-transform">
                     {count}
                   </span>
                   <div
-                    className="w-14 rounded-t-lg transition-all duration-300 group-hover:brightness-110 shadow-xs"
+                    className="w-16 rounded-t-2xl transition-all duration-300 group-hover:brightness-110 shadow-xs"
                     style={{ height: `${barH}px`, background: AGE_GROUP_COLORS[group] }}
                   />
-                  <span className="text-xs font-medium text-[var(--muted)]">{group} yrs</span>
+                  <span className="text-xs font-bold text-slate-500">{group} yrs</span>
                 </div>
               );
             })}
@@ -254,17 +272,17 @@ export default async function BhwHeadDashboard() {
       </div>
 
       {/* Recent records table */}
-      <div className="rounded-[16px] bg-white border border-[var(--border-light)] shadow-card overflow-hidden">
-        <div className="p-5 border-b border-[var(--border-light)] flex items-center justify-between">
+      <div className="card rounded-[24px] bg-white border border-slate-100 shadow-card overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-[var(--ink)]">Recent Registrations</h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5">Latest maternal records logged</p>
+            <h3 className="text-base font-extrabold text-slate-800">Recent Registrations</h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Latest maternal records logged</p>
           </div>
           <Link
             href="/dashboard/pregnant"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors px-3 py-1.5 rounded-full bg-teal-50 border border-teal-100"
           >
-            <span>View all</span>
+            <span>See all</span>
             <ArrowRight size={14} />
           </Link>
         </div>
@@ -286,15 +304,15 @@ export default async function BhwHeadDashboard() {
             <tbody>
               {recentRecords.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-muted-2">
+                  <td colSpan={8} className="text-center py-8 text-slate-400 font-medium">
                     No records yet.
                   </td>
                 </tr>
               )}
               {recentRecords.map((r) => (
-                <tr key={r.id} className="hover:bg-[var(--surface-alt)] transition-colors">
-                  <td data-label="Serial No." className="font-mono text-xs text-[var(--muted)]">{r.serial_no ?? '—'}</td>
-                  <td data-label="Name" className="font-semibold text-[var(--ink)]">{r.full_name ?? '—'}</td>
+                <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td data-label="Serial No." className="font-mono text-xs font-bold text-slate-500">{r.serial_no ?? '—'}</td>
+                  <td data-label="Name" className="font-bold text-slate-800">{r.full_name ?? '—'}</td>
                   <td data-label="Zone">{r.purok ? `Zone ${r.purok}` : '—'}</td>
                   <td data-label="Age">{r.age ?? '—'}</td>
                   <td data-label="LMP">{r.lmp ?? '—'}</td>
@@ -302,7 +320,7 @@ export default async function BhwHeadDashboard() {
                   <td data-label="Risk">
                     <RiskBadge riskLevel={r.risk_level} />
                   </td>
-                  <td data-label="Date Registered" className="text-xs text-[var(--muted)]">{r.date_registered ?? '—'}</td>
+                  <td data-label="Date Registered" className="text-xs font-medium text-slate-500">{r.date_registered ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -315,18 +333,23 @@ export default async function BhwHeadDashboard() {
 
 function EmptyChart() {
   return (
-    <div className="flex items-center justify-center h-40 text-xs font-medium text-[var(--muted-2)]">
+    <div className="flex items-center justify-center h-40 text-xs font-semibold text-slate-400">
       No data available.
     </div>
   );
 }
 
-function Legend({ color, label, pct }: { color: string; label: string; pct: string }) {
+function LegendRow({ color, label, pct, count, href }: { color: string; label: string; pct: string; count: number; href: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-      <span className="text-xs font-medium text-[var(--muted)]">{label}</span>
-      <span className="text-xs font-bold text-[var(--ink)]">{pct}</span>
-    </div>
+    <Link href={href} className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 transition-colors group">
+      <div className="flex items-center gap-2.5">
+        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
+        <span className="text-xs font-bold text-slate-700">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-extrabold text-slate-800">{count} ({pct})</span>
+        <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+      </div>
+    </Link>
   );
 }

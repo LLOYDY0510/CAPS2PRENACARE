@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ShieldCheck } from 'lucide-react';
 import RiskListTable from '@/components/pregnant/RiskListTable';
 import { requireRoles } from '@/utils/auth/roles';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +28,6 @@ export default async function RiskListPage({
   if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
   const { data: records } = await recordsQuery;
 
-  // Sort by zone number, unassigned last
   const sorted = (records ?? []).slice().sort((a, b) => {
     const za = parseInt(a.purok ?? '999') || 999;
     const zb = parseInt(b.purok ?? '999') || 999;
@@ -37,23 +38,21 @@ export default async function RiskListPage({
   const isHigh = level === 'high';
 
   return (
-    <div>
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline"
-      >
-        <ArrowLeft size={16} aria-hidden="true" />
-        Back to Dashboard
-      </Link>
-
-      <div className="flex items-center gap-3 mt-3 mb-6">
-        <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>{isHigh ? 'High Risk' : 'Low Risk'} Pregnant Mothers</h1>
-        </div>
-        <span className={isHigh ? 'badge-high' : 'badge-low'}>
-          {sorted.length} total
-        </span>
+    <div className="space-y-6 anim-fade-up">
+      <div className="flex items-center justify-between">
+        <Link href="/dashboard">
+          <Button variant="outline" size="sm" leftIcon={<ArrowLeft size={16} />}>
+            Back to Dashboard
+          </Button>
+        </Link>
       </div>
+
+      <PageHeader
+        title={`${isHigh ? 'High Risk' : 'Low Risk'} Pregnant Mothers`}
+        subtitle={`Filter view of all registered mothers evaluated at ${isHigh ? 'high' : 'low'} risk level`}
+        icon={isHigh ? AlertTriangle : ShieldCheck}
+        badge={`${sorted.length} total ${isHigh ? 'high risk' : 'low risk'}`}
+      />
 
       <RiskListTable records={sorted} isHigh={isHigh} />
     </div>

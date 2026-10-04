@@ -1,8 +1,9 @@
 'use client';
- 
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { Sparkles, FileEdit, Check, Send, Clock, Loader2 } from 'lucide-react';
  
 type MonthlyTip = {
   id: string;
@@ -210,53 +211,64 @@ export default function MonthlyTipsManager({
   }
  
   return (
-    <div className="card p-6">
+    <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-700">
+        <h2 className="text-lg font-bold text-slate-800">
           Monthly Nutrition & Health Tips
         </h2>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowTemplates((s) => !s)}
             className={showTemplates ? 'btn-ghost' : 'btn-secondary'}
-            style={{ fontSize: '0.8125rem', padding: '0.3125rem 0.75rem' }}
           >
             {showTemplates ? 'Hide Templates' : 'Manage Templates'}
           </button>
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="bg-brand text-white px-4 py-1.5 rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
-            {generating ? 'Generating...' : "Generate This Month's Messages"}
+            {generating ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Generating…
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} />
+                Generate This Month&apos;s Messages
+              </>
+            )}
           </button>
         </div>
       </div>
  
       {message && (
-        <p className="text-sm text-brand bg-brand-light/40 p-2 rounded mb-4">{message}</p>
+        <div className="bg-teal-50 text-teal-700 p-3 rounded-2xl text-sm font-medium mb-4">
+          {message}
+        </div>
       )}
  
       {/* Templates editor */}
       {showTemplates && (
-        <div className="mb-6 border rounded-lg divide-y">
+        <div className="mb-6 border border-slate-200/60 rounded-2xl divide-y divide-slate-200/60">
           {Array.from({ length: 9 }, (_, i) => i + 1).map((month) => {
             const low = monthlyTips.find((t) => t.month === month && t.risk_level === 'low');
             const high = monthlyTips.find((t) => t.month === month && t.risk_level === 'high');
             return (
               <div key={month} className="p-4">
-                <p className="text-sm font-semibold mb-2">Month {month}</p>
+                <p className="text-sm font-bold text-slate-800 mb-3">Month {month}</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[low, high].map(
                     (tip) =>
                       tip && (
-                        <div key={tip.id} className="border rounded-lg p-3">
+                        <div key={tip.id} className="border border-slate-200/60 rounded-2xl p-3">
                           <p
-                            className={`text-xs font-medium mb-1 ${
-                              tip.risk_level === 'high' ? 'text-red-600' : 'text-green-600'
+                            className={`text-xs font-semibold mb-2 ${
+                              tip.risk_level === 'high' ? 'text-red-600' : 'text-emerald-600'
                             }`}
                           >
-                            {tip.risk_level === 'high' ? '⚠️ High Risk' : '✅ Low Risk'}
+                            {tip.risk_level === 'high' ? 'High Risk' : 'Low Risk'}
                           </p>
                           {editingTemplateId === tip.id ? (
                             <>
@@ -270,14 +282,12 @@ export default function MonthlyTipsManager({
                                 <button
                                   onClick={() => saveTemplate(tip)}
                                   className="btn-primary"
-                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={() => setEditingTemplateId(null)}
                                   className="btn-secondary"
-                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                                 >
                                   Cancel
                                 </button>
@@ -285,15 +295,15 @@ export default function MonthlyTipsManager({
                             </>
                           ) : (
                             <>
-                              <p className="text-xs text-muted">{tip.content}</p>
+                              <p className="text-xs text-slate-600">{tip.content}</p>
                               <button
                                 onClick={() => {
                                   setEditingTemplateId(tip.id);
                                   setTemplateDraft(tip.content);
                                 }}
-                                className="btn-ghost"
-                                style={{ fontSize: '0.75rem', padding: '0.1875rem 0.5rem', marginTop: '0.375rem' }}
+                                className="btn-ghost mt-2"
                               >
+                                <FileEdit size={12} className="mr-1" />
                                 Edit
                               </button>
                             </>
@@ -310,25 +320,25 @@ export default function MonthlyTipsManager({
  
       {/* Pending review */}
       <div className="mb-6">
-        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
           Pending Review ({pending.length})
         </h3>
         {pending.length === 0 ? (
-          <p className="text-sm text-muted-2">No messages waiting for review.</p>
+          <p className="text-sm text-slate-400">No messages waiting for review.</p>
         ) : (
           <div className="space-y-3">
             {pending.map((b) => {
               const recs = recipientsFor(b.id);
               return (
-                <div key={b.id} className="border rounded-lg p-4">
+                <div key={b.id} className="border border-slate-200/60 rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-semibold text-slate-800">
                       Month {b.month} —{' '}
-                      <span className={b.risk_level === 'high' ? 'text-red-600' : 'text-green-600'}>
+                      <span className={b.risk_level === 'high' ? 'text-red-600' : 'text-emerald-600'}>
                         {b.risk_level === 'high' ? 'High Risk' : 'Low Risk'}
                       </span>
                     </p>
-                    <span className="text-xs text-muted-2">{recs.length} recipient(s)</span>
+                    <span className="text-xs text-slate-400">{recs.length} recipient(s)</span>
                   </div>
  
                   {editingBroadcastId === b.id ? (
@@ -343,25 +353,23 @@ export default function MonthlyTipsManager({
                         <button
                           onClick={() => saveBroadcastEdit(b)}
                           className="btn-primary"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         >
                           Save Edit
                         </button>
                         <button
                           onClick={() => setEditingBroadcastId(null)}
                           className="btn-secondary"
-                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                         >
                           Cancel
                         </button>
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-gray-700 mb-2">{b.content}</p>
+                    <p className="text-sm text-slate-700 mb-2">{b.content}</p>
                   )}
  
-                  <details className="text-xs text-muted mt-2">
-                    <summary className="cursor-pointer hover:text-gray-700">
+                  <details className="text-xs text-slate-500 mt-2">
+                    <summary className="cursor-pointer hover:text-slate-700">
                       View recipient list
                     </summary>
                     <ul className="mt-1 list-disc list-inside">
@@ -381,15 +389,15 @@ export default function MonthlyTipsManager({
                           setBroadcastDraft(b.content);
                         }}
                         className="btn-secondary"
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                       >
+                        <FileEdit size={12} className="mr-1" />
                         Edit Message
                       </button>
                       <button
                         onClick={() => approveBroadcast(b)}
                         className="btn-primary"
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem' }}
                       >
+                        <Check size={12} className="mr-1" />
                         Approve
                       </button>
                     </div>
@@ -403,34 +411,34 @@ export default function MonthlyTipsManager({
  
       {/* Approved, ready to send */}
       <div className="mb-6">
-        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
           Approved — Ready to Send ({approved.length})
         </h3>
         {approved.length === 0 ? (
-          <p className="text-sm text-muted-2">No approved messages waiting to be sent.</p>
+          <p className="text-sm text-slate-400">No approved messages waiting to be sent.</p>
         ) : (
           <div className="space-y-2">
             {approved.map((b) => {
               const recs = recipientsFor(b.id);
               return (
-                <div key={b.id} className="border rounded-lg px-4 py-3">
+                <div key={b.id} className="border border-slate-200/60 rounded-2xl px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-semibold text-slate-800">
                       Month {b.month} —{' '}
-                      <span className={b.risk_level === 'high' ? 'text-red-600' : 'text-green-600'}>
+                      <span className={b.risk_level === 'high' ? 'text-red-600' : 'text-emerald-600'}>
                         {b.risk_level === 'high' ? 'High Risk' : 'Low Risk'}
                       </span>{' '}
-                      <span className="text-xs text-muted-2">({recs.length} recipients)</span>
+                      <span className="text-xs text-slate-400">({recs.length} recipients)</span>
                     </p>
                     <button
                       onClick={() => sendBroadcast(b)}
                       className="btn-primary"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
                     >
-                      Send Now (Simulated SMS)
+                      <Send size={12} className="mr-1" />
+                      Send Now
                     </button>
                   </div>
-                  <p className="text-xs text-muted mt-2">
+                  <p className="text-xs text-slate-500 mt-2">
                     {recs
                       .map(
                         (r) =>
@@ -449,25 +457,28 @@ export default function MonthlyTipsManager({
  
       {/* Sent history */}
       <div>
-        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
           Sent ({sent.length})
         </h3>
         {sent.length === 0 ? (
-          <p className="text-sm text-muted-2">No messages sent yet.</p>
+          <p className="text-sm text-slate-400">No messages sent yet.</p>
         ) : (
           <div className="space-y-2">
             {sent.map((b) => {
               const recs = recipientsFor(b.id);
               return (
-                <div key={b.id} className="text-xs border-b last:border-0 py-2">
-                  <div className="flex items-center justify-between text-muted">
+                <div key={b.id} className="text-xs border-b border-slate-200/60 last:border-0 py-2">
+                  <div className="flex items-center justify-between text-slate-600">
                     <span>
                       Month {b.month} — {b.risk_level === 'high' ? 'High Risk' : 'Low Risk'} (
                       {recs.length} recipients)
                     </span>
-                    <span>{b.sent_at ? new Date(b.sent_at).toLocaleString() : ''}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={10} />
+                      {b.sent_at ? new Date(b.sent_at).toLocaleString() : ''}
+                    </span>
                   </div>
-                  <p className="text-muted-2 mt-1">
+                  <p className="text-slate-400 mt-1">
                     {recs
                       .map(
                         (r) =>

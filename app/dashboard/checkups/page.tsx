@@ -1,6 +1,8 @@
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
 import { requireRoles } from '@/utils/auth/roles';
 import { getPrenatalVisitStatus, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
+import PageHeader from '@/components/ui/PageHeader';
+import { ClipboardCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +33,9 @@ export default async function PrenatalCheckupsPage() {
   const loadError = recordsError ?? checkupsError ?? schedulesError;
   if (loadError) {
     return (
-      <div>
-        <div className="page-header">
-          <h1>Prenatal Checkups</h1>
-        </div>
-        <div className="alert-error" role="alert">
+      <div className="space-y-6">
+        <PageHeader title="Prenatal Checkups" icon={ClipboardCheck} />
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
           Failed to load checkup data: {loadError.message}
         </div>
       </div>
@@ -81,13 +81,13 @@ export default async function PrenatalCheckupsPage() {
   }));
 
   return (
-    <div>
-      <div className="page-header">
-        <h1>Prenatal Checkups</h1>
-        <p className="page-date">
-          Select a pregnant mother to view or record her 1st–3rd trimester checkups.
-        </p>
-      </div>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Prenatal Checkups"
+        subtitle="Select a pregnant mother to view or record her 1st–3rd trimester checkups"
+        icon={ClipboardCheck}
+        badge="Clinical History"
+      />
 
       <CheckupsTable records={tableRecords} />
     </div>

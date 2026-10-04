@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
+import Button from '@/components/ui/Button';
+import { Input, Textarea } from '@/components/ui/Input';
+import Tabs from '@/components/ui/Tabs';
+import { Alert } from '@/components/ui/ToastAlert';
+import { ClipboardCheck, Plus, Trash2 } from 'lucide-react';
 
 type Checkup = {
   id: string;
@@ -88,9 +93,6 @@ export default function PrenatalCheckups({
         return;
       }
 
-      // The API updates the existing row for this trimester when one exists,
-      // so replace by id. Filtering the whole trimester would hide the other
-      // visits recorded in the same trimester.
       const saved = result.data;
       setCheckups((prev) => [...prev.filter((checkup) => checkup.id !== saved.id), saved]);
       setForm({ blood_pressure: '', weight_kg: '', notes: '' });
@@ -132,97 +134,64 @@ export default function PrenatalCheckups({
   }
 
   return (
-    <div className="card">
-      {/* Card header */}
-      <div className="section-header">
-        <h2>Prenatal Checkups</h2>
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
+      {/* Header & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <ClipboardCheck size={20} className="text-[var(--brand)]" />
+            <span>Prenatal Checkup History</span>
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Trimester progress and medical checkup records</p>
+        </div>
+
+        <Tabs
+          variant="segmented"
+          tabs={TRIMESTERS.map((tri) => ({
+            id: tri,
+            label: `${tri} Trimester`,
+            count: grouped[tri]?.length ?? 0,
+          }))}
+          activeTab={activeTrimester}
+          onChange={(id) => {
+            setActiveTrimester(id as '1st' | '2nd' | '3rd');
+            setShowForm(false);
+          }}
+        />
       </div>
 
-      {/* Trimester tabs */}
-      <div
-        className="flex"
-        style={{
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--surface-alt)',
-          padding: '0 1rem',
-        }}
-      >
-        {TRIMESTERS.map((tri) => {
-          const active = activeTrimester === tri;
-          return (
-            <button
-              key={tri}
-              onClick={() => { setActiveTrimester(tri); setShowForm(false); }}
-              style={{
-                padding: '0.625rem 0.875rem',
-                fontSize: '0.8125rem',
-                fontWeight: active ? 600 : 400,
-                color: active ? 'var(--brand)' : 'var(--muted)',
-                borderBottom: active ? '2px solid var(--brand)' : '2px solid transparent',
-                background: 'none',
-                border: 'none',
-                borderBottomWidth: '2px',
-                borderBottomStyle: 'solid',
-                borderBottomColor: active ? 'var(--brand)' : 'transparent',
-                cursor: 'pointer',
-                transition: 'color 0.15s',
-                marginBottom: '-1px',
-              }}
-            >
-              {tri} Trimester
-              <span
-                style={{
-                  marginLeft: '0.375rem',
-                  fontSize: '0.6875rem',
-                  color: 'var(--muted-2)',
-                }}
-              >
-                ({grouped[tri]?.length ?? 0})
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ padding: '1rem' }}>
+      <div>
         {error && (
-          <div className="alert-error mb-3" role="alert">
+          <Alert type="error" className="mb-4" onClose={() => setError('')}>
             {error}
-          </div>
+          </Alert>
         )}
         {notice && !error && (
-          <div className="alert-success mb-3" role="status">
+          <Alert type="success" className="mb-4" onClose={() => setNotice('')}>
             {notice}
-          </div>
+          </Alert>
         )}
 
-        {/* Checkup list */}
+        {/* Checkup table */}
         {grouped[activeTrimester].length === 0 ? (
-          <p
-            style={{
-              textAlign: 'center',
-              padding: '1.5rem',
-              fontSize: '0.8125rem',
-              color: 'var(--muted-2)',
-            }}
-          >
+          <p className="text-xs text-slate-400 font-medium text-center py-10">
             No checkups recorded for the {activeTrimester} trimester.
           </p>
         ) : (
-          <div className="mb-4">
-            <table className="data-table">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100 mb-6">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr>
-                  <th>Scheduled Date</th>
-                  <th>Actual Date</th>
-                  <th>Blood Pressure</th>
-                  <th>Weight (kg)</th>
-                  <th>Notes</th>
-                  <th>Status</th>
-                  {canEdit && <th style={{ width: '60px' }}></th>}
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Scheduled Date</th>
+                  <th className="py-3.5 px-4">Actual Visit Date</th>
+                  <th className="py-3.5 px-4">Blood Pressure</th>
+                  <th className="py-3.5 px-4">Weight (kg)</th>
+                  <th className="py-3.5 px-4">Clinical Notes</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  {canEdit && <th className="py-3.5 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
                 {grouped[activeTrimester].map((c) => {
                   const status = getPrenatalVisitStatus({
                     scheduledFor:
@@ -233,39 +202,40 @@ export default function PrenatalCheckups({
                     actualCheckupDate: c.actual_checkup_date,
                     recordedStatus: c.status,
                   });
-                  const statusClass =
+                  const statusColor =
                     status === 'completed'
-                      ? 'badge-low'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : status === 'missed'
-                        ? 'badge-high'
-                        : 'badge-neutral';
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200';
                   return (
-                    <tr key={c.id}>
-                      <td data-label="Scheduled Date" className="font-medium text-ink">
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-800">
                         {scheduledDates[c.trimester] ??
                           c.scheduled_checkup_date ??
                           c.scheduled_for ??
                           c.checkup_date}
                       </td>
-                      <td data-label="Actual Date">{c.actual_checkup_date ?? '—'}</td>
-                      <td data-label="Blood Pressure">{c.blood_pressure ?? '—'}</td>
-                      <td data-label="Weight (kg)">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
-                      <td data-label="Notes" style={{ maxWidth: '240px' }}>
-                        {c.notes ?? '—'}
-                      </td>
-                      <td data-label="Status">
-                        <span className={statusClass}>{prenatalStatusLabel(status)}</span>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.actual_checkup_date ?? '—'}</td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.blood_pressure ?? '—'}</td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium max-w-xs truncate">{c.notes ?? '—'}</td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
+                          {prenatalStatusLabel(status)}
+                        </span>
                       </td>
                       {canEdit && (
-                        <td data-label="Actions">
-                          <button
-                            type="button"
+                        <td className="py-3.5 px-4 text-right">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            isLoading={deletingId === c.id}
                             onClick={() => void handleDelete(c.id)}
-                            disabled={deletingId === c.id}
-                            className="btn-danger"
+                            leftIcon={<Trash2 size={14} />}
                           >
-                            {deletingId === c.id ? 'Deleting…' : 'Delete'}
-                          </button>
+                            Delete
+                          </Button>
                         </td>
                       )}
                     </tr>
@@ -276,100 +246,69 @@ export default function PrenatalCheckups({
           </div>
         )}
 
-        {/* Add checkup */}
+        {/* Add checkup form */}
         {canEdit && (
           !showForm ? (
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setShowForm(true)}
-              className="btn-secondary"
-              style={{ fontSize: '0.8125rem' }}
+              leftIcon={<Plus size={16} />}
             >
-              + Add {activeTrimester} trimester checkup
-            </button>
+              Add {activeTrimester} Trimester Checkup
+            </Button>
           ) : (
             <form
               onSubmit={handleAdd}
-              style={{
-                background: 'var(--surface-alt)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1rem',
-                marginTop: grouped[activeTrimester].length > 0 ? '0.5rem' : 0,
-              }}
+              className="bg-slate-50/90 rounded-2xl border border-slate-200/80 p-5 space-y-4"
             >
-              <h3
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: 'var(--ink)',
-                  marginBottom: '0.875rem',
-                }}
-              >
-                New {activeTrimester} Trimester Checkup
+              <h3 className="text-sm font-bold text-slate-900">
+                New {activeTrimester} Trimester Checkup Record
               </h3>
 
-              {error && (
-                <div className="alert-error mb-4" role="alert">{error}</div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">                <div>
-                  <span className="form-label">Scheduled Checkup Date</span>
-                  <div className="form-input bg-surface-alt" style={{ color: 'var(--ink-secondary)' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                    Scheduled Checkup Date
+                  </label>
+                  <div className="h-11 px-4 flex items-center bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700">
                     {scheduledDates[activeTrimester] ?? 'No schedule set'}
                   </div>
                 </div>
-                <div>
-                  <label className="form-label" htmlFor="blood-pressure">Blood Pressure</label>
-                  <input
-                    id="blood-pressure"
-                    type="text"
-                    value={form.blood_pressure}
-                    onChange={(e) => setForm((p) => ({ ...p, blood_pressure: e.target.value }))}
-                    placeholder="e.g. 120/80"
-                    className="form-input"
-                  />
-                </div>
+                <Input
+                  label="Blood Pressure"
+                  type="text"
+                  value={form.blood_pressure}
+                  onChange={(e) => setForm((p) => ({ ...p, blood_pressure: e.target.value }))}
+                  placeholder="e.g. 120/80"
+                />
               </div>
 
-              <div className="mb-3">
-                <label className="form-label" htmlFor="weight">Weight (kg)</label>
-                <input
-                  id="weight"
+              <div className="w-full sm:w-1/2">
+                <Input
+                  label="Weight (kg)"
                   type="number"
                   step="0.1"
                   value={form.weight_kg}
                   onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))}
-                  className="form-input"
-                  style={{ maxWidth: '160px' }}
+                  placeholder="Weight in kg"
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="form-label" htmlFor="notes">Notes</label>
-                <textarea
-                  id="notes"
-                  value={form.notes}
-                  onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                  rows={2}
-                  className="form-textarea"
-                />
-              </div>
+              <Textarea
+                label="Clinical Notes"
+                value={form.notes}
+                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Doctor or midwife clinical notes..."
+                className="min-h-[80px]"
+              />
 
-              <div className="form-actions">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn btn-primary"
-                >
-                  <span className="btn-label">{saving ? 'Saving…' : 'Save Checkup'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="btn-secondary"
-                >
+              <div className="flex items-center gap-3 pt-2">
+                <Button type="submit" isLoading={saving}>
+                  Save Checkup
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           )

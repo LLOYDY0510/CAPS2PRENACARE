@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import Button from '@/components/ui/Button';
+import { Input, Textarea, Select } from '@/components/ui/Input';
+import { Activity, Share2, Plus } from 'lucide-react';
 
 type History = { id: string; condition: string; details: string | null; diagnosed_date: string | null; resolved_date: string | null; created_at: string };
 type Referral = { id: string; referred_to: string; reason: string; status: 'pending' | 'in_progress' | 'completed' | 'cancelled'; referred_at: string; follow_up_date: string | null; outcome: string | null; updated_at: string };
@@ -51,18 +54,107 @@ export default function MaternalCarePanel({
   }
 
   return (
-    <div className="card p-6 space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Maternal Health History</h2>
-        {history.length === 0 ? <p className="text-sm text-muted mt-2">No history recorded.</p> : <div className="space-y-2 mt-3">{history.map((item) => <div key={item.id} className="border rounded-lg p-3"><p className="font-medium text-sm">{item.condition}</p>{item.details && <p className="text-sm text-muted mt-1">{item.details}</p>}</div>)}</div>}
-        {canEdit && <div className="grid gap-2 mt-4"><input className="form-input" value={condition} onChange={(e) => setCondition(e.target.value)} placeholder="Condition or prior pregnancy history" /><textarea className="form-textarea" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Details, treatment, or outcome" rows={2} /><button type="button" className="btn-secondary w-fit" onClick={addHistory}>Add health history</button></div>}
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-8">
+      {/* Maternal Health History */}
+      <div className="space-y-4">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Activity size={18} className="text-[var(--brand)]" />
+          <span>Maternal Health History</span>
+        </h2>
+
+        {history.length === 0 ? (
+          <p className="text-xs text-slate-400 font-medium py-2">No prior health history recorded.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {history.map((item) => (
+              <div key={item.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <p className="font-bold text-xs sm:text-sm text-slate-800">{item.condition}</p>
+                {item.details && <p className="text-xs text-slate-600 mt-1 font-medium">{item.details}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {canEdit && (
+          <div className="space-y-3 pt-2 bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+            <Input
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              placeholder="Condition or prior pregnancy history..."
+            />
+            <Textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Details, treatment, or clinical outcome..."
+              className="min-h-[70px]"
+            />
+            <Button variant="secondary" size="sm" onClick={addHistory} leftIcon={<Plus size={16} />}>
+              Add Health History
+            </Button>
+          </div>
+        )}
       </div>
-      <div>
-        <h2 className="text-lg font-semibold">High-Risk Referrals</h2>
-        {referrals.length === 0 ? <p className="text-sm text-muted mt-2">No referrals recorded.</p> : <div className="space-y-2 mt-3">{referrals.map((item) => <div key={item.id} className="border rounded-lg p-3 flex flex-wrap items-center gap-3"><div className="flex-1 min-w-[220px]"><p className="font-medium text-sm">{item.referred_to}</p><p className="text-sm text-muted">{item.reason}</p></div><select className="form-select" value={item.status} disabled={!canEdit} onChange={(e) => updateReferral(item.id, e.target.value as Referral['status'])}><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>)}</div>}
-        {canEdit && <div className="grid gap-2 mt-4"><input className="form-input" value={referredTo} onChange={(e) => setReferredTo(e.target.value)} placeholder="Referral facility or provider" /><textarea className="form-textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for referral" rows={2} /><button type="button" className="btn-secondary w-fit" onClick={addReferral}>Create referral</button></div>}
+
+      {/* High-Risk Referrals */}
+      <div className="space-y-4">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Share2 size={18} className="text-indigo-600" />
+          <span>High-Risk Referrals</span>
+        </h2>
+
+        {referrals.length === 0 ? (
+          <p className="text-xs text-slate-400 font-medium py-2">No high-risk referrals recorded.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {referrals.map((item) => (
+              <div key={item.id} className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex-1 min-w-[220px]">
+                  <p className="font-bold text-xs sm:text-sm text-indigo-950">{item.referred_to}</p>
+                  <p className="text-xs text-slate-600 mt-0.5 font-medium">{item.reason}</p>
+                </div>
+                <div className="w-40">
+                  <Select
+                    value={item.status}
+                    disabled={!canEdit}
+                    onChange={(e) => updateReferral(item.id, e.target.value as Referral['status'])}
+                    options={[
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'in_progress', label: 'In progress' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'cancelled', label: 'Cancelled' },
+                    ]}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {canEdit && (
+          <div className="space-y-3 pt-2 bg-indigo-50/30 p-4 rounded-2xl border border-indigo-100">
+            <Input
+              value={referredTo}
+              onChange={(e) => setReferredTo(e.target.value)}
+              placeholder="Referral facility or healthcare provider..."
+            />
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Reason for clinical referral..."
+              className="min-h-[70px]"
+            />
+            <Button variant="secondary" size="sm" onClick={addReferral} leftIcon={<Plus size={16} />}>
+              Create Referral
+            </Button>
+          </div>
+        )}
       </div>
-      {error && <p className="alert-error" role="alert">{error}</p>}
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

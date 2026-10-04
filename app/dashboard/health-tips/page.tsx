@@ -1,6 +1,8 @@
 import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSection';
 import { requireHealthTipsManagement } from '@/utils/auth/middleware';
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
+import PageHeader from '@/components/ui/PageHeader';
+import { HeartPulse } from 'lucide-react';
 
 type MotherIndicatorRow = {
   pregnant_mother_id: string | null;
@@ -59,13 +61,13 @@ export default async function HealthTipsPage() {
   });
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Health Tips</h1>
-        <p className="text-muted">
-          Automatically generated maternal health advice based on each pregnant mother&apos;s triggered risk indicators.
-        </p>
-      </div>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Health Advice &amp; Tips"
+        subtitle="Maternal health guidance automatically generated from triggered clinical risk indicators"
+        icon={HeartPulse}
+        badge="Clinical Protocol"
+      />
 
       <RiskTipsSection
         mothers={atRiskMothers}

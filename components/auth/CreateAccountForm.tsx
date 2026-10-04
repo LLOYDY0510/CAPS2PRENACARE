@@ -5,16 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import PasswordInput from '@/components/auth/PasswordInput';
+import { Mail, ShieldCheck, Phone, FileText } from 'lucide-react';
 
 type Status = 'idle' | 'creating';
 
-/**
- * Self-service account creation for pregnant mothers.
- *
- * Behaviour is unchanged from the previous page-local implementation: sign up,
- * fall back to a password sign-in when email confirmation is off, then link the
- * new account to a record with POST /api/account/link.
- */
 export default function CreateAccountForm() {
   const router = useRouter();
   const supabase = createClient();
@@ -105,38 +99,42 @@ export default function CreateAccountForm() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h2 className="text-xl font-semibold text-ink">Create account</h2>
-        <p className="text-sm text-muted">Link your prenatal record to sign in.</p>
+    <div className="w-full max-w-md mx-auto space-y-6">
+      <header className="border-b border-slate-100 pb-3">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Create Account</h2>
+        <p className="text-xs text-slate-500 font-medium mt-1">Link your prenatal record to register your mother portal account.</p>
       </header>
 
       {error && (
-        <p className="alert-error" role="alert">
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold" role="alert">
           {error}
-        </p>
+        </div>
       )}
       {notice && (
-        <p className="alert-success" role="status">
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold" role="status">
           {notice}
-        </p>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
           <label className="form-label" htmlFor="create-email">
-            Email
+            Email Address
           </label>
-          <input
-            id="create-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="form-input"
-            required
-          />
+          <div className="relative flex items-center">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              id="create-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+              placeholder="name@example.com"
+              required
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -148,67 +146,78 @@ export default function CreateAccountForm() {
             onChange={setPassword}
             autoComplete="new-password"
             required
+            inputClassName="h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-full border-slate-200 text-xs sm:text-sm"
           />
           <PasswordInput
-            label="Confirm"
+            label="Confirm Password"
             id="create-confirm-password"
             name="confirm-password"
             value={confirmPassword}
             onChange={setConfirmPassword}
             autoComplete="new-password"
             required
+            inputClassName="h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-full border-slate-200 text-xs sm:text-sm"
           />
         </div>
 
-        <div className="border-t border-[var(--border-light)] pt-4 space-y-3">
-          <p className="text-xs text-muted">
-            Enter the details from your registration slip to link your account to your record.
-          </p>
+        <div className="border-t border-slate-100 pt-4 space-y-3.5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-teal-50/70 p-3 rounded-2xl border border-teal-100">
+            <ShieldCheck className="w-4 h-4 text-[var(--brand)] shrink-0" />
+            <span>Enter registration details to link your maternal record.</span>
+          </div>
+
           <div>
             <label className="form-label" htmlFor="create-serial-no">
               Serial Number
             </label>
-            <input
-              id="create-serial-no"
-              name="serialNo"
-              type="text"
-              value={serialNo}
-              onChange={(event) => setSerialNo(event.target.value)}
-              placeholder="e.g. SPM-2026-0001"
-              className="form-input"
-              required
-            />
+            <div className="relative flex items-center">
+              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                id="create-serial-no"
+                name="serialNo"
+                type="text"
+                value={serialNo}
+                onChange={(event) => setSerialNo(event.target.value)}
+                placeholder="e.g. SPM-2026-0001"
+                className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none"
+                required
+              />
+            </div>
           </div>
+
           <div>
             <label className="form-label" htmlFor="create-contact-number">
               Contact Number
             </label>
-            <input
-              id="create-contact-number"
-              name="contactNumber"
-              type="tel"
-              value={contactNumber}
-              onChange={(event) => setContactNumber(event.target.value)}
-              placeholder="The number you gave during registration"
-              className="form-input"
-              required
-            />
+            <div className="relative flex items-center">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                id="create-contact-number"
+                name="contactNumber"
+                type="tel"
+                value={contactNumber}
+                onChange={(event) => setContactNumber(event.target.value)}
+                placeholder="Contact number used during registration"
+                className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none"
+                required
+              />
+            </div>
           </div>
         </div>
 
         <button
           type="submit"
           disabled={busy}
-          className={`btn btn-primary w-full ${busy ? 'is-loading' : ''}`}
+          className="w-full h-11 px-6 rounded-full bg-[var(--brand)] hover:bg-[var(--brand-dark)] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:ring-offset-2 hover:-translate-y-0.5 mt-2"
         >
-          <span className="btn-label">{busy ? 'Creating account…' : 'Create Account'}</span>
+          <span>{busy ? 'Creating account…' : 'Create Account'}</span>
         </button>
       </form>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-xs font-medium text-slate-500 pt-2 border-t border-slate-100">
         Already have an account?{' '}
-        <Link href="/login" className="text-brand font-medium">
-          Log in
+        <Link href="/login" className="font-bold text-[var(--brand)] hover:underline">
+          Sign In
         </Link>
       </p>
     </div>

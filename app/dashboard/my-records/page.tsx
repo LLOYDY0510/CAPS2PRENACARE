@@ -1,7 +1,11 @@
 import InfoRow from '@/components/ui/InfoRow';
 import { AccountNotLinked, RecordNotFound } from '@/components/ui/PatientNotices';
+import RiskBadge from '@/components/ui/RiskBadge';
 import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 import { getPatientContext } from '@/utils/patient';
+import PageHeader from '@/components/ui/PageHeader';
+import { FileText } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,45 +28,46 @@ export default async function MyRecordsPage() {
 
   if (!record) return <RecordNotFound />;
 
-  const fullName = [record.first_name, record.middle_name, record.last_name]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <div className="card p-5">
-        <h1 className="text-xl font-semibold text-ink">{fullName}</h1>
-        <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>
-        <div className="mt-3">
-          {record.risk_level === 'high' ? (
-            <span className="risk-pill risk-pill-high">High Risk</span>
-          ) : (
-            <span className="risk-pill risk-pill-low">Low Risk</span>
-          )}
+    <div className="max-w-2xl mx-auto space-y-6">
+      <PageHeader
+        title="My Records"
+        icon={FileText}
+        subtitle={record.serial_no}
+      />
+
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-800">Risk Assessment</h2>
+          <RiskBadge riskLevel={record.risk_level} />
         </div>
       </div>
 
-      <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Medical Records</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm mb-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6">
+        <h2 className="text-lg font-bold text-slate-800 mb-4">Medical Records</h2>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-6">
           <InfoRow label="Blood Pressure" value={record.blood_pressure} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
           <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
         </div>
 
-        <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">
           Checkup History
         </h3>
         {!checkups || checkups.length === 0 ? (
-          <p className="text-sm text-muted-2">No checkups recorded yet.</p>
+          <EmptyState
+            icon={FileText}
+            title="No checkups recorded yet"
+            description="Your prenatal checkup history will appear here."
+          />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {checkups.map((c) => (
-              <div key={c.id} className="border rounded-lg px-3 py-2">
-                <p className="text-sm font-medium">
+              <div key={c.id} className="border border-slate-200/60 rounded-2xl px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                <p className="text-sm font-semibold text-slate-800">
                   {c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date} — {c.trimester} Trimester
                 </p>
-                <p className="text-xs text-muted mt-0.5">
+                <p className="text-xs text-slate-500 mt-1">
                   Status: {prenatalStatusLabel(getPrenatalVisitStatus({ scheduledFor: c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status }))}
                   {' · '}
                   Actual: {c.actual_checkup_date ?? '—'}
@@ -70,7 +75,7 @@ export default async function MyRecordsPage() {
                   {c.blood_pressure ? `BP: ${c.blood_pressure}` : ''}
                   {c.weight_kg ? ` · Weight: ${c.weight_kg}kg` : ''}
                 </p>
-                {c.notes && <p className="text-xs text-muted mt-1">{c.notes}</p>}
+                {c.notes && <p className="text-xs text-slate-500 mt-2">{c.notes}</p>}
               </div>
             ))}
           </div>

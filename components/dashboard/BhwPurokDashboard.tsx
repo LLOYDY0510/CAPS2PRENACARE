@@ -4,7 +4,8 @@ import { one } from '@/utils/embedded';
 import RiskBadge from '@/components/ui/RiskBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
-import { Users, AlertTriangle, ShieldCheck, HelpCircle, ClipboardCheck, AlertCircle, Calendar, ArrowRight } from 'lucide-react';
+import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
+import { Users, AlertTriangle, ShieldCheck, HelpCircle, ClipboardCheck, AlertCircle, Calendar, ArrowRight, ChevronRight } from 'lucide-react';
 
 export default async function BhwPurokDashboard() {
   const supabase = await createClient();
@@ -25,9 +26,9 @@ export default async function BhwPurokDashboard() {
 
   if (profileError) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="BHW Dashboard" icon={Users} />
-        <div className="alert-error">Failed to load your profile: {profileError.message}</div>
+        <div className="alert-error" role="alert">Failed to load your profile: {profileError.message}</div>
       </div>
     );
   }
@@ -45,9 +46,9 @@ export default async function BhwPurokDashboard() {
 
   if (recordsError) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="BHW Dashboard" icon={Users} />
-        <div className="alert-error">Failed to load mothers: {recordsError.message}</div>
+        <div className="alert-error" role="alert">Failed to load mothers: {recordsError.message}</div>
       </div>
     );
   }
@@ -119,7 +120,7 @@ export default async function BhwPurokDashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 anim-fade-up">
       {/* Page header */}
       <PageHeader
         title={hasPurok ? `BHW Dashboard — Purok ${purok}` : 'BHW Dashboard'}
@@ -129,13 +130,22 @@ export default async function BhwPurokDashboard() {
       />
 
       {!hasPurok && (
-        <div className="p-4 rounded-xl bg-[var(--danger-bg)] border border-[var(--danger-border)] text-[var(--danger)] text-xs font-semibold flex items-center gap-2" role="alert">
-          <AlertCircle size={16} className="shrink-0" />
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-700 text-xs font-semibold flex items-center gap-3 shadow-xs" role="alert">
+          <AlertCircle size={18} className="shrink-0 text-red-600" />
           <span>Your account has no purok assignment yet, so no mother records are visible. Ask your BHW Head or administrator to assign your purok.</span>
         </div>
       )}
 
-      {/* KPI row with StatCard */}
+      {/* Highlighted Banner Card */}
+      <HighlightedBannerCard
+        title={hasPurok ? `Purok ${purok} Maternal Field Care` : 'Barangay Field Operations'}
+        description="Monitor community visits, track scheduled prenatal checkups, and record field observations for mothers in your assigned zone."
+        buttonText="View Pregnant Records"
+        href="/dashboard/pregnant"
+        badgeText={hasPurok ? `Purok ${purok} Active` : 'Field Duty'}
+      />
+
+      {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Mothers"
@@ -187,31 +197,31 @@ export default async function BhwPurokDashboard() {
       {/* Alerts and Notifications Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Missed Checkups Alert */}
-        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-light)]">
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
-              <AlertCircle size={18} className="text-[var(--danger)]" />
-              <h2 className="text-base font-bold text-[var(--ink)]">Missed Checkups</h2>
+              <AlertCircle size={20} className="text-red-500" />
+              <h2 className="text-base font-bold text-slate-900">Missed Checkups</h2>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--danger-bg)] text-[var(--danger)] border border-[var(--danger-border)]">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200/60">
               {missedCheckupsInPurok.length} follow-ups
             </span>
           </div>
 
           {missedError ? (
-            <p className="text-xs text-[var(--danger)]">Failed to load missed checkups: {missedError.message}</p>
+            <p className="text-xs text-red-500">Failed to load missed checkups: {missedError.message}</p>
           ) : missedCheckupsInPurok.length === 0 ? (
-            <p className="text-xs text-[var(--muted-2)] text-center py-6">No missed checkups recorded for your purok</p>
+            <p className="text-xs text-slate-400 font-medium text-center py-6">No missed checkups recorded for your purok</p>
           ) : (
             <div className="space-y-2.5">
               {missedCheckupsInPurok.map(({ checkup, mother }) => (
                 <div
                   key={checkup.id}
-                  className="flex items-center justify-between p-3.5 bg-[var(--danger-bg)]/60 rounded-xl border border-[var(--danger-border)]/80 hover:bg-[var(--danger-bg)] transition-colors"
+                  className="flex items-center justify-between p-3.5 bg-red-50/60 rounded-2xl border border-red-100 hover:bg-red-50 transition-colors"
                 >
                   <div>
-                    <p className="font-bold text-xs text-[var(--ink)]">{mother?.full_name ?? 'Unknown mother'}</p>
-                    <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                    <p className="font-bold text-xs text-slate-900">{mother?.full_name ?? 'Unknown mother'}</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                       Missed Visit: {checkup.scheduled_checkup_date ?? checkup.checkup_date ?? '—'}
                     </p>
                   </div>
@@ -223,91 +233,99 @@ export default async function BhwPurokDashboard() {
         </div>
 
         {/* Upcoming Checkups */}
-        <div className="rounded-[16px] bg-white border border-[var(--border-light)] p-6 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-light)]">
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-[var(--brand)]" />
-              <h2 className="text-base font-bold text-[var(--ink)]">Upcoming Checkups</h2>
+              <Calendar size={20} className="text-[var(--brand)]" />
+              <h2 className="text-base font-bold text-slate-900">Upcoming Checkups</h2>
             </div>
-            <Link href="/dashboard/schedule" className="text-xs font-semibold text-[var(--brand)] hover:underline">
+            <Link href="/dashboard/schedule" className="text-xs font-bold text-[var(--brand)] hover:underline">
               View schedule →
             </Link>
           </div>
 
           {upcomingError ? (
-            <p className="text-xs text-[var(--danger)]">Failed to load upcoming checkups: {upcomingError.message}</p>
+            <p className="text-xs text-red-500">Failed to load upcoming checkups: {upcomingError.message}</p>
           ) : upcomingCheckupsWithMother.length > 0 ? (
             <div className="space-y-2.5">
               {upcomingCheckupsWithMother.map(({ schedule, mother }) => (
                 <div
                   key={`${schedule.id}-${mother?.full_name ?? 'unknown'}`}
-                  className="flex items-center justify-between p-3.5 bg-[var(--success-bg)]/60 rounded-xl border border-[var(--success-border)]/80 hover:bg-[var(--success-bg)] transition-colors"
+                  className="flex items-center justify-between p-3.5 bg-teal-50/50 rounded-2xl border border-teal-100 hover:bg-teal-50 transition-colors"
                 >
                   <div>
-                    <p className="font-bold text-xs text-[var(--ink)]">{mother?.full_name ?? 'Unassigned schedule'}</p>
-                    <p className="text-[11px] text-[var(--muted)] mt-0.5">Scheduled Date: {schedule.visit_date}</p>
+                    <p className="font-bold text-xs text-slate-900">{mother?.full_name ?? 'Unassigned schedule'}</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Scheduled Date: {schedule.visit_date}</p>
                   </div>
                   <RiskBadge riskLevel={mother?.risk_level} />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-[var(--muted-2)] text-center py-6">No upcoming checkups scheduled</p>
+            <p className="text-xs text-slate-400 font-medium text-center py-6">No upcoming checkups scheduled</p>
           )}
         </div>
       </div>
 
       {/* Recent Registrations Table */}
-      <div className="rounded-[16px] bg-white border border-[var(--border-light)] shadow-card overflow-hidden">
-        <div className="p-5 border-b border-[var(--border-light)] flex items-center justify-between">
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold text-[var(--ink)]">
+            <h2 className="text-lg font-bold text-slate-900">
               {hasPurok ? `Registrations in Purok ${purok}` : 'Recent Registrations'}
             </h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5">Maternal records assigned to your field zone</p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Maternal records assigned to your field zone</p>
           </div>
           <Link
             href="/dashboard/pregnant"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors self-start sm:self-auto"
           >
             <span>View all</span>
             <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr>
-                <th>Serial No.</th>
-                <th>Name</th>
-                <th>Age</th>
-                <th>LMP</th>
-                <th>G-P</th>
-                <th>Risk</th>
-                <th>Date Registered</th>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Serial No.</th>
+                <th className="py-3.5 px-4">Name</th>
+                <th className="py-3.5 px-4">Age</th>
+                <th className="py-3.5 px-4">LMP</th>
+                <th className="py-3.5 px-4">G-P</th>
+                <th className="py-3.5 px-4">Risk</th>
+                <th className="py-3.5 px-4">Date Registered</th>
+                <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {records && records.length > 0 ? (
                 records.slice(0, 5).map((r) => (
-                  <tr key={r.id} className="hover:bg-[var(--surface-alt)] transition-colors">
-                    <td data-label="Serial No." className="font-mono text-xs text-[var(--muted)]">{r.serial_no ?? '—'}</td>
-                    <td data-label="Name" className="font-semibold text-[var(--ink)]">
-                      {r.full_name ?? '—'}
-                    </td>
-                    <td data-label="Age">{r.age ?? '—'}</td>
-                    <td data-label="LMP">{r.lmp ?? '—'}</td>
-                    <td data-label="G-P">{r.gravida_para ?? '—'}</td>
-                    <td data-label="Risk">
+                  <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-800">{r.full_name ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.age ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
+                    <td className="py-3.5 px-4">
                       <RiskBadge riskLevel={r.risk_level} />
                     </td>
-                    <td data-label="Date Registered" className="text-xs text-[var(--muted)]">{r.date_registered ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">{r.date_registered ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Link
+                        href={`/dashboard/pregnant/${r.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[var(--brand)] hover:text-[var(--brand-dark)] transition-colors"
+                      >
+                        View
+                        <ChevronRight size={14} />
+                      </Link>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-muted-2">
+                  <td colSpan={8} className="text-center py-10 text-slate-400 font-medium">
                     {hasPurok
                       ? `No mothers registered in Purok ${purok}`
                       : 'No mothers visible until a purok is assigned to your account.'}

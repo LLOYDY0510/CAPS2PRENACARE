@@ -59,18 +59,19 @@ export default function AuthIllustration() {
           </div>
 
           {/* Center Custom Image Illustration: prenatrack_logo_for_login_page.png */}
-          <div className="relative w-48 h-48 rounded-3xl bg-white/90 backdrop-blur-md p-4 shadow-lg border border-white/90 flex items-center justify-center overflow-hidden">
+          <div className="relative w-48 h-48 rounded-full bg-white/90 backdrop-blur-md p-4 shadow-lg border border-white/90 flex items-center justify-center overflow-hidden">
             {/* Animated green ring halo around illustration badge */}
-            <div 
-              aria-hidden="true" 
-              className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-[var(--brand)] via-[var(--brand-subtle)] to-[var(--brand-light)] opacity-30 blur-md animate-green-pulse pointer-events-none" 
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 rounded-full bg-gradient-to-tr from-[var(--brand)] via-[var(--brand-subtle)] to-[var(--brand-light)] opacity-30 blur-md animate-green-pulse pointer-events-none"
             />
 
             <div className="relative w-full h-full">
               <Image
                 src="/prenatrack_logo_for_login_page.png"
                 alt="Prenatrack Maternal Health Illustration"
-                fill
+                width={192}
+                height={192}
                 priority
                 className="object-contain p-1 drop-shadow-sm"
               />
