@@ -13,6 +13,19 @@ export interface PaginationProps {
   className?: string;
 }
 
+function getPageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  }
+  if (currentPage >= totalPages - 3) {
+    return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
+}
+
 export default function Pagination({
   currentPage,
   totalPages,
@@ -21,13 +34,17 @@ export default function Pagination({
   itemsPerPage,
   className = '',
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && (!totalItems || totalItems <= (itemsPerPage ?? 10))) {
+    return null;
+  }
+
+  const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
     <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 ${className}`}>
       {totalItems !== undefined && itemsPerPage !== undefined ? (
         <p className="text-xs font-semibold text-slate-500">
-          Showing <span className="text-slate-800 font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span> to{' '}
+          Showing <span className="text-slate-800 font-bold">{totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to{' '}
           <span className="text-slate-800 font-bold">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
           <span className="text-slate-800 font-bold">{totalItems}</span> results
         </p>
@@ -37,22 +54,52 @@ export default function Pagination({
         </p>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
         <Button
           variant="outline"
           size="sm"
           disabled={currentPage <= 1}
-          onClick={() => onPageChange(currentPage - 1)}
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           leftIcon={<ChevronLeft size={16} />}
+          className="rounded-full px-2.5 sm:px-3 text-xs"
         >
-          Previous
+          Prev
         </Button>
+
+        {pageNumbers.map((page, idx) => {
+          if (page === 'ellipsis') {
+            return (
+              <span key={`ellipsis-${idx}`} className="px-2 py-1 text-xs text-slate-400 font-bold">
+                …
+              </span>
+            );
+          }
+
+          const isActive = page === currentPage;
+          return (
+            <button
+              key={page}
+              type="button"
+              onClick={() => onPageChange(page)}
+              aria-current={isActive ? 'page' : undefined}
+              className={`min-w-[32px] h-8 px-2 rounded-full text-xs font-bold transition-all ${
+                isActive
+                  ? 'bg-[var(--brand)] text-white shadow-sm shadow-teal-700/20 scale-105'
+                  : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+              }`}
+            >
+              {page}
+            </button>
+          );
+        })}
+
         <Button
           variant="outline"
           size="sm"
           disabled={currentPage >= totalPages}
-          onClick={() => onPageChange(currentPage + 1)}
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           rightIcon={<ChevronRight size={16} />}
+          className="rounded-full px-2.5 sm:px-3 text-xs"
         >
           Next
         </Button>
