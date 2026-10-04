@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import {
   Activity,
   BarChart3,
@@ -25,11 +26,13 @@ import {
   UserCog,
   Users,
   X,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import LogoutButton from '@/components/layout/LogoutButton';
 import NotificationBell, { type NotificationBellItem } from '@/components/layout/NotificationBell';
+import RiskBadge from '@/components/ui/RiskBadge';
 
 export type MenuItem = { label: string; href: string; icon?: string };
 
@@ -62,6 +65,21 @@ const ROLE_LABELS: Record<string, { title: string; subtitle: string; badge: stri
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 
+type SearchPatientResult = {
+  id: string;
+  serial_no: string | null;
+  full_name: string | null;
+  purok: string | null;
+  risk_level: string | null;
+};
+
+type SearchScheduleResult = {
+  id: string;
+  visit_date: string;
+  trimester: string | null;
+  status: string;
+};
+
 export default function Sidebar({
   role,
   menuItems,
@@ -77,15 +95,22 @@ export default function Sidebar({
   notifications: NotificationBellItem[];
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
+  const supabase = createClient();
   const asideRef = useRef<HTMLElement | null>(null);
   const burgerRef = useRef<HTMLButtonElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [openAt, setOpenAt] = useState<string | null>(null);
   const mobileOpen = openAt === pathname;
   const [isDesktop, setIsDesktop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [patientResults, setPatientResults] = useState<SearchPatientResult[]>([]);
+  const [scheduleResults, setScheduleResults] = useState<SearchScheduleResult[]>([]);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -95,6 +120,71 @@ export default function Sidebar({
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
+
+  // Debounced search query
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setPatientResults([]);
+      setScheduleResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const [mothersRes, schedulesRes] = await Promise.all([
+          supabase
+            .from('pregnant_mothers')
+            .select('id, serial_no, full_name, purok, risk_level')
+            .or(`full_name.ilike.%${q}%,serial_no.ilike.%${q}%,purok.ilike.%${q}%`)
+            .limit(5),
+          supabase
+            .from('prenatal_schedules')
+            .select('id, visit_date, trimester, status')
+            .or(`visit_date.ilike.%${q}%,trimester.ilike.%${q}%,notes.ilike.%${q}%`)
+            .limit(4),
+        ]);
+
+        setPatientResults((mothersRes.data as SearchPatientResult[]) ?? []);
+        setScheduleResults((schedulesRes.data as SearchScheduleResult[]) ?? []);
+      } catch (err) {
+        console.error('Search error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, supabase]);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    setSearchOpen(false);
+    if (role === 'pregnant_mother') {
+      router.push('/dashboard/my-schedule');
+    } else {
+      router.push(`/dashboard/pregnant?q=${encodeURIComponent(q)}`);
+    }
+  }
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -290,16 +380,132 @@ export default function Sidebar({
               </div>
             </div>
 
-            {/* Center: Wide Pill Search Bar */}
-            <div className="hidden md:flex items-center relative max-w-md w-full mx-4">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search records, schedules, patients..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-11 pr-4 bg-white/90 hover:bg-white focus:bg-white text-xs sm:text-sm font-medium rounded-full border border-slate-200/80 focus:border-[var(--brand)] text-slate-800 placeholder:text-slate-400 shadow-xs transition-all outline-none"
-              />
+            {/* Center: Wide Pill Search Bar with Interactive Dropdown */}
+            <div ref={searchContainerRef} className="hidden md:flex items-center relative max-w-md w-full mx-4">
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search records, schedules, patients..."
+                  value={searchQuery}
+                  onFocus={() => setSearchOpen(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchOpen(true);
+                  }}
+                  className="w-full h-11 pl-11 pr-10 bg-white/90 hover:bg-white focus:bg-white text-xs sm:text-sm font-medium rounded-full border border-slate-200/80 focus:border-[var(--brand)] text-slate-800 placeholder:text-slate-400 shadow-xs transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/15"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setPatientResults([]);
+                      setScheduleResults([]);
+                    }}
+                    aria-label="Clear search"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </form>
+
+              {/* Live Search Results Popover */}
+              {searchOpen && searchQuery.trim().length > 0 && (
+                <div className="absolute top-13 left-0 right-0 z-50 bg-white border border-slate-100 rounded-3xl shadow-2xl p-3 max-h-[380px] overflow-y-auto anim-scale-in space-y-3">
+                  {isSearching && (
+                    <div className="flex items-center justify-center gap-2 py-4 text-xs font-semibold text-slate-400">
+                      <Loader2 size={16} className="animate-spin text-[var(--brand)]" />
+                      <span>Searching database…</span>
+                    </div>
+                  )}
+
+                  {!isSearching && patientResults.length === 0 && scheduleResults.length === 0 && (
+                    <div className="py-6 text-center">
+                      <p className="text-xs font-bold text-slate-700">No matches found</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Try searching by mother name, serial number, or purok</p>
+                    </div>
+                  )}
+
+                  {/* Patient Matches */}
+                  {!isSearching && patientResults.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Pregnant Mothers</p>
+                      {patientResults.map((patient) => (
+                        <Link
+                          key={patient.id}
+                          href={role === 'pregnant_mother' ? '/dashboard/my-records' : `/dashboard/pregnant/${patient.id}`}
+                          onClick={() => setSearchOpen(false)}
+                          className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-teal-50 text-[var(--brand)] flex items-center justify-center shrink-0">
+                              <Baby size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate group-hover:text-[var(--brand)] transition-colors">
+                                {patient.full_name || 'Unnamed Mother'}
+                              </p>
+                              <p className="text-[11px] text-slate-400 font-mono">
+                                {patient.serial_no ?? 'No serial'} {patient.purok ? `· Zone ${patient.purok}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          {patient.risk_level && (
+                            <div className="shrink-0 ml-2">
+                              <RiskBadge riskLevel={patient.risk_level} />
+                            </div>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Schedule Matches */}
+                  {!isSearching && scheduleResults.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-1">Prenatal Schedules</p>
+                      {scheduleResults.map((schedule) => (
+                        <Link
+                          key={schedule.id}
+                          href={role === 'pregnant_mother' ? '/dashboard/my-schedule' : '/dashboard/schedule'}
+                          onClick={() => setSearchOpen(false)}
+                          className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                              <CalendarDays size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate group-hover:text-[var(--brand)] transition-colors">
+                                {schedule.visit_date}
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {schedule.trimester ? `${schedule.trimester} Trimester` : 'Prenatal Visit'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                            {schedule.status}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer hint */}
+                  {!isSearching && (patientResults.length > 0 || scheduleResults.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={handleSearchSubmit}
+                      className="w-full text-center py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-bold text-[var(--brand)] transition-colors"
+                    >
+                      Press Enter or click to view all matching records →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right: Notifications & User Profile Dropdown */}
