@@ -1,6 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Button from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import SearchBar from '@/components/ui/SearchBar';
+import { CalendarDays, Users, Check, X, Search, RotateCcw } from 'lucide-react';
 
 export type ScheduleMother = {
   id: string;
@@ -38,6 +42,7 @@ export default function ScheduleEditor({
   const [notes, setNotes] = useState(initial.notes);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(initial.motherIds));
   const [purokFilter, setPurokFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
 
   const puroks = useMemo(() => {
@@ -45,10 +50,22 @@ export default function ScheduleEditor({
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [mothers]);
 
-  const visible = useMemo(
-    () => (purokFilter === 'all' ? mothers : mothers.filter((m) => (m.purok ?? 'Unassigned') === purokFilter)),
-    [mothers, purokFilter],
-  );
+  const visible = useMemo(() => {
+    return mothers.filter((m) => {
+      if (purokFilter !== 'all' && (m.purok ?? 'Unassigned') !== purokFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const name = (m.full_name ?? '').toLowerCase();
+        const contact = (m.contact_number ?? '').toLowerCase();
+        if (!name.includes(q) && !contact.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [mothers, purokFilter, searchQuery]);
+
+  const selectedMothersList = useMemo(() => {
+    return mothers.filter((m) => selected.has(m.id));
+  }, [mothers, selected]);
 
   const withoutContact = visible.filter((m) => !m.contact_number).length;
 
@@ -62,15 +79,24 @@ export default function ScheduleEditor({
   }
 
   function toggleAll() {
-    setSelected((prev) =>
-      prev.size === visible.length ? new Set() : new Set(visible.map((m) => m.id)),
-    );
+    setSelected((prev) => {
+      const allVisibleSelected = visible.every((m) => prev.has(m.id));
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visible.forEach((m) => next.delete(m.id));
+      } else {
+        visible.forEach((m) => next.add(m.id));
+      }
+      return next;
+    });
   }
 
-  function selectPurok(purok: string) {
-    setPurokFilter(purok);
-    const ids = mothers.filter((m) => (m.purok ?? 'Unassigned') === purok).map((m) => m.id);
-    setSelected((prev) => new Set([...prev, ...ids]));
+  function removeSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -104,144 +130,171 @@ export default function ScheduleEditor({
       motherIds: Array.from(selected),
     });
     if (!ok) {
-      // Keep the form and its values so the manager can correct and retry.
       return;
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
       {error && (
-        <p className="alert-error" role="alert">
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
           {error}
-        </p>
+        </div>
       )}
 
-      <div className="card p-6">
-        <h2 className="text-sm font-semibold text-ink mb-4">Visit details</h2>
+      {/* Visit details card */}
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-4">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <CalendarDays size={18} className="text-[var(--brand)]" />
+          <span>Visit Schedule Details</span>
+        </h2>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="form-label" htmlFor="schedule-trimester">
-              Trimester
-            </label>
-            <select
-              id="schedule-trimester"
-              value={trimester}
-              onChange={(e) => setTrimester(e.target.value as Trimester)}
-              className="form-select"
-            >
-              <option value="1st">1st Trimester</option>
-              <option value="2nd">2nd Trimester</option>
-              <option value="3rd">3rd Trimester</option>
-            </select>
-          </div>
-          <div>
-            <label className="form-label" htmlFor="schedule-visit-date">
-              Visit date
-            </label>
-            <input
-              id="schedule-visit-date"
-              type="date"
-              value={visitDate}
-              onChange={(e) => setVisitDate(e.target.value)}
-              className="form-input"
-              required
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="form-label" htmlFor="schedule-notes">
-            Notes for the team <span className="font-normal text-muted-2">(optional)</span>
-          </label>
-          <input
-            id="schedule-notes"
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Bring BP measurement and previous lab results"
-            className="form-input"
+          <Select
+            label="Trimester"
+            value={trimester}
+            onChange={(e) => setTrimester(e.target.value as Trimester)}
+            options={[
+              { value: '1st', label: '1st Trimester' },
+              { value: '2nd', label: '2nd Trimester' },
+              { value: '3rd', label: '3rd Trimester' },
+            ]}
+          />
+          <Input
+            label="Visit Date"
+            type="date"
+            value={visitDate}
+            onChange={(e) => setVisitDate(e.target.value)}
+            required
           />
         </div>
+
+        <Input
+          label="Notes for the team (Optional)"
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="e.g. Bring BP measurement equipment and laboratory receipts"
+        />
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="section-header !py-3 flex-wrap gap-2">
-          <p className="text-sm font-medium">
-            Pregnant mothers ({selected.size} of {mothers.length} selected)
-          </p>
+      {/* Mother Picker Card */}
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-[var(--brand)]" />
+            <h2 className="text-base font-bold text-slate-900">
+              Select Pregnant Mothers ({selected.size} selected)
+            </h2>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             {puroks.length > 0 && (
-              <select
-                value={purokFilter}
-                onChange={(e) => {
-                  setPurokFilter(e.target.value);
-                  if (e.target.value !== 'all') selectPurok(e.target.value);
-                }}
-                className="form-select"
-                style={{ width: 'auto', minWidth: '140px' }}
-                aria-label="Filter by purok"
-              >
-                <option value="all">All puroks</option>
-                {puroks.map((p) => (
-                  <option key={p} value={p}>
-                    Purok {p}
-                  </option>
-                ))}
-              </select>
+              <div className="w-36">
+                <Select
+                  value={purokFilter}
+                  onChange={(e) => setPurokFilter(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All Puroks' },
+                    ...puroks.map((p) => ({ value: p, label: `Zone ${p}` })),
+                  ]}
+                />
+              </div>
             )}
-            <button type="button" onClick={toggleAll} className="btn-ghost">
-              {selected.size === visible.length && visible.length > 0 ? 'Deselect all' : 'Select all'}
-            </button>
+            <Button type="button" variant="outline" size="sm" onClick={toggleAll}>
+              {visible.every((m) => selected.has(m.id)) && visible.length > 0 ? 'Deselect All' : 'Select All'}
+            </Button>
           </div>
         </div>
 
-        <div className="max-h-[420px] overflow-y-auto">
+        {/* Search Bar */}
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search mother by name or contact number..."
+        />
+
+        {/* Selected Chips Bar */}
+        {selectedMothersList.length > 0 && (
+          <div className="space-y-2 bg-teal-50/50 p-4 rounded-2xl border border-teal-100">
+            <p className="text-xs font-bold text-[var(--brand-dark)] uppercase tracking-wider">
+              Selected Recipients ({selectedMothersList.length})
+            </p>
+            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto pt-1">
+              {selectedMothersList.map((m) => (
+                <span
+                  key={m.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white text-[var(--brand-dark)] border border-teal-200 shadow-xs"
+                >
+                  <span>{m.full_name ?? 'Unnamed'}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeSelected(m.id)}
+                    className="hover:text-red-600 transition-colors p-0.5 rounded-full"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mothers Checklist */}
+        <div className="max-h-[360px] overflow-y-auto rounded-2xl border border-slate-100 divide-y divide-slate-100">
           {visible.length === 0 && (
-            <p className="px-4 py-8 text-center text-muted-2 text-sm">
-              No pregnant mothers found for this purok.
+            <p className="p-8 text-center text-slate-400 font-medium text-xs">
+              No pregnant mothers match your search or filter.
             </p>
           )}
-          {visible.map((mother) => (
-            <label
-              key={mother.id}
-              className="flex items-center gap-3 px-4 py-3 border-b border-[#EEF1F4] last:border-0 hover:bg-[#F8FAFB] cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(mother.id)}
-                onChange={() => toggle(mother.id)}
-                className="rounded"
-              />
-              <div className="flex-1 text-sm">
-                <p className="font-medium">{mother.full_name ?? 'Unnamed mother'}</p>
-                <p className="text-muted text-xs">
-                  Purok {mother.purok ?? '—'} ·{' '}
-                  {mother.contact_number ? (
-                    mother.contact_number
-                  ) : (
-                    <span className="text-danger">no contact number — cannot receive SMS</span>
-                  )}
-                </p>
-              </div>
-            </label>
-          ))}
+          {visible.map((mother) => {
+            const isChecked = selected.has(mother.id);
+            return (
+              <label
+                key={mother.id}
+                className={`flex items-center gap-3.5 px-4 py-3.5 transition-colors cursor-pointer ${
+                  isChecked ? 'bg-teal-50/40' : 'hover:bg-slate-50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggle(mother.id)}
+                  className="rounded-md border-slate-300 text-[var(--brand)] focus:ring-[var(--brand)] w-4 h-4"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                    {mother.full_name ?? 'Unnamed mother'}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Zone {mother.purok ?? '—'} ·{' '}
+                    {mother.contact_number ? (
+                      mother.contact_number
+                    ) : (
+                      <span className="text-red-500 font-semibold">no contact number — no SMS</span>
+                    )}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
         </div>
 
         {withoutContact > 0 && (
-          <p className="px-4 py-2 text-xs text-muted bg-[#F8FAFB] border-t border-[#EEF1F4]">
-            {withoutContact} of the mothers shown have no contact number. They can still be
-            scheduled, but no SMS will reach them.
+          <p className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-100">
+            {withoutContact} of the mothers shown have no contact number. They can still be scheduled, but SMS reminders won&apos;t reach them.
           </p>
         )}
       </div>
 
-      <div className="flex gap-3">
-        <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button type="button" onClick={onCancel} className="btn-secondary" disabled={busy}>
+      {/* Form Action Buttons */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           Cancel
-        </button>
+        </Button>
+        <Button type="submit" isLoading={busy}>
+          {submitLabel}
+        </Button>
       </div>
     </form>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -12,27 +13,12 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      {/* Search icon */}
-      <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        style={{
-          position: 'absolute',
-          left: '0.5625rem',
-          width: '14px',
-          height: '14px',
-          color: 'var(--muted-2)',
-          pointerEvents: 'none',
-          flexShrink: 0,
-        }}
+    <div className="relative inline-flex items-center">
+      <Search
+        size={16}
+        className="absolute left-3 text-slate-400 pointer-events-none"
         aria-hidden
-      >
-        <circle cx="6.5" cy="6.5" r="5" />
-        <path d="M10.5 10.5l3.5 3.5" strokeLinecap="round" />
-      </svg>
+      />
 
       <input
         ref={inputRef}
@@ -40,39 +26,18 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="form-input"
-        style={{
-          paddingLeft: '2rem',
-          paddingRight: value ? '2rem' : undefined,
-          minWidth: '220px',
-        }}
+        className="form-input pl-10 pr-10 min-w-[220px]"
         aria-label={placeholder}
       />
 
-      {/* Clear button */}
       {value && (
         <button
           type="button"
           onClick={() => { onChange(''); inputRef.current?.focus(); }}
           aria-label="Clear search"
-          style={{
-            position: 'absolute',
-            right: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '18px',
-            height: '18px',
-            borderRadius: '50%',
-            background: 'var(--border)',
-            color: 'var(--muted)',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '10px',
-            lineHeight: 1,
-          }}
+          className="absolute right-2.5 flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors"
         >
-          ✕
+          <X size={12} />
         </button>
       )}
     </div>

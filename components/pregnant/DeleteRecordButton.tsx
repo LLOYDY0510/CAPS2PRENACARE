@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { Trash2, Loader2 } from 'lucide-react';
 
 export default function DeleteRecordButton({ id }: { id: string }) {
   const router = useRouter();
@@ -25,10 +26,19 @@ export default function DeleteRecordButton({ id }: { id: string }) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="btn-danger"
-      style={{ padding: '0.25rem 0.625rem', fontSize: '0.8125rem' }}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-red-500 hover:bg-red-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
     >
-      {deleting ? 'Deleting...' : 'Delete'}
+      {deleting ? (
+        <>
+          <Loader2 size={12} className="animate-spin" />
+          Deleting…
+        </>
+      ) : (
+        <>
+          <Trash2 size={12} />
+          Delete
+        </>
+      )}
     </button>
   );
 }

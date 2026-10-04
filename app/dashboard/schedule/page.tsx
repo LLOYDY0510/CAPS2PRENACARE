@@ -1,7 +1,13 @@
 import ScheduleSetter, { type ScheduleRow } from '@/components/schedule/ScheduleSetter';
 import { requireRoles } from '@/utils/auth/roles';
 import { canManageSchedules } from '@/utils/auth/permissions';
-import { getSmsStatusSummary, listMothersForScheduling, listSchedules } from '@/utils/schedules/service';
+import {
+  getSmsStatusSummary,
+  tryListMothersForScheduling,
+  tryListSchedules,
+} from '@/utils/schedules/service';
+import PageHeader from '@/components/ui/PageHeader';
+import { CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,21 +16,44 @@ export default async function PrenatalSchedulePage() {
 
   const canEditSchedule = canManageSchedules(role);
 
-  // The schedule service uses the service-role client: the reminder receipts a
-  // manager needs to see are written by the server-side sender, and a schedule
-  // the manager cannot see is worse than a schedule they can.
-  const schedules = (await listSchedules()) as ScheduleRow[];
-  const mothers = await listMothersForScheduling();
-  const smsStatus = await getSmsStatusSummary();
+  const [schedulesResult, mothersResult] = await Promise.all([
+    tryListSchedules(),
+    tryListMothersForScheduling(),
+  ]);
+
+  const loadError = !schedulesResult.ok
+    ? schedulesResult.error
+    : !mothersResult.ok
+      ? mothersResult.error
+      : null;
+  const schedules = (schedulesResult.ok ? schedulesResult.data : []) as ScheduleRow[];
+  const mothers = mothersResult.ok ? mothersResult.data : [];
+
+  const smsStatus = await getSmsStatusSummary().catch(() => ({
+    account: { creditBalance: null, accountName: null, status: null },
+    accountError: 'The SMS provider status could not be read right now.',
+    dueSchedules: 0,
+  }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-1">Prenatal Schedule</h1>
-      <p className="text-muted mb-6">
-        {canEditSchedule
-          ? 'Create and change prenatal visits, and send the reminder SMS immediately or let it go out automatically the day before.'
-          : 'View the prenatal schedules for your purok.'}
-      </p>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="Prenatal Schedule"
+        subtitle={
+          canEditSchedule
+            ? 'Create and manage prenatal visits, dispatch instant SMS reminders, or rely on automated dispatch'
+            : 'View scheduled prenatal visits for your assigned purok'
+        }
+        icon={CalendarDays}
+        badge="Appointment Management"
+      />
+
+      {loadError && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+          <p className="font-bold">The prenatal schedules could not be loaded.</p>
+          <p className="text-xs mt-0.5">{loadError}</p>
+        </div>
+      )}
 
       <ScheduleSetter
         schedules={schedules}

@@ -4,8 +4,16 @@ import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
 import { canAccessPurok } from '@/utils/auth/permissions';
+import PageHeader from '@/components/ui/PageHeader';
+import { Baby, Plus } from 'lucide-react';
+import Button from '@/components/ui/Button';
 
-export default async function PregnantRecordsPage() {
+export default async function PregnantRecordsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string; search?: string }>;
+}) {
+  const { q, search } = (await searchParams) ?? {};
   const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
@@ -56,24 +64,23 @@ export default async function PregnantRecordsPage() {
   }));
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Pregnant Records</h1>
-          <p className="page-date">
-            {records?.length ?? 0} registered pregnant mother
-            {records?.length === 1 ? '' : 's'}
-          </p>
-        </div>
+    <div className="space-y-6 anim-fade-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader
+          title="Pregnant Records"
+          subtitle={`${records?.length ?? 0} registered pregnant mother${records?.length === 1 ? '' : 's'}`}
+          icon={Baby}
+          badge="Maternal Registry"
+        />
         {canEdit && (
-          <Link href="/dashboard/pregnant/new" className="btn-primary">
-            + Register Pregnant Mother
+          <Link href="/dashboard/pregnant/new">
+            <Button leftIcon={<Plus size={18} />}>Register Pregnant Mother</Button>
           </Link>
         )}
       </div>
 
       {error && (
-        <div className="alert-error mb-4">
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
           Failed to load records: {error.message}
         </div>
       )}
@@ -81,6 +88,7 @@ export default async function PregnantRecordsPage() {
       <PregnantRecordsTable
         records={recordsWithCheckupCount}
         canEdit={canEdit}
+        initialSearch={q || search || ''}
       />
     </div>
   );

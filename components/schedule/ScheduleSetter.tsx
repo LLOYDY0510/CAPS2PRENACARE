@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import ScheduleEditor, { type ScheduleEditorValue, type ScheduleMother, type Trimester } from './ScheduleEditor';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { relativeDayLabel, weekdayLabel } from '@/utils/sms/clock';
+import Button from '@/components/ui/Button';
+import { Alert } from '@/components/ui/ToastAlert';
+import { CalendarDays, Send, Plus, Trash2, Edit, AlertCircle, CheckCircle2, Phone, Clock } from 'lucide-react';
 
 export type ScheduleRow = {
   id: string;
@@ -37,13 +40,6 @@ type SmsStatus = {
   dueSchedules: number;
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  scheduled: 'badge-neutral',
-  completed: 'badge-low',
-  missed: 'badge-high',
-  cancelled: 'badge-neutral',
-};
-
 export default function ScheduleSetter({
   schedules,
   mothers,
@@ -69,7 +65,6 @@ export default function ScheduleSetter({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, SendOutcome[]>>({});
 
-  // A BHW (purok) sees only her own purok.
   const scopedMothers =
     role === 'bhw_purok' && userPurok
       ? mothers.filter((m) => m.purok === userPurok)
@@ -208,56 +203,57 @@ export default function ScheduleSetter({
   return (
     <div className="space-y-6">
       {error && (
-        <p className="alert-error" role="alert">
+        <Alert type="error" onClose={() => setError('')}>
           {error}
-        </p>
+        </Alert>
       )}
       {notice && !error && (
-        <p className="alert-success" role="status">
+        <Alert type="success" onClose={() => setNotice('')}>
           {notice}
-        </p>
+        </Alert>
       )}
 
-      {/* Live provider status: proves the SMS service and credits are real. */}
+      {/* Live provider status banner */}
       {smsStatus && (
-        <div className="card p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <div>
-            <p className="text-xs text-muted">Semaphore account</p>
-            <p className="text-sm font-semibold text-ink">
-              {smsStatus.account.accountName ?? 'Not connected'}
-              {smsStatus.account.status ? ` · ${smsStatus.account.status}` : ''}
-            </p>
-          </div>          <div>
-            <p className="text-xs text-muted">Credits available</p>
-            <p
-              className="text-sm font-semibold"
-              style={{
-                color:
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SMS Provider</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">
+                {smsStatus.account.accountName ?? 'Not connected'}
+                {smsStatus.account.status ? ` (${smsStatus.account.status})` : ''}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Credits Available</p>
+              <p
+                className={`text-xs sm:text-sm font-extrabold mt-0.5 ${
                   smsStatus.account.creditBalance == null
-                    ? 'var(--muted-2)'
+                    ? 'text-slate-400'
                     : smsStatus.account.creditBalance > 0
-                      ? 'var(--success)'
-                      : 'var(--danger)',
-              }}
-            >
-              {smsStatus.account.creditBalance ?? '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Reminders still due</p>
-            <p className="text-sm font-semibold text-ink">{smsStatus.dueSchedules}</p>
+                      ? 'text-emerald-600'
+                      : 'text-red-600'
+                }`}
+              >
+                {smsStatus.account.creditBalance ?? '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reminders Due</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">{smsStatus.dueSchedules}</p>
+            </div>
           </div>
           {smsStatus.accountError && (
-            <p className="text-xs text-danger">{smsStatus.accountError}</p>
+            <p className="text-xs font-semibold text-red-500">{smsStatus.accountError}</p>
           )}
         </div>
       )}
 
       {canEdit && mode === 'idle' && (
-        <div className="flex gap-3">
-          <button type="button" className="btn-primary" onClick={() => setMode('create')}>
-            Set a new prenatal schedule
-          </button>
+        <div>
+          <Button onClick={() => setMode('create')} leftIcon={<Plus size={18} />}>
+            Set New Prenatal Schedule
+          </Button>
         </div>
       )}
 
@@ -265,7 +261,7 @@ export default function ScheduleSetter({
         <ScheduleEditor
           mothers={scopedMothers}
           initial={{ visitDate: '', trimester: '1st', notes: '', motherIds: [] }}
-          submitLabel="Create schedule"
+          submitLabel="Create Schedule"
           busy={busy}
           onSubmit={handleCreate}
           onCancel={() => setMode('idle')}
@@ -284,7 +280,7 @@ export default function ScheduleSetter({
               motherIds: (target?.recipients ?? []).map((r) => r.pregnant_mother_id),
             };
           })()}
-          submitLabel="Save changes"
+          submitLabel="Save Changes"
           busy={busy}
           onSubmit={(value) => handleUpdate(mode.edit, value)}
           onCancel={() => setMode('idle')}
@@ -292,22 +288,23 @@ export default function ScheduleSetter({
       )}
 
       {!canEdit && (
-        <div className="card p-6 bg-blue-50 border border-blue-100">
-          <h2 className="text-sm font-semibold text-gray-700 mb-2">View-only access</h2>
-          <p className="text-sm text-muted">
-            You can see the schedules for your purok, but only the BHW Manager, nurse, or admin
-            can create, change, or send reminders.
+        <div className="bg-blue-50/80 rounded-2xl border border-blue-200/80 p-5 text-blue-900 text-xs sm:text-sm font-medium">
+          <p className="font-bold text-blue-950 mb-1">View-only schedule access</p>
+          <p>
+            You can see the schedules for your assigned purok, but only the BHW Manager, nurse, or admin can create, update, or dispatch SMS reminders.
           </p>
         </div>
       )}
 
-      <section>
-        <h2 className="text-sm font-semibold text-ink mb-3">
-          Upcoming schedules ({upcoming.length})
+      {/* Upcoming Schedules */}
+      <section className="space-y-4">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+          <CalendarDays size={18} className="text-[var(--brand)]" />
+          <span>Upcoming Schedules ({upcoming.length})</span>
         </h2>
         {upcoming.length === 0 ? (
-          <div className="card p-6">
-            <p className="text-sm text-muted-2">No upcoming prenatal schedule.</p>
+          <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 text-center">
+            <p className="text-xs text-slate-400 font-medium">No upcoming prenatal schedules set.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -336,10 +333,14 @@ export default function ScheduleSetter({
         )}
       </section>
 
+      {/* Past Schedules */}
       {history.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-ink mb-3">Past schedules ({history.length})</h2>
-          <div className="space-y-3">
+        <section className="space-y-4 pt-4">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Clock size={18} className="text-slate-400" />
+            <span>Past Schedules ({history.length})</span>
+          </h2>
+          <div className="space-y-4">
             {history.map((schedule) => (
               <ScheduleCard
                 key={schedule.id}
@@ -397,86 +398,89 @@ function ScheduleCard({
   const hasReachable = reachable.length > 0;
 
   return (
-    <div className="card p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-lg font-semibold text-ink">{schedule.visit_date}</span>
-            <span className="text-xs text-muted">
+            <span className="text-lg font-extrabold text-slate-900">{schedule.visit_date}</span>
+            <span className="text-xs font-semibold text-slate-500">
               {weekdayLabel(schedule.visit_date)} · {relativeDayLabel(schedule.visit_date)}
             </span>
-            <span className={STATUS_BADGE[schedule.status] ?? 'badge-neutral'}>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[var(--brand)] border border-teal-200/60">
               {schedule.status}
             </span>
-            {schedule.trimester && <span className="badge-neutral">{schedule.trimester} trimester</span>}
+            {schedule.trimester && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
+                {schedule.trimester} trimester
+              </span>
+            )}
           </div>
-          {schedule.notes && <p className="text-sm text-muted mt-1">{schedule.notes}</p>}
+          {schedule.notes && <p className="text-xs text-slate-600 font-medium mt-1.5">{schedule.notes}</p>}
         </div>
 
-        <div className="text-right text-xs text-muted">
+        <div className="text-xs font-semibold">
           {schedule.reminder_sent ? (
-            <p className="text-[var(--success)] font-medium">
+            <p className="text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block">
               Reminder sent
               {schedule.reminder_sent_at
                 ? ` · ${new Date(schedule.reminder_sent_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}`
                 : ''}
             </p>
           ) : isOpen ? (
-            <p className="text-amber-600 font-medium">
-              Reminder not sent — will go out automatically the day before
+            <p className="text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 inline-block">
+              Auto-reminder scheduled for day prior
             </p>
           ) : (
-            <p>Closed</p>
+            <p className="text-slate-400">Closed</p>
           )}
         </div>
       </div>
 
-      <div className="mt-4">
-        <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-          Assigned mothers ({schedule.recipients.length})
+      <div>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+          Assigned Mothers ({schedule.recipients.length})
         </p>
         {schedule.recipients.length === 0 ? (
-          <p className="text-sm text-danger">No mothers assigned.</p>
+          <p className="text-xs font-semibold text-red-500">No mothers assigned.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {schedule.recipients.map((recipient) => (
               <span
                 key={recipient.pregnant_mother_id}
-                className="badge-neutral"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200/80 shadow-xs"
                 title={formatE164(toE164(recipient.contact_number))}
               >
-                {recipient.full_name ?? 'Unnamed'}
-                {recipient.purok ? ` · P${recipient.purok}` : ''}
-                {toE164(recipient.contact_number) ? '' : ' · no number'}
+                <span>{recipient.full_name ?? 'Unnamed'}</span>
+                {recipient.purok && <span className="text-slate-400">Zone {recipient.purok}</span>}
+                {!toE164(recipient.contact_number) && <span className="text-red-500">no number</span>}
               </span>
             ))}
           </div>
         )}
 
         {unreachable.length > 0 && (
-          <p className="text-xs text-muted mt-2">
-            {unreachable.length} mother/mothers have no valid mobile number and will not receive SMS.
+          <p className="text-xs text-slate-400 font-medium mt-2">
+            {unreachable.length} mother(s) have no valid mobile number and won&apos;t receive SMS.
           </p>
         )}
       </div>
 
       {outcomes && outcomes.length > 0 && (
-        <div className="mt-4 border-t border-[#EEF1F4] pt-3">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-            Result of the last send
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            Last Send Results
           </p>
-          <ul className="space-y-1">
+          <div className="space-y-1.5">
             {outcomes.map((outcome, index) => (
-              <li key={`${outcome.pregnantMotherId ?? outcome.phone ?? index}`} className="text-sm">
+              <div key={`${outcome.pregnantMotherId ?? outcome.phone ?? index}`} className="text-xs font-medium flex items-center gap-2">
                 <span
-                  className="badge-low"
-                  style={
+                  className={`px-2 py-0.5 rounded-full font-bold ${
                     outcome.status === 'sent'
-                      ? undefined
+                      ? 'bg-emerald-50 text-emerald-700'
                       : outcome.status === 'skipped_duplicate'
-                        ? { background: 'var(--surface-alt)', color: 'var(--muted)' }
-                        : undefined
-                  }
+                        ? 'bg-slate-100 text-slate-500'
+                        : 'bg-red-50 text-red-600'
+                  }`}
                 >
                   {outcome.status === 'sent'
                     ? 'Sent'
@@ -485,60 +489,41 @@ function ScheduleCard({
                       : outcome.status === 'skipped_duplicate'
                         ? 'Already sent'
                         : 'No number'}
-                </span>{' '}
-                <span className="text-ink">
-                  {formatE164(outcome.phone ?? toE164(''))}
                 </span>
-                {outcome.detail && <span className="text-muted"> — {outcome.detail}</span>}
-                {outcome.providerMessageId && (
-                  <span className="text-muted"> · ref {outcome.providerMessageId}</span>
-                )}
-              </li>
+                <span className="font-mono text-slate-700">{formatE164(outcome.phone ?? toE164(''))}</span>
+                {outcome.detail && <span className="text-slate-400">— {outcome.detail}</span>}
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
       {canEdit && isOpen && (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EEF1F4] pt-4">
-          <button
-            type="button"
-            className="btn-primary"
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+          <Button
             onClick={onSend}
-            disabled={sending || busy || editing || !hasReachable}
-            title={
-              reachable.length === 0
-                ? 'No assigned mother has a usable mobile number.'
-                : undefined
-            }
+            isLoading={sending}
+            disabled={busy || editing || !hasReachable}
+            leftIcon={<Send size={16} />}
           >
-            {sending
-              ? 'Sending…'
-              : schedule.reminder_sent
-                ? 'Send reminder again'
-                : 'Send reminder now'}
-          </button>
-          <button type="button" className="btn-secondary" onClick={onEdit} disabled={busy || sending}>
-            Edit schedule
-          </button>
+            {schedule.reminder_sent ? 'Resend Reminder' : 'Send Reminder Now'}
+          </Button>
+          <Button variant="secondary" onClick={onEdit} disabled={busy || sending} leftIcon={<Edit size={16} />}>
+            Edit Schedule
+          </Button>
           {confirmingDelete ? (
-            <>
-              <button type="button" className="btn-danger" onClick={onConfirmDelete} disabled={busy}>
-                Confirm delete
-              </button>
-              <button type="button" className="btn-ghost" onClick={onCancelDelete} disabled={busy}>
-                Keep it
-              </button>
-            </>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="danger" size="sm" onClick={onConfirmDelete} disabled={busy}>
+                Confirm Delete
+              </Button>
+              <Button variant="outline" size="sm" onClick={onCancelDelete} disabled={busy}>
+                Keep
+              </Button>
+            </div>
           ) : (
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={onRequestDelete}
-              disabled={busy || sending}
-            >
+            <Button variant="ghost" size="sm" onClick={onRequestDelete} disabled={busy || sending} leftIcon={<Trash2 size={16} />}>
               Delete
-            </button>
+            </Button>
           )}
         </div>
       )}

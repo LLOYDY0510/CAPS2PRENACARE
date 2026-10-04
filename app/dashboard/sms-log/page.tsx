@@ -2,15 +2,14 @@ import SmsLogTable, { type SmsLogRow } from '@/components/schedule/SmsLogTable';
 import { requireRoles } from '@/utils/auth/roles';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
+import PageHeader from '@/components/ui/PageHeader';
+import { Send } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SmsLogPage() {
   await requireRoles(['admin', 'bhw_head', 'bhw_purok', 'nurse']);
 
-  // The service-role client is required here: sms_recipient_receipts is written
-  // by the server-side sender, and the real per-number result is the whole point
-  // of this page.
   const supabase = createAdminClient();
   const { hasReceipts } = await getSmsSchemaCapabilities();
 
@@ -111,7 +110,6 @@ export default async function SmsLogPage() {
       created_at: log.created_at,
       sender: sender?.full_name || sender?.email || null,
       send_kind: (log.send_kind ?? 'manual') as SmsLogRow['send_kind'],
-      // What Semaphore actually returned, per number.
       receipts: logReceipts.map((receipt) => ({
         motherName: receipt.pregnant_mother_id
           ? (mothersById.get(receipt.pregnant_mother_id)?.full_name ?? 'Unknown')
@@ -159,13 +157,13 @@ export default async function SmsLogPage() {
     );
 
   return (
-    <div>
-      <div className="page-header">
-        <h1>SMS Log</h1>
-        <p className="page-date">
-          Every message sent through Semaphore, with the result the provider returned for each number.
-        </p>
-      </div>
+    <div className="space-y-6 anim-fade-up">
+      <PageHeader
+        title="SMS Log &amp; Broadcast Dispatch"
+        subtitle="Every message sent through Semaphore with live provider delivery receipts"
+        icon={Send}
+        badge="Messaging Log"
+      />
 
       <SmsLogTable logs={rows} followUps={followUpRows} />
     </div>

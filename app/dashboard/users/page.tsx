@@ -1,6 +1,8 @@
 import UsersTable from '@/components/users/UsersTable';
 import { requireUserManagement } from '@/utils/auth/middleware';
 import { createAdminClient } from '@/utils/supabase/admin';
+import PageHeader from '@/components/ui/PageHeader';
+import { Users } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +25,11 @@ export default async function ManageUsersPage() {
   if (error || mothersError) {
     return (
       <div>
-        <div className="page-header">
-          <h1>Manage Users</h1>
-        </div>
+        <PageHeader
+          title="Manage Users"
+          icon={Users}
+          subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
+        />
         <div className="alert-error">
           Failed to load accounts: {error?.message ?? mothersError?.message}
         </div>
@@ -41,12 +45,11 @@ export default async function ManageUsersPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Manage Users</h1>
-        <p className="page-date">
-          {profiles?.length ?? 0} account{profiles?.length === 1 ? '' : 's'}
-        </p>
-      </div>
+      <PageHeader
+        title="Manage Users"
+        icon={Users}
+        subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
+      />
 
       <UsersTable
         profiles={profiles ?? []}

@@ -21,22 +21,18 @@ type RiskPoint = {
   longitude: number;
 };
 
-/* ─── Color per risk level ─── */
 const RISK_COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
-  high:     { fill: '#DC2626', stroke: '#991B1B', label: 'High Risk' },
-  low:      { fill: '#16A34A', stroke: '#14532D', label: 'Low Risk' },
+  high: { fill: '#DC2626', stroke: '#991B1B', label: 'High Risk' },
+  low: { fill: '#16A34A', stroke: '#14532D', label: 'Low Risk' },
 };
 
 function getRiskColor(level: string) {
   return RISK_COLORS[level] ?? { fill: '#6B7280', stroke: '#374151', label: level };
 }
 
-/* ─── SVG pin as a Leaflet DivIcon ─── */
 function makePinIcon(riskLevel: string) {
   const { fill, stroke } = getRiskColor(riskLevel);
 
-  // Classic teardrop/pinpoint shape: 28px wide, 38px tall
-  // The tip of the pin is at the bottom-center → anchor at (14, 38)
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 38" width="28" height="38">
       <path
@@ -51,24 +47,21 @@ function makePinIcon(riskLevel: string) {
 
   return divIcon({
     html: svg,
-    className: '',          // clear Leaflet's default white-box class
-    iconSize:   [28, 38],
-    iconAnchor: [14, 38],   // tip of pin
-    popupAnchor:[0, -40],   // popup appears above the pin tip
+    className: '',
+    iconSize: [28, 38],
+    iconAnchor: [14, 38],
+    popupAnchor: [0, -40],
   });
 }
 
-// Sankanan, Manolo Fortich, Bukidnon
 const DEFAULT_CENTER: [number, number] = [8.315242, 124.860898];
 
-/* ─── Invalidates Leaflet's size whenever the map container resizes ─── */
 function AutoResize() {
   const map = useMap();
 
   useEffect(() => {
     const container = map.getContainer();
     const observer = new ResizeObserver(() => {
-      // invalidateSize triggers Leaflet to recalculate and repaint the map
       map.invalidateSize({ animate: false });
     });
     observer.observe(container);
@@ -95,19 +88,11 @@ export default function RiskMap({
   pendingClick?: (lat: number, lng: number) => void;
 }) {
   return (
-    <div
-      className="risk-map-container"
-      style={{
-        height: 'clamp(320px, 62vh, 600px)',
-        borderRadius: 'var(--radius-md)',
-        overflow: 'hidden',
-        border: '1px solid var(--border)',
-      }}
-    >
+    <div className="relative w-full h-[520px] rounded-[24px] overflow-hidden border border-slate-100 shadow-inner">
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={16}
-        style={{ height: '100%', width: '100%' }}
+        className="h-full w-full rounded-[24px]"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -123,36 +108,32 @@ export default function RiskMap({
             position={[point.latitude, point.longitude]}
             icon={makePinIcon(point.risk_level)}
           >
-                       <Popup>
-              <div style={{ fontSize: '13px', lineHeight: 1.5, minWidth: '200px' }}>
-                <p style={{ fontWeight: 600, marginBottom: '2px' }}>{point.full_name}</p>
-                {point.serial_no && (
-                  <p style={{ color: '#9CA3AF', fontSize: '11px', marginBottom: '6px' }}>
-                    {point.serial_no}
-                  </p>
-                )}
-                <div style={{ color: '#374151', marginBottom: '8px' }}>
-                  <p>Zone: {point.purok ?? '—'}</p>
-                  {point.age != null && <p>Age: {point.age}</p>}
-                  {point.address && <p>Address: {point.address}</p>}
-                  {point.contact_number && <p>Contact: {point.contact_number}</p>}
-                  {point.lmp && <p>LMP: {point.lmp}</p>}
-                  {point.edd && <p>EDC: {point.edd}</p>}
-                  {point.gravida_para && <p>G-P: {point.gravida_para}</p>}
+            <Popup className="rounded-2xl shadow-xl">
+              <div className="p-1 space-y-2 text-xs font-medium text-slate-700 min-w-[200px]">
+                <div>
+                  <p className="font-extrabold text-sm text-slate-900">{point.full_name}</p>
+                  {point.serial_no && (
+                    <p className="text-[10px] font-mono font-semibold text-slate-400">
+                      {point.serial_no}
+                    </p>
+                  )}
                 </div>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    padding: '1px 7px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: '#fff',
-                    background: getRiskColor(point.risk_level).fill,
-                  }}
-                >
-                  {getRiskColor(point.risk_level).label}
-                </span>
+                <div className="space-y-0.5 border-t border-slate-100 pt-2 text-[11px]">
+                  <p><strong className="text-slate-900">Zone:</strong> {point.purok ? `Zone ${point.purok}` : '—'}</p>
+                  {point.age != null && <p><strong className="text-slate-900">Age:</strong> {point.age}</p>}
+                  {point.address && <p><strong className="text-slate-900">Address:</strong> {point.address}</p>}
+                  {point.contact_number && <p><strong className="text-slate-900">Contact:</strong> {point.contact_number}</p>}
+                  {point.edd && <p><strong className="text-slate-900">EDC:</strong> {point.edd}</p>}
+                </div>
+                <div className="pt-1">
+                  <span
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs ${
+                      point.risk_level === 'high' ? 'bg-red-600' : 'bg-emerald-600'
+                    }`}
+                  >
+                    {getRiskColor(point.risk_level).label}
+                  </span>
+                </div>
               </div>
             </Popup>
           </Marker>

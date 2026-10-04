@@ -1,48 +1,15 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
+import { AccountNotLinked } from '@/components/ui/PatientNotices';
+import { getPatientContext } from '@/utils/patient';
+import PageHeader from '@/components/ui/PageHeader';
+import EmptyState from '@/components/ui/EmptyState';
+import { Calendar, Bell } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MySchedulePage() {
-  const supabase = await createClient();
+  const { supabase, pregnantMotherId } = await getPatientContext();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('pregnant_mother_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileError) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="alert-error" role="alert">
-          Failed to load your account: {profileError.message}
-        </div>
-      </div>
-    );
-  }
-
-  const pregnantMotherId = profile?.pregnant_mother_id;
-
-  if (!pregnantMotherId) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="card p-6">
-          <h1 className="text-lg mb-2">Account not linked</h1>
-          <p className="text-muted">
-            Your account is not linked to a prenatal record yet. Please contact your BHW or the
-            administrator.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!pregnantMotherId) return <AccountNotLinked />;
 
   const today = new Date().toISOString().slice(0, 10);
   const [scheduleResult, remindersResult] = await Promise.all([
@@ -65,48 +32,63 @@ export default async function MySchedulePage() {
   const { data: reminders, error: remindersError } = remindersResult;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-6">
+      <PageHeader
+        title="My Schedule"
+        icon={Calendar}
+      />
+
       {(scheduleError || remindersError) && (
         <div className="alert-error" role="alert">
           Failed to load your schedule: {(scheduleError ?? remindersError)?.message}
         </div>
       )}
 
-      <div className="card">
-        <div className="section-header">
-          <h2>Prenatal Schedule</h2>
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200/60 bg-slate-50/50">
+          <h2 className="text-lg font-bold text-slate-800">Prenatal Schedule</h2>
         </div>
-        <div className="p-5">
+        <div className="p-6">
           {upcomingSchedules && upcomingSchedules.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {upcomingSchedules.map((schedule) => (
-                <li key={schedule.id} className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-ink">{schedule.visit_date}</span>
+                <li key={schedule.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl">
+                  <span className="text-base font-semibold text-slate-800">{schedule.visit_date}</span>
                   {schedule.trimester && (
-                    <span className="badge-neutral">{schedule.trimester} trimester</span>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                      {schedule.trimester} trimester
+                    </span>
                   )}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-2">No prenatal schedule has been set yet.</p>
+            <EmptyState
+              icon={Calendar}
+              title="No prenatal schedule set"
+              description="Your upcoming prenatal visits will appear here."
+            />
           )}
         </div>
       </div>
 
-      <div className="card">
-        <div className="section-header">
-          <h2>Reminders ({reminders?.length ?? 0})</h2>
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200/60 bg-slate-50/50">
+          <h2 className="text-lg font-bold text-slate-800">Reminders ({reminders?.length ?? 0})</h2>
         </div>
-        <div className="p-5">
+        <div className="p-6">
           {!reminders || reminders.length === 0 ? (
-            <p className="text-sm text-muted-2">No reminders yet.</p>
+            <EmptyState
+              icon={Bell}
+              title="No reminders yet"
+              description="Your appointment reminders will appear here."
+            />
           ) : (
             <div className="space-y-3">
               {reminders.map((r) => (
-                <div key={r.id} className="border rounded-lg p-3">
-                  <p className="text-sm text-ink-secondary">{r.message}</p>
-                  <p className="text-xs text-muted-2 mt-1">
+                <div key={r.id} className="border border-slate-200/60 rounded-2xl p-4 hover:bg-slate-50/50 transition-colors">
+                  <p className="text-sm text-slate-800">{r.message}</p>
+                  <p className="text-xs text-slate-400 mt-2">
                     {r.sent_at ? new Date(r.sent_at).toLocaleString() : 'Not sent yet'}
                   </p>
                 </div>

@@ -1,8 +1,12 @@
 'use client';
 
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo, useEffect } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
+import { Input, Select } from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
+import { Send, ChevronDown, ChevronUp, AlertCircle, RotateCcw } from 'lucide-react';
 
 export type SmsLogRow = {
   id: string;
@@ -42,6 +46,8 @@ type FollowUpRow = {
   messageType: 'missed_visit_follow_up' | 'risk_alert';
 };
 
+const PAGE_SIZE = 10;
+
 const TYPE_LABELS: Record<SmsLogRow['message_type'], string> = {
   general: 'General',
   prenatal_reminder: 'Prenatal reminder',
@@ -69,6 +75,7 @@ export default function SmsLogTable({
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'success' | 'failed'>('all');
   const [type, setType] = useState<'all' | SmsLogRow['message_type']>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [quickMessage, setQuickMessage] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, { tone: 'ok' | 'error'; text: string }>>({});
@@ -91,6 +98,23 @@ export default function SmsLogTable({
       return haystack.includes(q);
     });
   }, [logs, search, status, type]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status, type]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const hasFilters = !!search || status !== 'all' || type !== 'all';
 
@@ -151,7 +175,6 @@ export default function SmsLogTable({
             .join(' · '),
         },
       }));
-      // Pull the new row so the log reflects what actually happened.
       window.location.reload();
     } catch {
       setFeedback((prev) => ({
@@ -164,102 +187,97 @@ export default function SmsLogTable({
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-2 mb-4 items-center">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search message, sender, or number…" />
+    <div className="space-y-6">
+      {/* Controls Card */}
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+          <div className="flex-1 min-w-[220px]">
+            <SearchBar value={search} onChange={setSearch} placeholder="Search message, sender, or number..." />
+          </div>
 
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as 'all' | 'success' | 'failed')}
-          className="form-select"
-          style={{ width: 'auto', minWidth: '130px' }}
-          aria-label="Filter by status"
-        >
-          <option value="all">All Statuses</option>
-          <option value="success">Accepted</option>
-          <option value="failed">Failed</option>
-        </select>
+          <div className="w-36">
+            <Select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as 'all' | 'success' | 'failed')}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'success', label: 'Accepted' },
+                { value: 'failed', label: 'Failed' },
+              ]}
+            />
+          </div>
 
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as typeof type)}
-          className="form-select"
-          style={{ width: 'auto', minWidth: '170px' }}
-          aria-label="Filter by message type"
-        >
-          <option value="all">All Message Types</option>
-          {Object.entries(TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+          <div className="w-48">
+            <Select
+              value={type}
+              onChange={(e) => setType(e.target.value as typeof type)}
+              options={[
+                { value: 'all', label: 'All Types' },
+                ...Object.entries(TYPE_LABELS).map(([val, lbl]) => ({ value: val, label: lbl })),
+              ]}
+            />
+          </div>
 
-        {hasFilters && (
-          <button
-            onClick={() => {
-              setSearch('');
-              setStatus('all');
-              setType('all');
-            }}
-            className="btn-ghost"
-            style={{ fontSize: '0.75rem' }}
-          >
-            Clear filters
-          </button>
-        )}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatus('all'); setType('all'); }} leftIcon={<RotateCcw size={14} />}>
+              Clear
+            </Button>
+          )}
+        </div>
 
-        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--muted)' }}>
+        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
           {filtered.length} of {logs.length} entries
         </span>
       </div>
 
+      {/* Follow-up Pending Banner */}
       {followUps.length > 0 && (
-        <div className="card p-4 mb-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-700">Follow-up Needed</h2>
-              <p className="text-xs text-muted">Missed checkups and high-risk cases needing contact.</p>
+              <h2 className="text-base font-bold text-slate-900">Follow-up Action Needed</h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Missed checkups and high-risk cases needing contact</p>
             </div>
-            <span className="badge-warning">{followUps.length} pending</span>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+              {followUps.length} Pending
+            </span>
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-3">
             {followUps.map((item) => {
               const note = feedback[item.id];
               return (
-                <div key={item.id} className="border rounded-lg p-3">
-                  <div className="flex flex-wrap items-center gap-3">
+                <div key={item.id} className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100/80 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex-1 min-w-[220px]">
-                      <p className="text-sm font-medium">{item.motherName}</p>
-                      <p className="text-xs text-muted">
+                      <p className="font-bold text-xs sm:text-sm text-slate-900">{item.motherName}</p>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
                         {item.reason} · {item.contactNumber ?? 'No contact number'}
                       </p>
                     </div>
-                    <input
-                      className="form-input"
-                      style={{ maxWidth: '360px' }}
-                      value={quickMessage[item.id] ?? QUICK_DEFAULTS[item.messageType]}
-                      onChange={(e) =>
-                        setQuickMessage((current) => ({ ...current, [item.id]: e.target.value }))
-                      }
-                      placeholder="Quick message"
-                      aria-label={`Quick message for ${item.motherName}`}
-                    />
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={!item.contactNumber || sendingId === item.id}
-                      onClick={() => quickSend(item)}
-                    >
-                      {sendingId === item.id ? 'Sending…' : 'Quick Send'}
-                    </button>
+
+                    <div className="flex items-center gap-2 flex-1 max-w-md">
+                      <input
+                        className="h-10 px-3.5 bg-white text-xs sm:text-sm font-medium rounded-2xl border border-amber-200 focus:border-[var(--brand)] outline-none w-full shadow-xs"
+                        value={quickMessage[item.id] ?? QUICK_DEFAULTS[item.messageType]}
+                        onChange={(e) =>
+                          setQuickMessage((current) => ({ ...current, [item.id]: e.target.value }))
+                        }
+                        placeholder="Quick message text..."
+                      />
+                      <Button
+                        size="sm"
+                        disabled={!item.contactNumber}
+                        isLoading={sendingId === item.id}
+                        onClick={() => quickSend(item)}
+                        leftIcon={<Send size={14} />}
+                      >
+                        Send
+                      </Button>
+                    </div>
                   </div>
                   {note && (
-                    <p
-                      role="status"
-                      className="text-xs mt-2"
-                      style={{ color: note.tone === 'ok' ? 'var(--success)' : 'var(--danger)' }}
-                    >
+                    <p className={`text-xs font-semibold ${note.tone === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
                       {note.text}
                     </p>
                   )}
@@ -270,129 +288,131 @@ export default function SmsLogTable({
         </div>
       )}
 
-      <div className="card overflow-x-auto">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date &amp; Time</th>
-              <th>Trigger</th>
-              <th>Sent By</th>
-              <th>Recipient</th>
-              <th>Message</th>
-              <th>Type</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted-2)' }}>
-                  {hasFilters ? 'No entries match the current filters.' : 'No SMS sent yet.'}
-                </td>
+      {/* Main Logs Table Card */}
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                <th className="py-3.5 px-4">Date &amp; Time</th>
+                <th className="py-3.5 px-4">Trigger</th>
+                <th className="py-3.5 px-4">Sent By</th>
+                <th className="py-3.5 px-4">Recipient</th>
+                <th className="py-3.5 px-4">Message</th>
+                <th className="py-3.5 px-4">Type</th>
+                <th className="py-3.5 px-4">Status</th>
               </tr>
-            )}
-            {filtered.map((log) => {
-              const isOpen = expanded.has(log.id);
-              const failedCount = log.receipts.filter((r) => r.providerStatus === 'failed').length;
-              return (
-                <Fragment key={log.id}>
-                  <tr style={{ verticalAlign: 'top' }}>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(log.created_at).toLocaleString('en-PH', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className="badge-neutral">{log.send_kind === 'auto' ? 'Automatic' : 'Manual'}</span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{log.sender ?? 'System'}</td>
-                    <td>
-                      <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{log.recipients}</span>
-                      <br />
-                      <span className="text-xs text-muted">{log.recipient_count} recipient(s)</span>
-                    </td>
-                    <td style={{ maxWidth: '320px' }}>
-                      <p
-                        style={{
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          color: 'var(--ink)',
-                        }}
-                      >
-                        {log.message}
-                      </p>
-                      {log.error_message && (
-                        <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>
-                          {log.error_message}
-                        </p>
-                      )}
-                    </td>
-                    <td>
-                      <span className="badge-neutral">{TYPE_LABELS[log.message_type]}</span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {log.status === 'success' ? (
-                        <span className="badge-low">
-                          {failedCount > 0 ? `${log.receipts.length - failedCount}/${log.receipts.length} sent` : 'Sent'}
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-10 text-slate-400 font-medium">
+                    {hasFilters ? 'No entries match the current filters.' : 'No SMS sent yet.'}
+                  </td>
+                </tr>
+              )}
+              {paginated.map((log) => {
+                const isOpen = expanded.has(log.id);
+                const failedCount = log.receipts.filter((r) => r.providerStatus === 'failed').length;
+                return (
+                  <Fragment key={log.id}>
+                    <tr className="hover:bg-slate-50/80 transition-colors align-top">
+                      <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-500 text-xs">
+                        {new Date(log.created_at).toLocaleString('en-PH', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
+                          {log.send_kind === 'auto' ? 'Automatic' : 'Manual'}
                         </span>
-                      ) : (
-                        <span className="badge-high">Failed</span>
-                      )}
-                      {log.receipts.length > 0 && (
-                        <>
-                          <br />
-                          <button
-                            type="button"
-                            className="btn-ghost"
-                            style={{ fontSize: '0.7rem', padding: '0.125rem 0.375rem' }}
-                            aria-expanded={isOpen}
-                            onClick={() => toggleExpanded(log.id)}
-                          >
-                            {isOpen ? 'Hide numbers' : 'View numbers'}
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                  {isOpen && (
-                    <tr key={`${log.id}-receipts`}>                      <td colSpan={7} style={{ background: 'var(--surface-alt)' }}>
-                        <ul className="space-y-1">
-                          {log.receipts.map((receipt, index) => (
-                            <li key={`${log.id}-${index}`} className="text-xs flex flex-wrap gap-2 items-center">
-                              <span
-                                className="badge-low"
-                                style={
-                                  receipt.providerStatus === 'sent'
-                                    ? undefined
-                                    : { background: 'var(--danger)', color: '#fff' }
-                                }
-                              >
-                                {receipt.providerStatus}
-                              </span>
-                              <span style={{ color: 'var(--ink)' }}>
-                                {receipt.motherName ?? 'Unlinked number'}
-                              </span>
-                              <span className="text-muted">{formatE164(toE164(receipt.contactNumber))}</span>
-                              {receipt.providerMessageId && (
-                                <span className="text-muted">ref {receipt.providerMessageId}</span>
-                              )}
-                              {receipt.errorMessage && (
-                                <span style={{ color: 'var(--danger)' }}>{receipt.errorMessage}</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{log.sender ?? 'System'}</td>
+                      <td className="py-3.5 px-4">
+                        <p className="font-bold text-slate-800">{log.recipients}</p>
+                        <p className="text-[11px] text-slate-400 font-medium">{log.recipient_count} recipient(s)</p>
+                      </td>
+                      <td className="py-3.5 px-4 max-w-xs">
+                        <p className="line-clamp-2 text-slate-700 font-medium">{log.message}</p>
+                        {log.error_message && (
+                          <p className="text-xs text-red-600 font-semibold mt-1">{log.error_message}</p>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[var(--brand)] border border-teal-200/60">
+                          {TYPE_LABELS[log.message_type]}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {log.status === 'success' ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {failedCount > 0 ? `${log.receipts.length - failedCount}/${log.receipts.length} sent` : 'Sent'}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+                            Failed
+                          </span>
+                        )}
+                        {log.receipts.length > 0 && (
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(log.id)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--brand)] hover:underline"
+                            >
+                              <span>{isOpen ? 'Hide numbers' : 'View numbers'}</span>
+                              {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                    {isOpen && (
+                      <tr key={`${log.id}-receipts`} className="bg-slate-50/90">
+                        <td colSpan={7} className="p-4">
+                          <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Delivery Receipts</p>
+                            {log.receipts.map((receipt, index) => (
+                              <div key={`${log.id}-${index}`} className="text-xs flex flex-wrap gap-2 items-center font-medium">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    receipt.providerStatus === 'sent'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : 'bg-red-50 text-red-600 border border-red-200'
+                                  }`}
+                                >
+                                  {receipt.providerStatus}
+                                </span>
+                                <span className="font-bold text-slate-800">{receipt.motherName ?? 'Unlinked number'}</span>
+                                <span className="font-mono text-slate-500">{formatE164(toE164(receipt.contactNumber))}</span>
+                                {receipt.providerMessageId && (
+                                  <span className="text-slate-400">· ref {receipt.providerMessageId}</span>
+                                )}
+                                {receipt.errorMessage && (
+                                  <span className="text-red-600 font-semibold">{receipt.errorMessage}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );

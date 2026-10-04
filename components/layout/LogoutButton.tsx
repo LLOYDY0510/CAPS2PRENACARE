@@ -1,39 +1,42 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { clearRememberPreference } from '@/utils/auth/session-persistence';
 
-export default function LogoutButton() {
-  const router   = useRouter();
+export default function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
+  const router = useRouter();
   const supabase = createClient();
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    clearRememberPreference();
     router.push('/login');
     router.refresh();
   }
 
-  return (
+  return collapsed ? (
     <button
+      type="button"
       onClick={handleLogout}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors"
-      style={{
-        color: '#F87171',
-        background: 'transparent',
-        border: '1px solid rgba(248,113,113,0.25)',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-      }}
+      aria-label="Log out"
+      className="relative group w-12 h-12 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 flex items-center justify-center transition-all duration-200 hover:scale-105"
     >
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 shrink-0" aria-hidden>
-        <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3"/>
-        <path d="M10 11l3-3-3-3M13 8H6" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-      Log out
+      <LogOut size={20} className="stroke-[2.2]" aria-hidden="true" />
+      <span className="absolute left-16 px-3 py-1.5 bg-slate-900/90 text-white text-xs font-semibold rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+        Log out
+      </span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={handleLogout}
+      aria-label="Log out"
+      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+    >
+      <LogOut size={16} aria-hidden="true" />
+      <span>Log out</span>
     </button>
   );
 }

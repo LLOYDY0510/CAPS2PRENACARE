@@ -1,6 +1,9 @@
 import BhwTable from '@/components/users/BhwTable';
 import { requireBhwManagement } from '@/utils/auth/middleware';
 import { createAdminClient } from '@/utils/supabase/admin';
+import PageHeader from '@/components/ui/PageHeader';
+import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
+import { AlertTriangle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +26,10 @@ export default async function ManageBhwPage() {
   if (usersError || mothersError) {
     return (
       <div>
-        <div className="page-header">
-          <h1>Manage BHW (Purok)</h1>
-        </div>
+        <PageHeader
+          title="Manage BHW (Purok)"
+          subtitle={`${bhwUsers?.length ?? 0} account${(bhwUsers?.length ?? 0) === 1 ? '' : 's'}`}
+        />
         <div className="alert-error" role="alert">
           Failed to load BHW accounts: {usersError?.message ?? mothersError?.message}
         </div>
@@ -44,18 +48,19 @@ export default async function ManageBhwPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Manage BHW (Purok)</h1>
-        <p className="page-date">
-          {bhwUsers?.length ?? 0} account{(bhwUsers?.length ?? 0) === 1 ? '' : 's'} ·{' '}
-          {unassigned} BHW without a purok
-        </p>
-      </div>
+      <PageHeader
+        title="Manage BHW (Purok)"
+        subtitle={`${bhwUsers?.length ?? 0} account${(bhwUsers?.length ?? 0) === 1 ? '' : 's'} · ${unassigned} BHW without a purok`}
+      />
 
       {unassigned > 0 && (
-        <div className="alert-error mb-4" role="alert">
-          {unassigned} BHW account{unassigned === 1 ? ' has' : 's have'} no purok assigned. They
-          cannot see any mother records until a purok is set.
+        <div className="mb-4">
+          <HighlightedBannerCard
+            icon={AlertTriangle}
+            title={`${unassigned} BHW account${unassigned === 1 ? ' has' : 's have'} no purok assigned`}
+            description="They cannot see any mother records until a purok is set."
+            badgeText="Warning"
+          />
         </div>
       )}
 

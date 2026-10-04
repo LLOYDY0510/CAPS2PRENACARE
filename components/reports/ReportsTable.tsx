@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
+import { Select } from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import ReportExport, { type ReportRow } from '@/components/reports/ReportExport';
+import RiskBadge from '@/components/ui/RiskBadge';
+import StatCard from '@/components/ui/StatCard';
+import { Printer, RotateCcw, FileText, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 
-/* ─── Extended row type (id is internal only, not exported) ─── */
 export type ReportRowWithId = ReportRow & { _id: string };
 
 export type RowMeta = {
@@ -15,13 +20,14 @@ export type RowMeta = {
   latestStatus: 'upcoming' | 'missed' | 'completed' | null;
 };
 
-/* ─── Report type definitions ─── */
 type ReportType =
   | 'all'
   | 'high_risk'
   | 'low_risk'
   | 'missed_checkups'
   | 'upcoming_edc';
+
+const PAGE_SIZE = 10;
 
 const REPORT_TYPES: { value: ReportType; label: string; description: string }[] = [
   {
@@ -42,7 +48,7 @@ const REPORT_TYPES: { value: ReportType; label: string; description: string }[] 
   {
     value: 'missed_checkups',
     label: 'Missed Checkups',
-    description: 'Mothers with no prenatal checkup recorded yet.',
+    description: 'Mothers with missed prenatal checkup visits.',
   },
   {
     value: 'upcoming_edc',
@@ -51,7 +57,6 @@ const REPORT_TYPES: { value: ReportType; label: string; description: string }[] 
   },
 ];
 
-/* ─── Date helpers ─── */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -76,15 +81,14 @@ export default function ReportsTable({
   const [reportType, setReportType] = useState<ReportType>('all');
   const [search, setSearch]         = useState('');
   const [zoneFilter, setZoneFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const printRef = useRef<HTMLDivElement>(null);
 
-  /* ── Distinct zones ── */
   const zones = useMemo(() => {
     const set = new Set(rowsWithId.map((r) => r.purok).filter(Boolean) as string[]);
     return Array.from(set).sort((a, b) => parseInt(a) - parseInt(b));
   }, [rowsWithId]);
 
-  /* ── Primary filter by report type ── */
   const byType = useMemo(() => {
     return rowsWithId.filter((r) => {
       switch (reportType) {
@@ -104,7 +108,6 @@ export default function ReportsTable({
     });
   }, [rowsWithId, reportType, meta]);
 
-  /* ── Secondary: search + zone ── */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return byType.filter((r) => {
@@ -118,7 +121,23 @@ export default function ReportsTable({
     });
   }, [byType, search, zoneFilter]);
 
-  /* ── Summary stats (over primary filter, ignore search/zone) ── */
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [reportType, search, zoneFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
   const stats = useMemo(() => ({
     total:    byType.length,
     highRisk: byType.filter((r) => r.risk_level === 'high').length,
@@ -129,66 +148,38 @@ export default function ReportsTable({
   const activeReportDef = REPORT_TYPES.find((t) => t.value === reportType)!;
   const hasSecondary    = search || zoneFilter !== 'all';
 
-  /* ── Export rows = filtered (what user sees) ── */
   const exportRows: ReportRow[] = filtered.map((row) => {
     return Object.fromEntries(
       Object.entries(row).filter(([key]) => key !== '_id')
     ) as ReportRow;
   });
 
-  /* ── Print ── */
   function handlePrint() {
     window.print();
   }
 
   return (
-    <div>
-      {/* ════════════════════════════════════
-          SCREEN: controls + header
-          (hidden when printing)
-          ════════════════════════════════════ */}
-      <div className="no-print">
-        {/* Page header */}
-        <div
-          className="flex flex-wrap items-start justify-between gap-4 mb-5"
-          style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1.25rem' }}
-        >
-          <div className="page-header" style={{ marginBottom: 0 }}>
-            <h1>Reports</h1>
-            <p className="page-date">
-              Generate and export the pregnant mothers registry.
-            </p>
+    <div className="space-y-6">
+      {/* SCREEN CONTROLS */}
+      <div className="no-print space-y-6">
+        {/* Export & Print Bar */}
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">{activeReportDef.label}</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">{activeReportDef.description}</p>
           </div>
-
-          {/* Action buttons */}
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint} className="btn-secondary" style={{ gap: '0.375rem' }}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
-                className="w-3.5 h-3.5" aria-hidden>
-                <path d="M4 6V1h8v5"/>
-                <path d="M4 11H2a1 1 0 01-1-1V7a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1h-2"/>
-                <rect x="4" y="9" width="8" height="6" rx="0.5"/>
-                <path d="M4 3h5" strokeLinecap="round"/>
-              </svg>
+            <Button variant="outline" size="sm" onClick={handlePrint} leftIcon={<Printer size={16} />}>
               Print Report
-            </button>
+            </Button>
             <ReportExport records={exportRows} />
           </div>
         </div>
 
-        {/* ── Report type selector ── */}
-        <div className="mb-5">
-          <p
-            style={{
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--muted)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            Report Type
+        {/* Report Type Pill Segmented Tabs */}
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-4 space-y-3">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Select Report Type
           </p>
           <div className="flex flex-wrap gap-2">
             {REPORT_TYPES.map((t) => {
@@ -197,233 +188,130 @@ export default function ReportsTable({
                 <button
                   key={t.value}
                   onClick={() => { setReportType(t.value); setSearch(''); setZoneFilter('all'); }}
-                  style={{
-                    padding: '0.375rem 0.875rem',
-                    fontSize: '0.8125rem',
-                    fontWeight: active ? 600 : 400,
-                    borderRadius: 'var(--radius)',
-                    border: `1px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
-                    background: active ? 'var(--brand-light)' : 'var(--surface)',
-                    color: active ? 'var(--brand)' : 'var(--ink-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
+                    active
+                      ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/20'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                  }`}
                 >
                   {t.label}
                 </button>
               );
             })}
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.375rem' }}>
-            {activeReportDef.description}
-          </p>
         </div>
 
-        {/* ── Summary stats ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          <StatCard label="Showing" value={byType.length} sub="records in this report" />
-          <StatCard label="High Risk"  value={stats.highRisk}  color="var(--danger)"  />
-          <StatCard label="Low Risk"   value={stats.lowRisk}   color="var(--success)" />
-          <StatCard label="No Checkup" value={stats.noCheckup} color="var(--warning)" />
+        {/* Summary Stat Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Showing Records" value={byType.length} trend="Active report scope" icon={Users} variant="brand" />
+          <StatCard title="High Risk" value={stats.highRisk} trend="High risk cases" icon={AlertTriangle} variant="danger" />
+          <StatCard title="Low Risk" value={stats.lowRisk} trend="Low risk cases" icon={ShieldCheck} variant="success" />
+          <StatCard title="No Checkups" value={stats.noCheckup} trend="Zero recorded visits" icon={HelpCircle} variant="warning" />
         </div>
 
-        {/* ── Secondary filters ── */}
-        <div className="flex flex-wrap gap-2 mb-4 items-center">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Search by name or serial no."
-          />
-
-          {zones.length > 0 && (
-            <select
-              value={zoneFilter}
-              onChange={(e) => setZoneFilter(e.target.value)}
-              className="form-select"
-              style={{ width: 'auto', minWidth: '120px' }}
-              aria-label="Filter by zone"
-            >
-              <option value="all">All Zones</option>
-              {zones.map((z) => (
-                <option key={z} value={z}>Zone {z}</option>
-              ))}
-            </select>
-          )}
-
-          {hasSecondary && (
-            <button
-              onClick={() => { setSearch(''); setZoneFilter('all'); }}
-              className="btn-ghost"
-              style={{ fontSize: '0.75rem' }}
-            >
-              Clear
-            </button>
-          )}
-
-          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--muted)' }}>
-            {filtered.length} of {byType.length} records
-            {hasSecondary && <span style={{ color: 'var(--muted-2)' }}> (filtered)</span>}
+        {/* Search & Zone Filters */}
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+            <div className="flex-1 min-w-[220px]">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="Search report by name or serial no..."
+              />
+            </div>
+            {zones.length > 0 && (
+              <div className="w-40">
+                <Select
+                  value={zoneFilter}
+                  onChange={(e) => setZoneFilter(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All Zones' },
+                    ...zones.map((z) => ({ value: z, label: `Zone ${z}` })),
+                  ]}
+                />
+              </div>
+            )}
+            {hasSecondary && (
+              <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setZoneFilter('all'); }} leftIcon={<RotateCcw size={14} />}>
+                Clear
+              </Button>
+            )}
+          </div>
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+            {filtered.length} of {byType.length} records shown
           </span>
         </div>
       </div>
 
-      {/* ════════════════════════════════════
-          PRINT HEADER (visible only when printing)
-          ════════════════════════════════════ */}
-      <div className="print-only" style={{ display: 'none', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #333', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
-              Prenatrack — {activeReportDef.label}
-            </h1>
-            <p style={{ fontSize: '0.875rem', color: '#555', marginTop: '0.125rem' }}>
-              {activeReportDef.description}
-            </p>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#555' }}>
-            <p>Generated: {printDate()}</p>
-            <p>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</p>
-          </div>
+      {/* PRINT HEADER */}
+      <div className="print-only hidden mb-6 pb-4 border-b-2 border-slate-800">
+        <h1 className="text-xl font-bold">Prenatrack — {activeReportDef.label}</h1>
+        <p className="text-xs text-slate-600 mt-1">{activeReportDef.description}</p>
+        <p className="text-xs text-slate-500 mt-2 font-mono">Generated: {printDate()} · {filtered.length} records</p>
+      </div>
+
+      {/* REPORT TABLE */}
+      <div ref={printRef} className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden" id="report-table">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-3">#</th>
+                <th className="py-3.5 px-3">Serial No.</th>
+                <th className="py-3.5 px-3">Name</th>
+                <th className="py-3.5 px-3">Purok</th>
+                <th className="py-3.5 px-3">Age</th>
+                <th className="py-3.5 px-3">Contact Number</th>
+                <th className="py-3.5 px-3">LMP</th>
+                <th className="py-3.5 px-3">EDC</th>
+                <th className="py-3.5 px-3">G-P</th>
+                <th className="py-3.5 px-3">Visits</th>
+                <th className="py-3.5 px-3">Risk Level</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="text-center py-10 text-slate-400 font-medium">
+                    No records match the report criteria.
+                  </td>
+                </tr>
+              )}
+              {paginated.map((r, idx) => {
+                const rowNumber = (currentPage - 1) * PAGE_SIZE + idx + 1;
+                return (
+                  <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-3 text-slate-400 font-semibold">{rowNumber}</td>
+                    <td className="py-3.5 px-3 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-800">{r.name || '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.age ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.contact_number ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.edd ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-800">{meta[r._id]?.checkupCount ?? 0}</td>
+                    <td className="py-3.5 px-3">
+                      <RiskBadge riskLevel={r.risk_level} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Component */}
+        <div className="no-print">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filtered.length}
+            itemsPerPage={PAGE_SIZE}
+          />
         </div>
       </div>
-
-      {/* ════════════════════════════════════
-          TABLE (screen + print)
-          ════════════════════════════════════ */}
-      <div ref={printRef} className="card overflow-x-auto" id="report-table">
-        <table className="data-table" style={{ whiteSpace: 'nowrap' }}>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Serial No.</th>
-              <th>Name</th>
-              <th>Zone</th>
-              <th>Age</th>
-              <th>LMP</th>
-              <th>EDC</th>
-              <th>G-P</th>
-              <th>BP</th>
-              <th>Checkups</th>
-              <th>Latest Visit</th>
-              <th>Risk</th>
-              {reportType === 'upcoming_edc' && <th>Days to EDC</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={reportType === 'upcoming_edc' ? 13 : 12}
-                  style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--muted-2)' }}
-                >
-                  {hasSecondary
-                    ? 'No records match the current search or zone filter.'
-                    : `No records for this report type.`}
-                </td>
-              </tr>
-            )}
-            {filtered.map((r, i) => {
-              const m        = meta[r._id];
-              const daysLeft = r.edd ? daysFromToday(r.edd) : null;
-
-              return (
-                <tr key={r._id}>
-                  <td style={{ color: 'var(--muted-2)', userSelect: 'none' }}>{i + 1}</td>
-                  <td>{r.serial_no ?? '—'}</td>
-                  <td style={{ color: 'var(--ink)', fontWeight: 500, whiteSpace: 'normal', minWidth: '160px' }}>
-                    {r.name || '—'}
-                  </td>
-                  <td>{r.purok ? `Zone ${r.purok}` : '—'}</td>
-                  <td>{r.age ?? '—'}</td>
-                  <td>{r.lmp ?? '—'}</td>
-                  <td>
-                    {r.edd ? (
-                      <span style={{
-                        fontWeight: daysLeft !== null && daysLeft <= 7 ? 600 : 400,
-                        color: daysLeft !== null && daysLeft <= 7 ? 'var(--danger)' : 'inherit',
-                      }}>
-                        {r.edd}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td>{r.gravida_para ?? '—'}</td>
-                  <td>{r.blood_pressure ?? '—'}</td>
-                  <td>
-                    <span style={{
-                      fontWeight: 500,
-                      color: (m?.checkupCount ?? 0) === 0 ? 'var(--danger)' : 'var(--success)',
-                    }}>
-                      {m?.checkupCount ?? 0}
-                    </span>
-                  </td>
-                  <td>
-                    {m?.latestStatus === 'missed' ? <span className="badge-high">Missed</span> : m?.latestStatus === 'completed' ? <span className="badge-low">Completed</span> : m?.latestStatus === 'upcoming' ? <span className="badge-neutral">Upcoming</span> : '—'}
-                  </td>
-                  <td>
-                    {r.risk_level === 'high'
-                      ? <span className="badge-high">High Risk</span>
-                      : r.risk_level === 'low'
-                        ? <span className="badge-low">Low Risk</span>
-                        : '—'}
-                  </td>
-                  {reportType === 'upcoming_edc' && (
-                    <td>
-                      {daysLeft !== null ? (
-                        <span style={{
-                          fontWeight: 600,
-                          color: daysLeft <= 7 ? 'var(--danger)' : daysLeft <= 14 ? 'var(--warning)' : 'var(--ink)',
-                        }}>
-                          {daysLeft === 0 ? 'Today' : `${daysLeft}d`}
-                        </span>
-                      ) : '—'}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Print footer ── */}
-      <div
-        className="print-only"
-        style={{
-          display: 'none',
-          marginTop: '1.5rem',
-          paddingTop: '0.75rem',
-          borderTop: '1px solid #ccc',
-          fontSize: '0.75rem',
-          color: '#777',
-          textAlign: 'center',
-        }}
-      >
-        Prenatrack — Barangay Maternal Health Tracking System &nbsp;|&nbsp; Confidential
-      </div>
-    </div>
-  );
-}
-
-/* ─── Stat card ─── */
-function StatCard({
-  label,
-  value,
-  color = 'var(--ink)',
-  sub,
-}: {
-  label: string;
-  value: number;
-  color?: string;
-  sub?: string;
-}) {
-  return (
-    <div className="stat-card">
-      <p className="stat-label">{label}</p>
-      <p className="stat-value" style={{ color }}>{value}</p>
-      {sub && (
-        <p style={{ fontSize: '0.6875rem', color: 'var(--muted)', marginTop: '0.25rem' }}>{sub}</p>
-      )}
     </div>
   );
 }
