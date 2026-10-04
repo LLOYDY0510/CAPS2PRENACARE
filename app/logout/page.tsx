@@ -18,7 +18,7 @@ export default function LogoutPage() {
   }, [router, supabase]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F5F7F8]">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="card p-8 text-center max-w-sm w-full mx-4">
         <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <h1 className="text-lg font-semibold text-ink mb-1">Signing out...</h1>

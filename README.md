@@ -29,6 +29,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 | `SEMAPHORE_API_KEY` | yes | Sending. Also used to read the live credit balance. |
 | `SEMAPHORE_SENDER_NAME` | no | A sender ID **registered and approved in your Semaphore account**. Omitted by default; sending an unregistered name makes Semaphore reject the entire batch. |
 | `CRON_SECRET` | for cron | Bearer token required by `GET /api/cron/prenatal-reminders`. The endpoint refuses every request while this is unset. |
+| `NEXT_PUBLIC_OAUTH_PROVIDERS` | no | Comma-separated Supabase OAuth providers enabled on the login screen (e.g. `google,github`). When unset, every social button renders disabled. |
 
 ### Semaphore account must have an approved sender name
 

@@ -15,6 +15,9 @@ export default function RiskBadge({
   if (riskLevel === 'high') {
     return <span className={`badge-high ${className}`}>High Risk</span>;
   }
+  if (riskLevel === 'medium') {
+    return <span className={`badge-medium ${className}`}>Medium Risk</span>;
+  }
   if (riskLevel === 'low') {
     return <span className={`badge-low ${className}`}>Low Risk</span>;
   }

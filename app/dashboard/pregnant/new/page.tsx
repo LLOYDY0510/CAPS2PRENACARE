@@ -330,7 +330,7 @@ export default function RegisterPregnantMotherPage() {
               value={form.date_registered}
               onChange={(e) => updateField('date_registered', e.target.value)}
               required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-input w-full"
             />
           </div>
           <div>
@@ -342,7 +342,7 @@ export default function RegisterPregnantMotherPage() {
                 onChange={(e) => updateField('first_name', e.target.value)}
                 placeholder="First name"
                 required
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+                className="form-input"
               />
               <input
                 type="text"
@@ -350,7 +350,7 @@ export default function RegisterPregnantMotherPage() {
                 onChange={(e) => updateField('middle_name', e.target.value)}
                 placeholder="M.I."
                 maxLength={2}
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+                className="form-input"
               />
               <input
                 type="text"
@@ -358,7 +358,7 @@ export default function RegisterPregnantMotherPage() {
                 onChange={(e) => updateField('last_name', e.target.value)}
                 placeholder="Last name"
                 required
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+                className="form-input"
               />
             </div>
           </div>
@@ -371,7 +371,7 @@ export default function RegisterPregnantMotherPage() {
             value={form.address}
             onChange={(e) => updateField('address', e.target.value)}
             placeholder="Enter complete address"
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+            className="form-input w-full"
           />
         </div>
 
@@ -381,7 +381,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.purok}
               onChange={(e) => updateField('purok', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {Array.from({ length: 8 }, (_, i) => i + 1).map((z) => (
@@ -398,7 +398,7 @@ export default function RegisterPregnantMotherPage() {
               value={form.age}
               onChange={(e) => updateField('age', e.target.value)}
               placeholder="Enter age"
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-input w-full"
             />
           </div>
           <div>
@@ -408,7 +408,7 @@ export default function RegisterPregnantMotherPage() {
               value={form.contact_number}
               onChange={(e) => updateField('contact_number', e.target.value)}
               placeholder="Enter contact number"
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-input w-full"
             />
           </div>
         </div>
@@ -420,7 +420,7 @@ export default function RegisterPregnantMotherPage() {
               type="date"
               value={form.lmp}
               onChange={(e) => updateField('lmp', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-input w-full"
             />
             <p className="text-xs text-transparent mt-1 select-none">.</p>
           </div>
@@ -432,7 +432,7 @@ export default function RegisterPregnantMotherPage() {
               type="date"
               value={form.edd}
               readOnly
-              className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-muted cursor-not-allowed"
+              className="form-input w-full"
             />
             <p className="text-xs text-muted-2 mt-1">Auto-computed from LMP</p>
           </div>
@@ -441,7 +441,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.gravida}
               onChange={(e) => updateField('gravida', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {GRAVIDA_OPTIONS.map((i) => (
@@ -457,7 +457,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.para}
               onChange={(e) => updateField('para', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {PARA_OPTIONS.map((i) => (
@@ -476,7 +476,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.blood_pressure}
               onChange={(e) => updateField('blood_pressure', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {BLOOD_PRESSURE_OPTIONS.map((bp) => (
@@ -491,7 +491,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.height_cm}
               onChange={(e) => updateField('height_cm', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {HEIGHT_OPTIONS_CM.map((cm) => (
@@ -506,7 +506,7 @@ export default function RegisterPregnantMotherPage() {
             <select
               value={form.weight_kg}
               onChange={(e) => updateField('weight_kg', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+              className="form-select w-full"
             >
               <option value="">Select...</option>
               {WEIGHT_OPTIONS_KG.map((kg) => (
@@ -561,13 +561,13 @@ export default function RegisterPregnantMotherPage() {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div className="form-actions form-actions-sticky">
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary"
+            className="btn btn-primary"
           >
-            {loading ? 'Saving…' : 'Save Record'}
+            <span className="btn-label">{loading ? 'Saving…' : 'Save Record'}</span>
           </button>
           <button
             type="button"

@@ -1,5 +1,5 @@
 import 'server-only';
-import { createAdminClient } from '@/utils/supabase/admin';
+import { createAdminClient, describeServiceKeyError } from '@/utils/supabase/admin';
 import { createRoleNotification } from '@/utils/notifications';
 import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
 import { sendSmsAndLog, type RecipientOutcome } from '@/utils/sms/sendSms';
@@ -151,7 +151,12 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
     .order('visit_date', { ascending: true });
 
   if (error) {
-    console.error('automatic reminders: could not read schedules', error.message);
+    // One clear line per failed run. With a bad/rotated service key this is
+    // the first symptom staff notice, so spell out what to fix.
+    console.error(
+      'automatic reminders: could not read schedules —',
+      describeServiceKeyError(error),
+    );
     return report;
   }
 

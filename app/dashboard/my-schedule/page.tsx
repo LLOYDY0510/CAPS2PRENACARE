@@ -1,48 +1,12 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
+import { AccountNotLinked } from '@/components/ui/PatientNotices';
+import { getPatientContext } from '@/utils/patient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MySchedulePage() {
-  const supabase = await createClient();
+  const { supabase, pregnantMotherId } = await getPatientContext();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('pregnant_mother_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileError) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="alert-error" role="alert">
-          Failed to load your account: {profileError.message}
-        </div>
-      </div>
-    );
-  }
-
-  const pregnantMotherId = profile?.pregnant_mother_id;
-
-  if (!pregnantMotherId) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="card p-6">
-          <h1 className="text-lg mb-2">Account not linked</h1>
-          <p className="text-muted">
-            Your account is not linked to a prenatal record yet. Please contact your BHW or the
-            administrator.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!pregnantMotherId) return <AccountNotLinked />;
 
   const today = new Date().toISOString().slice(0, 10);
   const [scheduleResult, remindersResult] = await Promise.all([

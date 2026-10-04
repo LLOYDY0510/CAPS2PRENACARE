@@ -1,36 +1,14 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
+import InfoRow from '@/components/ui/InfoRow';
+import { AccountNotLinked, RecordNotFound } from '@/components/ui/PatientNotices';
 import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
+import { getPatientContext } from '@/utils/patient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MyRecordsPage() {
-  const supabase = await createClient();
+  const { supabase, pregnantMotherId } = await getPatientContext();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('pregnant_mother_id')
-    .eq('id', user.id)
-    .single();
-
-  const pregnantMotherId = profile?.pregnant_mother_id;
-
-  if (!pregnantMotherId) {
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 max-w-2xl mx-auto">
-        <h1 className="text-xl font-semibold mb-2 text-ink">Account not linked</h1>
-        <p className="text-muted">
-          Your account isn&apos;t linked to a record yet. Please contact your BHW or admin.
-        </p>
-      </div>
-    );
-  }
+  if (!pregnantMotherId) return <AccountNotLinked />;
 
   const { data: record } = await supabase
     .from('pregnant_mothers')
@@ -44,16 +22,7 @@ export default async function MyRecordsPage() {
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
 
-  if (!record) {
-    return (
-      <div className="card p-6 max-w-2xl mx-auto">
-        <h1 className="text-xl font-semibold mb-2 text-ink">Record not found</h1>
-        <p className="text-muted text-sm">
-          We couldn&apos;t find your linked record. Please contact your BHW or midwife for help.
-        </p>
-      </div>
-    );
-  }
+  if (!record) return <RecordNotFound />;
 
   const fullName = [record.first_name, record.middle_name, record.last_name]
     .filter(Boolean)
@@ -66,13 +35,9 @@ export default async function MyRecordsPage() {
         <p className="text-sm text-muted mt-0.5">{record.serial_no}</p>
         <div className="mt-3">
           {record.risk_level === 'high' ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
-              High Risk
-            </span>
+            <span className="risk-pill risk-pill-high">High Risk</span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              Low Risk
-            </span>
+            <span className="risk-pill risk-pill-low">Low Risk</span>
           )}
         </div>
       </div>
@@ -111,15 +76,6 @@ export default async function MyRecordsPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | number | null }) {
-  return (
-    <div>
-      <p className="text-muted-2 text-xs mb-0.5">{label}</p>
-      <p className="text-gray-800">{value ?? '—'}</p>
     </div>
   );
 }

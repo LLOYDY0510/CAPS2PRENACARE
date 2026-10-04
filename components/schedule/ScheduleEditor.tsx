@@ -204,7 +204,7 @@ export default function ScheduleEditor({
           {visible.map((mother) => (
             <label
               key={mother.id}
-              className="flex items-center gap-3 px-4 py-3 border-b border-[#EEF1F4] last:border-0 hover:bg-[#F8FAFB] cursor-pointer"
+              className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-light)] last:border-0 hover:bg-[var(--surface-alt)] cursor-pointer"
             >
               <input
                 type="checkbox"
@@ -228,16 +228,16 @@ export default function ScheduleEditor({
         </div>
 
         {withoutContact > 0 && (
-          <p className="px-4 py-2 text-xs text-muted bg-[#F8FAFB] border-t border-[#EEF1F4]">
+          <p className="px-4 py-2 text-xs text-muted bg-[var(--surface-alt)] border-t border-[var(--border-light)]">
             {withoutContact} of the mothers shown have no contact number. They can still be
             scheduled, but no SMS will reach them.
           </p>
         )}
       </div>
 
-      <div className="flex gap-3">
-        <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? 'Saving…' : submitLabel}
+      <div className="form-actions">
+        <button type="submit" disabled={busy} className="btn btn-primary">
+          <span className="btn-label">{busy ? 'Saving…' : submitLabel}</span>
         </button>
         <button type="button" onClick={onCancel} className="btn-secondary" disabled={busy}>
           Cancel

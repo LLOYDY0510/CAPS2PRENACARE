@@ -3,6 +3,9 @@ import RiskTipsSection, { type AtRiskMother } from '@/components/tips/RiskTipsSe
 import { getMatchedRiskTips, type RiskIndicatorInput } from '@/utils/matchedRiskTips';
 import { one } from '@/utils/embedded';
 import RiskBadge from '@/components/ui/RiskBadge';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import { HeartPulse, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 
 type MotherIndicatorRow = {
   pregnant_mother_id: string | null;
@@ -12,7 +15,6 @@ type MotherIndicatorRow = {
 export default async function NurseDashboard() {
   const supabase = await createClient();
 
-  // 1. Fetch pregnant mothers
   const { data: records, error: recordsError } = await supabase
     .from('pregnant_mothers')
     .select(
@@ -20,14 +22,12 @@ export default async function NurseDashboard() {
     )
     .order('serial_no', { ascending: true });
 
-  // 2. Fetch active risk indicators
   const { data: indicators, error: indicatorsError } = await supabase
     .from('risk_indicators')
     .select('id, label, indicator_type, threshold_value, active')
     .eq('active', true)
     .order('created_at', { ascending: true });
 
-  // 3. Fetch matched indicators from junction table
   const { data: motherIndicators, error: linksError } = await supabase
     .from('pregnant_mother_indicators')
     .select(`
@@ -45,9 +45,7 @@ export default async function NurseDashboard() {
   if (loadError) {
     return (
       <div>
-        <div className="page-header">
-          <h1>Nurse Dashboard</h1>
-        </div>
+        <PageHeader title="Nurse Dashboard" icon={HeartPulse} />
         <div className="alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
         </div>
@@ -107,78 +105,108 @@ export default async function NurseDashboard() {
   });
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="page-header">
-        <h1>Nurse Dashboard</h1>
-        <p className="page-date">{today}</p>
-      </div>
+      <PageHeader
+        title="Nurse Dashboard"
+        subtitle={`Clinical monitoring and risk management for ${today}`}
+        icon={HeartPulse}
+        badge="Clinical Staff"
+      />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="stat-card">
-          <p className="stat-label">Total Registered</p>
-          <p className="stat-value">{total}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">High Risk</p>
-          <p className="stat-value" style={{ color: 'var(--danger)' }}>{highRisk}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Low Risk</p>
-          <p className="stat-value" style={{ color: 'var(--success)' }}>{lowRisk}</p>
-        </div>
-        <div className="stat-card">
-          <p className="stat-label">Unassessed</p>
-          <p className="stat-value" style={{ color: 'var(--muted)' }}>{unassessed}</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Registered"
+          value={total}
+          trend="Registered patients"
+          icon={Users}
+          variant="brand"
+          href="/dashboard/pregnant"
+          footerText="View all records"
+        />
+        <StatCard
+          title="High Risk Cases"
+          value={highRisk}
+          trend="Requires clinical intervention"
+          icon={AlertTriangle}
+          variant="danger"
+          href="/dashboard/risk-list/high"
+          footerText="View high risk list"
+        />
+        <StatCard
+          title="Low Risk Cases"
+          value={lowRisk}
+          trend="Routine prenatal care"
+          icon={ShieldCheck}
+          variant="success"
+          href="/dashboard/risk-list/low"
+          footerText="View low risk list"
+        />
+        <StatCard
+          title="Unassessed"
+          value={unassessed}
+          trend="Pending risk evaluation"
+          icon={HelpCircle}
+          variant="warning"
+          href="/dashboard/pregnant"
+          footerText="Review records"
+        />
       </div>
 
-      {/* Risk tips section — unchanged functionality */}
+      {/* Risk tips section */}
       <RiskTipsSection
         mothers={atRiskMothers}
         availableIndicators={activeIndicatorsList.map((i) => ({ id: i.id, label: i.label }))}
       />
 
       {/* Records table */}
-      <div className="card overflow-x-auto mt-4">
-        <div className="section-header">
-          <h2>Pregnant Women Records</h2>
-          <span className="text-xs text-muted">{total} registered</span>
+      <div className="rounded-[16px] bg-white border border-[var(--border-light)] shadow-card overflow-hidden">
+        <div className="p-5 border-b border-[var(--border-light)] flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[var(--ink)]">Pregnant Women Records</h2>
+            <p className="text-xs text-[var(--muted)] mt-0.5">Comprehensive patient list</p>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--surface-alt)] text-[var(--muted)] border border-[var(--border-light)]">
+            {total} registered
+          </span>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Serial No.</th>
-              <th>Name</th>
-              <th>Age</th>
-              <th>Purok</th>
-              <th>Risk Level</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(!records || records.length === 0) && (
+
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={5} className="text-center py-8 text-muted-2">
-                  No pregnant mothers registered yet.
-                </td>
+                <th>Serial No.</th>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Purok</th>
+                <th>Risk Level</th>
               </tr>
-            )}
-            {records?.map((r) => (
-              <tr key={r.id}>
-                <td data-label="Serial No.">{r.serial_no ?? '—'}</td>
-                <td data-label="Name" className="font-medium text-ink">
-                  {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
-                </td>
-                <td data-label="Age">{r.age ?? '—'}</td>
-                <td data-label="Purok">{r.purok ?? '—'}</td>
-                <td data-label="Risk Level">
-                  <RiskBadge riskLevel={r.risk_level} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(!records || records.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-muted-2">
+                    No pregnant mothers registered yet.
+                  </td>
+                </tr>
+              )}
+              {records?.map((r) => (
+                <tr key={r.id} className="hover:bg-[var(--surface-alt)] transition-colors">
+                  <td data-label="Serial No." className="font-mono text-xs text-[var(--muted)]">{r.serial_no ?? '—'}</td>
+                  <td data-label="Name" className="font-semibold text-[var(--ink)]">
+                    {[r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || '—'}
+                  </td>
+                  <td data-label="Age">{r.age ?? '—'}</td>
+                  <td data-label="Purok">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                  <td data-label="Risk Level">
+                    <RiskBadge riskLevel={r.risk_level} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

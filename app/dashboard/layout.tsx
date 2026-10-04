@@ -1,54 +1,55 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
+import SessionPersistenceGuard from '@/components/auth/SessionPersistenceGuard';
 import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
 import { isStaffRole } from '@/utils/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
-const MENUS: Record<string, { label: string; href: string }[]> = {
+const MENUS: Record<string, { label: string; href: string; icon?: string }[]> = {
   bhw_head: [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Risk Map', href: '/dashboard/risk-map' },
-    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
-    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
-    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
-    { label: 'SMS Log', href: '/dashboard/sms-log' },
-    { label: 'Manage BHW (Purok)', href: '/dashboard/bhw' },
-    { label: 'Reports', href: '/dashboard/reports' },
+    { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { label: 'Risk Map', href: '/dashboard/risk-map', icon: 'map' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant', icon: 'records' },
+    { label: 'Prenatal Schedule', href: '/dashboard/schedule', icon: 'schedule' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups', icon: 'checkups' },
+    { label: 'SMS Log', href: '/dashboard/sms-log', icon: 'sms' },
+    { label: 'Manage BHW (Purok)', href: '/dashboard/bhw', icon: 'users' },
+    { label: 'Reports', href: '/dashboard/reports', icon: 'reports' },
   ],
   bhw_purok: [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
-    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
-    { label: 'Prenatal Schedule (View Only)', href: '/dashboard/schedule' },
-    { label: 'Risk Map (View Only)', href: '/dashboard/risk-map' },
-    { label: 'Reports', href: '/dashboard/reports' },
+    { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant', icon: 'records' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups', icon: 'checkups' },
+    { label: 'Prenatal Schedule (View Only)', href: '/dashboard/schedule', icon: 'schedule' },
+    { label: 'Risk Map (View Only)', href: '/dashboard/risk-map', icon: 'map' },
+    { label: 'Reports', href: '/dashboard/reports', icon: 'reports' },
   ],
   admin: [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Risk Map', href: '/dashboard/risk-map' },
-    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
-    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
-    { label: 'Manage Users', href: '/dashboard/users' },
-    { label: 'SMS Log', href: '/dashboard/sms-log' },
-    { label: 'Reports', href: '/dashboard/reports' },
+    { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { label: 'Risk Map', href: '/dashboard/risk-map', icon: 'map' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant', icon: 'records' },
+    { label: 'Prenatal Schedule', href: '/dashboard/schedule', icon: 'schedule' },
+    { label: 'Manage Users', href: '/dashboard/users', icon: 'manageUsers' },
+    { label: 'SMS Log', href: '/dashboard/sms-log', icon: 'sms' },
+    { label: 'Reports', href: '/dashboard/reports', icon: 'reports' },
   ],
   nurse: [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Pregnant Records', href: '/dashboard/pregnant' },
-    { label: 'Prenatal Schedule', href: '/dashboard/schedule' },
-    { label: 'Prenatal Checkups', href: '/dashboard/checkups' },
-    { label: 'Risk Indicators', href: '/dashboard/risk-indicators' },
-    { label: 'Health Tips', href: '/dashboard/health-tips' },
-    { label: 'Nutrition Tips', href: '/dashboard/nutrition-tips' },
-    { label: 'SMS Log', href: '/dashboard/sms-log' },
+    { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { label: 'Pregnant Records', href: '/dashboard/pregnant', icon: 'records' },
+    { label: 'Prenatal Schedule', href: '/dashboard/schedule', icon: 'schedule' },
+    { label: 'Prenatal Checkups', href: '/dashboard/checkups', icon: 'checkups' },
+    { label: 'Risk Indicators', href: '/dashboard/risk-indicators', icon: 'indicators' },
+    { label: 'Health Tips', href: '/dashboard/health-tips', icon: 'healthTips' },
+    { label: 'Nutrition Tips', href: '/dashboard/nutrition-tips', icon: 'nutritionTips' },
+    { label: 'SMS Log', href: '/dashboard/sms-log', icon: 'sms' },
   ],
   pregnant_mother: [
-    { label: 'Messages', href: '/dashboard' },
-    { label: 'Prenatal Schedule', href: '/dashboard/my-schedule' },
-    { label: 'My Information', href: '/dashboard/my-info' },
-    { label: 'Medical Records', href: '/dashboard/my-records' },
+    { label: 'Messages', href: '/dashboard', icon: 'messages' },
+    { label: 'Prenatal Schedule', href: '/dashboard/my-schedule', icon: 'schedule' },
+    { label: 'My Information', href: '/dashboard/my-info', icon: 'myInfo' },
+    { label: 'Medical Records', href: '/dashboard/my-records', icon: 'myRecords' },
   ],
 };
 
@@ -114,14 +115,18 @@ export default async function DashboardLayout({
   }
 
   return (
-    <Sidebar
-      role={role}
-      menuItems={menuItems}
-      fullName={profile?.full_name}
-      email={user.email}
-      notifications={notifications}
-    >
-      {children}
-    </Sidebar>
+    <>
+      {/* Enforces the "remember me" choice made at sign-in; renders nothing. */}
+      <SessionPersistenceGuard />
+      <Sidebar
+        role={role}
+        menuItems={menuItems}
+        fullName={profile?.full_name}
+        email={user.email}
+        notifications={notifications}
+      >
+        {children}
+      </Sidebar>
+    </>
   );
 }
