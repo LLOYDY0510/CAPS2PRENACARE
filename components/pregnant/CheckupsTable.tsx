@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/ui/Button';
@@ -34,12 +34,20 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
       return (
         name.includes(q) ||
         (r.serial_no ?? '').toLowerCase().includes(q) ||
-        (r.purok ?? '').toLowerCase().includes(q)
+        (r.purok ?? '').toLowerCase().includes(q) ||
+        (r.purok ? `zone ${r.purok.toLowerCase()}` : '').includes(q)
       );
     });
   }, [records, search]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
