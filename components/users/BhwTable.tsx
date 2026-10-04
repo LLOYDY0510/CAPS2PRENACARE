@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 import EmptyState from '@/components/ui/EmptyState';
+import Pagination from '@/components/ui/Pagination';
 import { UserMinus, UserCheck, Loader2 } from 'lucide-react';
 
 type UserRow = {
@@ -13,6 +14,8 @@ type UserRow = {
   role: string;
   purok: string | null;
 };
+
+const PAGE_SIZE = 10;
 
 export default function BhwTable({
   initialUsers,
@@ -26,6 +29,7 @@ export default function BhwTable({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [draftPurok, setDraftPurok] = useState<Record<string, string>>({});
 
   // Account changes always go through the admin API: the browser session has no
@@ -89,14 +93,35 @@ export default function BhwTable({
     await updateAccount(id, { purok: purok || null }, '');
   }
 
-  const filteredUsers = users.filter((u) => {
-    const q = search.toLowerCase();
-    return (
-      (u.full_name ?? '').toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.purok ?? '').toLowerCase().includes(q)
-    );
-  });
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      return (
+        (u.full_name ?? '').toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.purok ?? '').toLowerCase().includes(q) ||
+        (u.purok ? `zone ${u.purok.toLowerCase()}` : '').includes(q)
+      );
+    });
+  }, [users, search]);
+
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredUsers.slice(start, start + PAGE_SIZE);
+  }, [filteredUsers, currentPage]);
 
   return (
     <div className="space-y-4">
@@ -117,7 +142,7 @@ export default function BhwTable({
         </div>
       )}
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden p-6 space-y-4">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -141,7 +166,7 @@ export default function BhwTable({
                   </td>
                 </tr>
               )}
-              {filteredUsers.map((user) => {
+              {paginatedUsers.map((user) => {
                 const isSaving = savingId === user.id;
                 const isBhw = user.role === 'bhw_purok';
                 return (
@@ -248,6 +273,15 @@ export default function BhwTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredUsers.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo, useEffect } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import { Input, Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { Send, ChevronDown, ChevronUp, AlertCircle, RotateCcw } from 'lucide-react';
 
@@ -45,6 +46,8 @@ type FollowUpRow = {
   messageType: 'missed_visit_follow_up' | 'risk_alert';
 };
 
+const PAGE_SIZE = 10;
+
 const TYPE_LABELS: Record<SmsLogRow['message_type'], string> = {
   general: 'General',
   prenatal_reminder: 'Prenatal reminder',
@@ -72,6 +75,7 @@ export default function SmsLogTable({
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'success' | 'failed'>('all');
   const [type, setType] = useState<'all' | SmsLogRow['message_type']>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [quickMessage, setQuickMessage] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, { tone: 'ok' | 'error'; text: string }>>({});
@@ -94,6 +98,23 @@ export default function SmsLogTable({
       return haystack.includes(q);
     });
   }, [logs, search, status, type]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status, type]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const hasFilters = !!search || status !== 'all' || type !== 'all';
 
@@ -290,7 +311,7 @@ export default function SmsLogTable({
                   </td>
                 </tr>
               )}
-              {filtered.map((log) => {
+              {paginated.map((log) => {
                 const isOpen = expanded.has(log.id);
                 const failedCount = log.receipts.filter((r) => r.providerStatus === 'failed').length;
                 return (
@@ -383,6 +404,15 @@ export default function SmsLogTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );

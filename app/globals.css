@@ -1678,4 +1678,32 @@ canvas {
   }
 }
 
+/* ─────────────────────────────────────────────
+   Leaflet Popup Custom Styling
+   ───────────────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 24, 35, 0.15);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.leaflet-popup-tip {
+  background: white;
+}
+
+.custom-leaflet-popup .leaflet-popup-content {
+  padding: 0;
+}
+
+/* Ensure buttons in popup don't have unwanted styles */
+.custom-leaflet-popup button {
+  -webkit-appearance: none;
+  appearance: none;
+}
 

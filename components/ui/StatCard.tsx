@@ -58,9 +58,6 @@ const VARIANT_ACCENTS: Record<
   },
 };
 
-// Default static heights for mini bar charts
-const MINI_BAR_HEIGHTS = ['40%', '65%', '45%', '90%', '70%', '100%', '60%'];
-
 export default function StatCard({
   title,
   value,
@@ -99,30 +96,13 @@ export default function StatCard({
         <div className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${styles.valueColor}`}>
           {value}
         </div>
-        <div className="flex items-center gap-2 mt-1.5">
-          {trend && (
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${styles.badgeBg}`}>
+        {trend && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${styles.badgeBg}`}>
               {trend}
             </span>
-          )}
-          <span className="text-[11px] font-semibold text-slate-400">on this week</span>
-        </div>
-      </div>
-
-      {/* Rounded-top Mini Bar Charts */}
-      <div className="flex items-end justify-between gap-1.5 h-9 mt-4 pt-2 border-t border-slate-100">
-        {MINI_BAR_HEIGHTS.map((height, i) => (
-          <div
-            key={i}
-            className="flex-1 bg-slate-100 rounded-t-full overflow-hidden flex items-end"
-            style={{ height: '100%' }}
-          >
-            <div
-              className={`w-full ${styles.barColor} rounded-t-full transition-all duration-300 opacity-80 group-hover:opacity-100`}
-              style={{ height }}
-            />
           </div>
-        ))}
+        )}
       </div>
 
       {/* Footer link hint if interactive */}

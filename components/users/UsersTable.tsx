@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import UserRoleEditor from '@/components/users/UserRoleEditor';
 import EmptyState from '@/components/ui/EmptyState';
+import Pagination from '@/components/ui/Pagination';
 import { X, Users } from 'lucide-react';
 
 type Profile = {
@@ -21,6 +22,8 @@ type MotherOption = {
   full_name: string;
   serial_no: string | null;
 };
+
+const PAGE_SIZE = 10;
 
 const ROLE_LABELS: Record<string, string> = {
   pending:          'Pending',
@@ -42,6 +45,7 @@ export default function UsersTable({
 }) {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Distinct roles in data
   const roles = useMemo(() => {
@@ -56,11 +60,29 @@ export default function UsersTable({
       if (q) {
         const matchName  = (p.full_name ?? '').toLowerCase().includes(q);
         const matchEmail = (p.email ?? '').toLowerCase().includes(q);
-        if (!matchName && !matchEmail) return false;
+        const matchPurok = (p.purok ?? '').toLowerCase().includes(q);
+        if (!matchName && !matchEmail && !matchPurok) return false;
       }
       return true;
     });
   }, [profiles, search, roleFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const hasFilters = search || roleFilter !== 'all';
 
@@ -101,7 +123,7 @@ export default function UsersTable({
         </span>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden p-6 space-y-4">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -126,7 +148,7 @@ export default function UsersTable({
                   </td>
                 </tr>
               )}
-              {filtered.map((p) => (
+              {paginated.map((p) => (
                 <UserRoleEditor
                   key={p.id}
                   profile={p}
@@ -143,6 +165,15 @@ export default function UsersTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );

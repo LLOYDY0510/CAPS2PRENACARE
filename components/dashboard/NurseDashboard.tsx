@@ -130,7 +130,7 @@ export default async function NurseDashboard() {
         <StatCard
           title="Total Registered"
           value={total}
-          trend="Registered patients"
+          trend={`${total} total patients`}
           icon={Users}
           variant="brand"
           href="/dashboard/pregnant"
@@ -139,7 +139,7 @@ export default async function NurseDashboard() {
         <StatCard
           title="High Risk Cases"
           value={highRisk}
-          trend="Requires clinical intervention"
+          trend={`${highRisk} priority cases`}
           icon={AlertTriangle}
           variant="danger"
           href="/dashboard/risk-list/high"
@@ -148,7 +148,7 @@ export default async function NurseDashboard() {
         <StatCard
           title="Low Risk Cases"
           value={lowRisk}
-          trend="Routine prenatal care"
+          trend={`${lowRisk} standard cases`}
           icon={ShieldCheck}
           variant="success"
           href="/dashboard/risk-list/low"
@@ -157,7 +157,7 @@ export default async function NurseDashboard() {
         <StatCard
           title="Unassessed"
           value={unassessed}
-          trend="Pending risk evaluation"
+          trend={`${unassessed} pending evaluation`}
           icon={HelpCircle}
           variant="warning"
           href="/dashboard/pregnant"

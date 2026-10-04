@@ -5,7 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
 import Link from 'next/link';
-import { Users, AlertTriangle, ShieldCheck, UserCheck, ArrowRight, LayoutDashboard, ChevronRight, MoreVertical } from 'lucide-react';
+import { Users, AlertTriangle, ShieldCheck, UserCheck, ArrowRight, LayoutDashboard, ChevronRight } from 'lucide-react';
 
 const ZONE_COLORS: Record<string, string> = {
   '1': '#3B82F6',
@@ -108,7 +108,7 @@ export default async function BhwHeadDashboard() {
         <StatCard
           title="Total Registered"
           value={total}
-          trend="+100% barangay coverage"
+          trend={`${total} registered mothers`}
           icon={Users}
           variant="brand"
           href="/dashboard/pregnant"
@@ -135,7 +135,7 @@ export default async function BhwHeadDashboard() {
         <StatCard
           title="BHW Members"
           value={bhwCount ?? 0}
-          trend="Field workers active"
+          trend={`${bhwCount ?? 0} active field BHWs`}
           icon={UserCheck}
           variant="warning"
           href="/dashboard/bhw"
@@ -156,9 +156,6 @@ export default async function BhwHeadDashboard() {
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
                 {total} total
               </span>
-              <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-                <MoreVertical size={16} />
-              </button>
             </div>
           </div>
 
@@ -192,9 +189,6 @@ export default async function BhwHeadDashboard() {
               <h3 className="text-base font-extrabold text-slate-800">Risk Breakdown</h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Clinical risk ratio</p>
             </div>
-            <button type="button" aria-label="Options" className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400">
-              <MoreVertical size={16} />
-            </button>
           </div>
 
           {total === 0 ? (

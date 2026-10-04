@@ -26,11 +26,6 @@ export default function BrandPanel({
         <h1 className="text-2xl font-semibold text-ink">{title}</h1>
         <p className="text-sm text-muted">{tagline}</p>
       </div>
-
-      <div
-        aria-hidden="true"
-        className="hidden lg:block flex-1 min-h-[240px] rounded-lg border border-dashed"
-      />
     </div>
   );
 }

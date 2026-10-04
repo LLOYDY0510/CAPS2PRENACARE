@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import ReportExport, { type ReportRow } from '@/components/reports/ReportExport';
 import RiskBadge from '@/components/ui/RiskBadge';
 import StatCard from '@/components/ui/StatCard';
@@ -25,6 +26,8 @@ type ReportType =
   | 'low_risk'
   | 'missed_checkups'
   | 'upcoming_edc';
+
+const PAGE_SIZE = 10;
 
 const REPORT_TYPES: { value: ReportType; label: string; description: string }[] = [
   {
@@ -78,6 +81,7 @@ export default function ReportsTable({
   const [reportType, setReportType] = useState<ReportType>('all');
   const [search, setSearch]         = useState('');
   const [zoneFilter, setZoneFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const printRef = useRef<HTMLDivElement>(null);
 
   const zones = useMemo(() => {
@@ -116,6 +120,23 @@ export default function ReportsTable({
       return true;
     });
   }, [byType, search, zoneFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [reportType, search, zoneFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const stats = useMemo(() => ({
     total:    byType.length,
@@ -256,25 +277,39 @@ export default function ReportsTable({
                   </td>
                 </tr>
               )}
-              {filtered.map((r, idx) => (
-                <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-3 text-slate-400 font-semibold">{idx + 1}</td>
-                  <td className="py-3.5 px-3 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
-                  <td className="py-3.5 px-3 font-bold text-slate-800">{r.name || '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.age ?? '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.contact_number ?? '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.edd ?? '—'}</td>
-                  <td className="py-3.5 px-3 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
-                  <td className="py-3.5 px-3 font-bold text-slate-800">{meta[r._id]?.checkupCount ?? 0}</td>
-                  <td className="py-3.5 px-3">
-                    <RiskBadge riskLevel={r.risk_level} />
-                  </td>
-                </tr>
-              ))}
+              {paginated.map((r, idx) => {
+                const rowNumber = (currentPage - 1) * PAGE_SIZE + idx + 1;
+                return (
+                  <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-3 text-slate-400 font-semibold">{rowNumber}</td>
+                    <td className="py-3.5 px-3 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-800">{r.name || '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.age ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.contact_number ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.edd ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-800">{meta[r._id]?.checkupCount ?? 0}</td>
+                    <td className="py-3.5 px-3">
+                      <RiskBadge riskLevel={r.risk_level} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Component */}
+        <div className="no-print">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filtered.length}
+            itemsPerPage={PAGE_SIZE}
+          />
         </div>
       </div>
     </div>

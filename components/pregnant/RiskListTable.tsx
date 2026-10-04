@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/ui/Button';
 import RiskBadge from '@/components/ui/RiskBadge';
+import Pagination from '@/components/ui/Pagination';
 import { ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 10;
 
 export type RiskRecord = {
   id: string;
@@ -25,6 +28,7 @@ export default function RiskListTable({
   isHigh: boolean;
 }) {
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -36,6 +40,16 @@ export default function RiskListTable({
       (r.serial_no ?? '').toLowerCase().includes(q)
     );
   }, [records, search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   return (
     <div className="space-y-4">
@@ -69,7 +83,7 @@ export default function RiskListTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-10 text-slate-400 font-medium">
                     {search
@@ -78,7 +92,7 @@ export default function RiskListTable({
                   </td>
                 </tr>
               )}
-              {filtered.map((r) => (
+              {paginated.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
                   <td className="py-3.5 px-4 font-bold text-slate-800">{r.full_name ?? '—'}</td>
@@ -100,6 +114,18 @@ export default function RiskListTable({
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filtered.length}
+              itemsPerPage={PAGE_SIZE}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

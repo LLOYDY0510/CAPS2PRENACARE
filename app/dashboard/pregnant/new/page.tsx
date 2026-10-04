@@ -21,6 +21,7 @@ const LocationPicker = dynamic<{
   latitude: number | null;
   longitude: number | null;
   onChange: (lat: number, lng: number) => void;
+  onLocationDetected?: (data: { lat: number; lng: number; address?: string; barangay?: string; purok?: string; confidence?: 'high' | 'medium' | 'low' }) => void;
 }>(() => import('@/components/maps/LocationPicker'), {
   ssr: false,
   loading: () => (
@@ -68,6 +69,7 @@ export default function RegisterPregnantMotherPage() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadIndicators() {
@@ -99,6 +101,37 @@ export default function RegisterPregnantMotherPage() {
     setSelectedIndicatorIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  }
+
+  function handleLocationDetected(data: {
+    lat: number;
+    lng: number;
+    address?: string;
+    barangay?: string;
+    purok?: string;
+    confidence?: 'high' | 'medium' | 'low';
+  }) {
+    // Auto-fill address if not already set
+    if (data.address && !form.address) {
+      setForm((prev) => ({ ...prev, address: data.address || '' }));
+      setAutoFilledFields((prev) => new Set([...prev, 'address']));
+    }
+
+    // Auto-fill purok if detected and not already set
+    if (data.purok && !form.purok) {
+      setForm((prev) => ({ ...prev, purok: data.purok || '' }));
+      setAutoFilledFields((prev) => new Set([...prev, 'purok']));
+    }
+  }
+
+  function handleFieldChange(field: string, value: string) {
+    updateField(field, value);
+    // Remove from auto-filled set when user manually edits
+    setAutoFilledFields((prev) => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -371,19 +404,23 @@ export default function RegisterPregnantMotherPage() {
             label="Address"
             type="text"
             value={form.address}
-            onChange={(e) => updateField('address', e.target.value)}
+            onChange={(e) => handleFieldChange('address', e.target.value)}
             placeholder="Enter complete residential address"
+            helperText={autoFilledFields.has('address') ? 'Auto-filled from map location' : undefined}
+            autoFilled={autoFilledFields.has('address')}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select
               label="Purok / Zone"
               value={form.purok}
-              onChange={(e) => updateField('purok', e.target.value)}
+              onChange={(e) => handleFieldChange('purok', e.target.value)}
               options={[
                 { value: '', label: 'Select Zone...' },
                 ...Array.from({ length: 8 }, (_, i) => ({ value: String(i + 1), label: `Zone ${i + 1}` })),
               ]}
+              helperText={autoFilledFields.has('purok') ? 'Auto-filled from map location' : undefined}
+              autoFilled={autoFilledFields.has('purok')}
             />
             <Input
               label="Age"
@@ -520,7 +557,11 @@ export default function RegisterPregnantMotherPage() {
               latitude={location.lat}
               longitude={location.lng}
               onChange={(lat, lng) => setLocation({ lat, lng })}
+              onLocationDetected={handleLocationDetected}
             />
+            <p className="text-[11px] text-slate-400 font-medium">
+              Click on the map or drag the pin to set the residence location. A popup will appear with detected barangay and zone information. Click "Apply Location to Form" to auto-fill the address and zone fields.
+            </p>
           </div>
         </div>
 

@@ -150,7 +150,7 @@ export default async function BhwPurokDashboard() {
         <StatCard
           title="Total Mothers"
           value={total}
-          trend="Purok field coverage"
+          trend={hasPurok ? `${total} in Purok ${purok}` : `${total} registered`}
           icon={Users}
           variant="brand"
           href="/dashboard/pregnant"
@@ -159,7 +159,7 @@ export default async function BhwPurokDashboard() {
         <StatCard
           title="High Risk"
           value={highRisk}
-          trend="Requires priority care"
+          trend={`${highRisk} priority cases`}
           icon={AlertTriangle}
           variant="danger"
           href="/dashboard/risk-list/high"
@@ -168,7 +168,7 @@ export default async function BhwPurokDashboard() {
         <StatCard
           title="Low Risk"
           value={lowRisk}
-          trend="Standard schedule"
+          trend={`${lowRisk} standard cases`}
           icon={ShieldCheck}
           variant="success"
           href="/dashboard/risk-list/low"
@@ -177,7 +177,7 @@ export default async function BhwPurokDashboard() {
         <StatCard
           title="Unassessed"
           value={unassessed}
-          trend="Needs risk check"
+          trend={`${unassessed} pending evaluation`}
           icon={HelpCircle}
           variant="warning"
           href="/dashboard/pregnant"
@@ -186,7 +186,7 @@ export default async function BhwPurokDashboard() {
         <StatCard
           title="With Checkups"
           value={withCheckups}
-          trend="Recorded visits"
+          trend={`${withCheckups} completed visits`}
           icon={ClipboardCheck}
           variant="purple"
           href="/dashboard/checkups"
