@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
 import RiskBadge from '@/components/ui/RiskBadge';
@@ -42,25 +43,44 @@ export default function PregnantRecordsTable({
   canEdit: boolean;
   initialSearch?: string;
 }) {
-  const [search, setSearch]   = useState(initialSearch);
-  const [risk, setRisk]       = useState('all');
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams?.get('search') ?? searchParams?.get('q') ?? '';
+
+  const [search, setSearch] = useState(urlSearch || initialSearch);
+  const [risk, setRisk] = useState('all');
   const [ageFilter, setAgeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    if (initialSearch) {
-      setSearch(initialSearch);
+    const activeSearch = urlSearch || initialSearch;
+    if (activeSearch) {
+      setSearch(activeSearch);
       setCurrentPage(1);
     }
-  }, [initialSearch]);
+  }, [urlSearch, initialSearch]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return records.filter((r) => {
       const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
       const serial = (r.serial_no ?? '').toLowerCase();
+      const purok = (r.purok ?? '').toLowerCase();
+      const purokZone = r.purok ? `zone ${r.purok.toLowerCase()}` : '';
+      const address = (r.address ?? '').toLowerCase();
+      const riskLevel = (r.risk_level ?? '').toLowerCase();
       const age = r.age;
-      if (q && !name.includes(q) && !serial.includes(q)) return false;
+
+      if (
+        q &&
+        !name.includes(q) &&
+        !serial.includes(q) &&
+        !purok.includes(q) &&
+        !purokZone.includes(q) &&
+        !address.includes(q) &&
+        !riskLevel.includes(q)
+      ) {
+        return false;
+      }
       if (risk !== 'all' && r.risk_level !== risk) return false;
       if (ageFilter === 'under-18' && (age == null || age >= 18)) return false;
       if (ageFilter === '18-24' && (age == null || age < 18 || age > 24)) return false;
@@ -71,6 +91,13 @@ export default function PregnantRecordsTable({
   }, [records, search, risk, ageFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
