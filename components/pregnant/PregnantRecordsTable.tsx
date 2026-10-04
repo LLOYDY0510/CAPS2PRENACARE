@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
 import RiskBadge from '@/components/ui/RiskBadge';
 import Button from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
+import Pagination from '@/components/ui/Pagination';
 import { ChevronRight, Filter, RotateCcw } from 'lucide-react';
 
 export type PregnantRecord = {
@@ -30,16 +31,28 @@ export type PregnantRecord = {
   checkupCount: number;
 };
 
+const PAGE_SIZE = 10;
+
 export default function PregnantRecordsTable({
   records,
   canEdit,
+  initialSearch = '',
 }: {
   records: PregnantRecord[];
   canEdit: boolean;
+  initialSearch?: string;
 }) {
-  const [search, setSearch]   = useState('');
+  const [search, setSearch]   = useState(initialSearch);
   const [risk, setRisk]       = useState('all');
   const [ageFilter, setAgeFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+      setCurrentPage(1);
+    }
+  }, [initialSearch]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -57,7 +70,18 @@ export default function PregnantRecordsTable({
     });
   }, [records, search, risk, ageFilter]);
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
   const hasFilters = search || risk !== 'all' || ageFilter !== 'all';
+
+  function handleFilterChange(updater: () => void) {
+    updater();
+    setCurrentPage(1);
+  }
 
   return (
     <div className="space-y-4">
@@ -66,7 +90,7 @@ export default function PregnantRecordsTable({
         <div className="flex-1 min-w-[240px]">
           <SearchBar
             value={search}
-            onChange={setSearch}
+            onChange={(val) => handleFilterChange(() => setSearch(val))}
             placeholder="Search by name or serial no..."
           />
         </div>
@@ -74,7 +98,7 @@ export default function PregnantRecordsTable({
         <div className="w-40">
           <Select
             value={risk}
-            onChange={(e) => setRisk(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setRisk(e.target.value))}
             options={[
               { value: 'all', label: 'All Risk Levels' },
               { value: 'high', label: 'High Risk' },
@@ -86,7 +110,7 @@ export default function PregnantRecordsTable({
         <div className="w-40">
           <Select
             value={ageFilter}
-            onChange={(e) => setAgeFilter(e.target.value)}
+            onChange={(e) => handleFilterChange(() => setAgeFilter(e.target.value))}
             options={[
               { value: 'all', label: 'All Ages' },
               { value: 'under-18', label: 'Under 18' },
@@ -101,7 +125,7 @@ export default function PregnantRecordsTable({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSearch(''); setRisk('all'); setAgeFilter('all'); }}
+            onClick={() => handleFilterChange(() => { setSearch(''); setRisk('all'); setAgeFilter('all'); })}
             leftIcon={<RotateCcw size={14} />}
           >
             Clear
@@ -141,7 +165,7 @@ export default function PregnantRecordsTable({
                   </td>
                 </tr>
               )}
-              {filtered.map((r) => (
+              {paginated.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
                   <td className="py-3.5 px-4 text-slate-500 text-xs">{r.date_registered ?? '—'}</td>
@@ -179,6 +203,15 @@ export default function PregnantRecordsTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );
