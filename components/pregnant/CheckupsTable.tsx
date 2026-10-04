@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import { prenatalStatusLabel, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
 import { ChevronRight } from 'lucide-react';
 
@@ -19,8 +20,11 @@ export type CheckupRecord = {
   trimesterStatuses: Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>;
 };
 
+const PAGE_SIZE = 10;
+
 export default function CheckupsTable({ records }: { records: CheckupRecord[] }) {
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -35,6 +39,12 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
     });
   }, [records, search]);
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
   return (
     <div className="space-y-4">
       {/* Search Card */}
@@ -42,7 +52,10 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
         <div className="flex-1 max-w-md">
           <SearchBar
             value={search}
-            onChange={setSearch}
+            onChange={(val) => {
+              setSearch(val);
+              setCurrentPage(1);
+            }}
             placeholder="Search by name, serial no, or zone..."
           />
         </div>
@@ -76,7 +89,7 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
                   </td>
                 </tr>
               )}
-              {filtered.map((r) => (
+              {paginated.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
                   <td className="py-3.5 px-4 font-bold text-slate-800">
@@ -121,6 +134,15 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={PAGE_SIZE}
+        />
       </div>
     </div>
   );
