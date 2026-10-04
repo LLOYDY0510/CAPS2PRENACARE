@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { reverseGeocode, parseLocationFromGeocode, debounce } from '@/utils/maps/reverseGeocode';
-import { MapPin, Loader2, AlertCircle, ExternalLink, Map as MapIcon, Navigation } from 'lucide-react';
+import { MapPin, Loader2, AlertCircle, Maximize2, Map as MapIcon, Navigation } from 'lucide-react';
+import FullscreenMapModal from './FullscreenMapModal';
 
 // Fix default marker icon paths (Leaflet + Next.js quirk)
 const defaultIcon = L.icon({
@@ -41,7 +42,7 @@ function ClickHandler({
   return null;
 }
 
-function PopupContent({
+function LocationDetailsCard({
   locationData,
   isGeocoding,
   geocodeError,
@@ -57,9 +58,9 @@ function PopupContent({
   onOpenStreetView: () => void;
 }) {
   return (
-    <div className="min-w-[280px] max-w-[320px] p-2 space-y-3">
+    <div className="bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-100 rounded-2xl p-4 space-y-3">
       {/* Header */}
-      <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+      <div className="flex items-center gap-2">
         <MapPin size={16} className="text-[var(--brand)] shrink-0" />
         <span className="text-xs font-bold text-slate-800">Location Details</span>
       </div>
@@ -84,7 +85,7 @@ function PopupContent({
       {locationData && !isGeocoding && (
         <div className="space-y-2">
           {/* Coordinates */}
-          <div className="bg-slate-50 rounded-lg p-2">
+          <div className="bg-white/60 rounded-lg p-2">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Coordinates</p>
             <p className="text-xs font-mono text-slate-700">
               {locationData.lat.toFixed(6)}, {locationData.lng.toFixed(6)}
@@ -103,12 +104,12 @@ function PopupContent({
           {(locationData.barangay || locationData.purok) && (
             <div className="flex flex-wrap gap-1.5">
               {locationData.barangay && (
-                <span className="px-2 py-1 bg-teal-50 rounded-lg text-[11px] font-semibold text-teal-800 border border-teal-200">
+                <span className="px-2 py-1 bg-white/80 rounded-lg text-[11px] font-semibold text-teal-800 border border-teal-200">
                   Barangay: {locationData.barangay}
                 </span>
               )}
               {locationData.purok && (
-                <span className="px-2 py-1 bg-indigo-50 rounded-lg text-[11px] font-semibold text-indigo-800 border border-indigo-200">
+                <span className="px-2 py-1 bg-white/80 rounded-lg text-[11px] font-semibold text-indigo-800 border border-indigo-200">
                   Zone {locationData.purok}
                 </span>
               )}
@@ -136,38 +137,37 @@ function PopupContent({
       )}
 
       {/* Action buttons */}
-      <div className="space-y-2 pt-2 border-t border-slate-200">
-        <button
-          type="button"
-          onClick={onApplyToForm}
-          disabled={!locationData || isGeocoding}
-          className="w-full px-3 py-2 bg-[var(--brand)] hover:bg-teal-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          <MapPin size={14} />
-          Apply Location to Form
-        </button>
+      {locationData && !isGeocoding && (
+        <div className="space-y-2 pt-2 border-t border-teal-200/50">
+          <button
+            type="button"
+            onClick={onApplyToForm}
+            className="w-full px-3 py-2 bg-[var(--brand)] hover:bg-teal-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <MapPin size={14} />
+            Apply Location to Form
+          </button>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onOpenGoogleMaps}
-            disabled={!locationData}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:cursor-not-allowed text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5"
-          >
-            <MapIcon size={14} />
-            Google Maps
-          </button>
-          <button
-            type="button"
-            onClick={onOpenStreetView}
-            disabled={!locationData}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:cursor-not-allowed text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Navigation size={14} />
-            Street View
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onOpenGoogleMaps}
+              className="px-3 py-2 bg-white/80 hover:bg-white text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-slate-200"
+            >
+              <MapIcon size={14} />
+              Google Maps
+            </button>
+            <button
+              type="button"
+              onClick={onOpenStreetView}
+              className="px-3 py-2 bg-white/80 hover:bg-white text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-slate-200"
+            >
+              <Navigation size={14} />
+              Street View
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -189,8 +189,9 @@ export default function LocationPicker({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const markerRef = useRef<L.Marker>(null);
+  const mapRef = useRef<L.Map>(null);
 
   // Debounced geocoding function to respect API rate limits
   const performGeocoding = useCallback(
@@ -228,21 +229,18 @@ export default function LocationPicker({
   function handlePick(lat: number, lng: number) {
     setPosition([lat, lng]);
     onChange(lat, lng);
-    setShowPopup(true);
     performGeocoding(lat, lng);
   }
 
   function handleDragEnd(lat: number, lng: number) {
     setPosition([lat, lng]);
     onChange(lat, lng);
-    setShowPopup(true);
     performGeocoding(lat, lng);
   }
 
   function handleApplyToForm() {
     if (locationData) {
       onLocationDetected?.(locationData);
-      setShowPopup(false);
     }
   }
 
@@ -260,16 +258,42 @@ export default function LocationPicker({
     }
   }
 
+  function handleFullscreenLocationSelected(data: LocationData) {
+    setPosition([data.lat, data.lng]);
+    onChange(data.lat, data.lng);
+    setLocationData(data);
+    onLocationDetected?.(data);
+  }
+
   return (
     <div className="space-y-3">
       <div
         className="rounded-3xl overflow-hidden border border-slate-200/60 shadow-sm relative"
         style={{ height: '300px' }}
       >
+        {/* Fullscreen button */}
+        <button
+          type="button"
+          onClick={() => setIsFullscreenOpen(true)}
+          className="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-slate-200 hover:bg-white transition-colors"
+          aria-label="Open fullscreen map"
+        >
+          <Maximize2 size={16} className="text-slate-600" />
+        </button>
+
         <MapContainer
           center={position ?? DEFAULT_CENTER}
           zoom={16}
           style={{ height: '100%', width: '100%' }}
+          ref={(map) => {
+            if (map) {
+              mapRef.current = map;
+              // Auto-pan to position when set
+              if (position) {
+                map.setView(position, 16, { animate: true });
+              }
+            }
+          }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -288,34 +312,34 @@ export default function LocationPicker({
                   handleDragEnd(newPos.lat, newPos.lng);
                 },
               }}
-            >
-              {showPopup && (
-                <Popup
-                  position={position}
-                  closeButton={true}
-                  closeOnClick={false}
-                  className="custom-leaflet-popup"
-                >
-                  <PopupContent
-                    locationData={locationData}
-                    isGeocoding={isGeocoding}
-                    geocodeError={geocodeError}
-                    onApplyToForm={handleApplyToForm}
-                    onOpenGoogleMaps={handleOpenGoogleMaps}
-                    onOpenStreetView={handleOpenStreetView}
-                  />
-                </Popup>
-              )}
-            </Marker>
+            />
           )}
         </MapContainer>
       </div>
+
+      {/* Location Details Card */}
+      <LocationDetailsCard
+        locationData={locationData}
+        isGeocoding={isGeocoding}
+        geocodeError={geocodeError}
+        onApplyToForm={handleApplyToForm}
+        onOpenGoogleMaps={handleOpenGoogleMaps}
+        onOpenStreetView={handleOpenStreetView}
+      />
 
       <p className="text-xs text-slate-500">
         {position
           ? `Selected: ${position[0].toFixed(6)}, ${position[1].toFixed(6)}`
           : 'Click on the map or drag the pin to set this mother\'s location.'}
       </p>
+
+      {/* Fullscreen Map Modal */}
+      <FullscreenMapModal
+        isOpen={isFullscreenOpen}
+        onClose={() => setIsFullscreenOpen(false)}
+        initialPosition={position}
+        onLocationSelected={handleFullscreenLocationSelected}
+      />
     </div>
   );
 }

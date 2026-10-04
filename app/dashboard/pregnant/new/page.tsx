@@ -560,7 +560,7 @@ export default function RegisterPregnantMotherPage() {
               onLocationDetected={handleLocationDetected}
             />
             <p className="text-[11px] text-slate-400 font-medium">
-              Click on the map or drag the pin to set the residence location. A popup will appear with detected barangay and zone information. Click "Apply Location to Form" to auto-fill the address and zone fields.
+              Click on the map or drag the pin to set the residence location. Location details will appear below the map. Click "Apply Location to Form" to auto-fill the address and zone fields. Use the fullscreen button for precise house location selection.
             </p>
           </div>
         </div>
