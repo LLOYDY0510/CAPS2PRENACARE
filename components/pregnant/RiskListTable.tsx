@@ -121,6 +121,8 @@ export default function RiskListTable({
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              totalItems={filtered.length}
+              itemsPerPage={PAGE_SIZE}
             />
           </div>
         )}
