@@ -191,8 +191,8 @@ export default function Sidebar({
             mobileOpen
               ? 'max-lg:translate-x-0 max-lg:visible'
               : 'max-lg:-translate-x-full max-lg:invisible max-lg:pointer-events-none',
-            // Desktop Pill
-            'lg:visible lg:relative lg:translate-x-0 lg:w-[84px] lg:h-full lg:rounded-[36px] lg:py-6 lg:px-3 lg:my-auto',
+            // Desktop Pill — overflow-visible so tooltips can escape the pill boundary
+            'lg:visible lg:relative lg:translate-x-0 lg:w-[84px] lg:h-full lg:rounded-[36px] lg:py-6 lg:px-3 lg:my-auto lg:overflow-visible',
           ].join(' ')}
         >
           {/* Logo at Top */}
@@ -209,59 +209,60 @@ export default function Sidebar({
           </div>
 
           {/* Navigation Items */}
-          <nav className="flex-1 my-4 flex flex-col items-center gap-3 w-full overflow-y-auto no-scrollbar py-2" aria-label="Main menu">
-            {menuItems.map((item) => {
-              const Icon = ICONS[item.icon ?? ''] ?? FileText;
-              const active = pathname === item.href;
-              return isDesktop ? (
-                /* Desktop Icon Button with Tooltip */
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={`relative group w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
-                    active
-                      ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/30 scale-105'
-                      : 'bg-slate-100/80 text-slate-500 hover:bg-teal-50 hover:text-[var(--brand)] hover:scale-105'
-                  }`}
-                >
-                  <Icon size={20} className="stroke-[2.2]" />
-                  <span className="absolute left-16 px-3 py-1.5 bg-slate-900/90 text-white text-xs font-semibold rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
-                    {item.label}
-                  </span>
-                </Link>
-              ) : (
-                /* Mobile Drawer Item with Text */
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpenAt(null)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
-                    active
-                      ? 'bg-[var(--brand)] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 my-4 flex flex-col items-center w-full min-h-0 lg:overflow-visible" aria-label="Main menu">
+            <div className="flex flex-col items-center gap-3 w-full overflow-y-auto no-scrollbar py-2 lg:overflow-visible">
+              {menuItems.map((item) => {
+                const Icon = ICONS[item.icon ?? ''] ?? FileText;
+                const active = pathname === item.href;
+                return isDesktop ? (
+                  /* Desktop Icon Button with Tooltip */
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`relative group w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+                      active
+                        ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/30 scale-105'
+                        : 'bg-slate-100/80 text-slate-500 hover:bg-teal-50 hover:text-[var(--brand)] hover:scale-105'
+                    }`}
+                  >
+                    <Icon size={20} className="stroke-[2.2]" />
+                    <span className="absolute left-16 px-3 py-1.5 bg-slate-900/90 text-white text-xs font-semibold rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50 top-1/2 -translate-y-1/2">
+                      {item.label}
+                    </span>
+                  </Link>
+                ) : (
+                  /* Mobile Drawer Item with Text */
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpenAt(null)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all ${
+                      active
+                        ? 'bg-[var(--brand)] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Bottom Logout */}
           <div className="shrink-0 flex items-center justify-center w-full pt-2">
             {isDesktop ? (
-              <div className="relative group">
-                <LogoutButton collapsed={true} />
-              </div>
+              <LogoutButton collapsed={true} />
             ) : (
               <div className="w-full">
                 <LogoutButton collapsed={false} />
               </div>
             )}
           </div>
+
         </aside>
 
         {/* ── MAIN CONTENT CANVAS ── */}
