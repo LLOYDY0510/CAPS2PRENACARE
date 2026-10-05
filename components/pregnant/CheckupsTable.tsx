@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/ui/Button';
@@ -41,17 +41,12 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
   }, [records, search]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   return (
     <div className="space-y-4">
@@ -145,7 +140,7 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
 
         {/* Pagination Component */}
         <Pagination
-          currentPage={currentPage}
+          currentPage={page}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           totalItems={filtered.length}
