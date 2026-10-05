@@ -37,6 +37,20 @@ export function isValidMobileNumber(input: string | null | undefined): boolean {
   return toE164(input) !== null;
 }
 
+/**
+ * Formats a number for the Semaphore API as 639XXXXXXXXXX (no leading +).
+ *
+ * Semaphore's documented examples use 09.../639... without a plus sign, so
+ * this strips the + that toE164() adds. toE164() stays the canonical form
+ * for UI display (formatE164) and DB matching; use this only at the provider
+ * boundary.
+ */
+export function toSemaphoreFormat(input: string | null | undefined): string | null {
+  const e164 = toE164(input);
+  if (!e164) return null;
+  return e164.replace(/^\+/, '');
+}
+
 /** Renders a number for the UI, e.g. +63 938 920 1440. */
 export function formatE164(e164: string | null | undefined): string {
   if (!e164) return '—';
