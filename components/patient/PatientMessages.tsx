@@ -2,7 +2,6 @@ import { createClient } from '@/utils/supabase/server';
 import { Bell, MessageSquare, HeartHandshake, Sparkles } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import RiskBadge from '@/components/ui/RiskBadge';
-import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
 
 export default async function PatientMessages({
   pregnantMotherId,
