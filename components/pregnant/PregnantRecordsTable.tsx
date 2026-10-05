@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
@@ -9,7 +9,7 @@ import RiskBadge from '@/components/ui/RiskBadge';
 import Button from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import Pagination from '@/components/ui/Pagination';
-import { ChevronRight, Filter, RotateCcw } from 'lucide-react';
+import { ChevronRight, RotateCcw } from 'lucide-react';
 
 export type PregnantRecord = {
   id: string;
@@ -44,20 +44,16 @@ export default function PregnantRecordsTable({
   initialSearch?: string;
 }) {
   const searchParams = useSearchParams();
-  const urlSearch = searchParams?.get('search') ?? searchParams?.get('q') ?? '';
-
-  const [search, setSearch] = useState(urlSearch || initialSearch);
+  // Initialised from the URL (?search=/ ?q=) or the server-provided value so
+  // the sidebar's "view all records matching X" link keeps working without a
+  // syncing effect. Key the component on the URL value if it must re-sync.
+  const [search, setSearch] = useState(() => {
+    const fromUrl = searchParams?.get('search') ?? searchParams?.get('q') ?? '';
+    return fromUrl || initialSearch;
+  });
   const [risk, setRisk] = useState('all');
   const [ageFilter, setAgeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    const activeSearch = urlSearch || initialSearch;
-    if (activeSearch) {
-      setSearch(activeSearch);
-      setCurrentPage(1);
-    }
-  }, [urlSearch, initialSearch]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -91,17 +87,12 @@ export default function PregnantRecordsTable({
   }, [records, search, risk, ageFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   const hasFilters = search || risk !== 'all' || ageFilter !== 'all';
 
@@ -233,7 +224,7 @@ export default function PregnantRecordsTable({
 
         {/* Pagination Component */}
         <Pagination
-          currentPage={currentPage}
+          currentPage={page}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           totalItems={filtered.length}
