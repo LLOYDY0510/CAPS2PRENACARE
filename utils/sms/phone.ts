@@ -51,6 +51,25 @@ export function toSemaphoreFormat(input: string | null | undefined): string | nu
   return e164.replace(/^\+/, '');
 }
 
+export type SemaphoreNumberFormat = 'plus63' | '63';
+
+/**
+ * Payload-only number format switch (SEMAPHORE_NUMBER_FORMAT).
+ *
+ *  - "plus63" (default): send +639XXXXXXXXX.
+ *  - "63": send 639XXXXXXXXX via toSemaphoreFormat().
+ *
+ * Matching, dedupe keys and UI stay on toE164() regardless.
+ */
+export function semaphoreNumberFormat(): SemaphoreNumberFormat {
+  return process.env.SEMAPHORE_NUMBER_FORMAT?.trim() === '63' ? '63' : 'plus63';
+}
+
+/** Applies semaphoreNumberFormat() to an already-normalised +63 number. */
+export function formatNumberForPayload(e164: string): string {
+  return semaphoreNumberFormat() === '63' ? e164.replace(/^\+/, '') : e164;
+}
+
 /** Renders a number for the UI, e.g. +63 938 920 1440. */
 export function formatE164(e164: string | null | undefined): string {
   if (!e164) return '—';

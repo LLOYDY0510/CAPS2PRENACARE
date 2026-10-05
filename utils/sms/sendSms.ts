@@ -1,7 +1,14 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { createAdminClient } from '@/utils/supabase/admin';
-import { sendSmsBatch, getSemaphoreAccount, type SemaphoreRecipientResult } from './semaphore';
+import {
+  sendSmsBatch,
+  getSemaphoreAccount,
+  isSmsDryRun,
+  classifySemaphoreError,
+  type SemaphoreErrorKind,
+  type SemaphoreRecipientResult,
+} from './semaphore';
 import { toE164 } from './phone';
 import { createMaternalNotification } from '@/utils/notifications';
 import { getSmsSchemaCapabilities, MIGRATION_014_HINT } from './schema';
@@ -46,8 +53,14 @@ export type SendSmsResult = {
   skipped: RecipientOutcome[];
   failed: RecipientOutcome[];
   batchError: string | null;
+  /** Stable machine-readable cause for the failure, if any. */
+  errorKind: SemaphoreErrorKind | null;
+  /** Staff-friendly explanation of the failure, if any. */
+  friendlyError: string | null;
   creditsBefore: number | null;
   creditsAfter: number | null;
+  /** True when SMS_DRY_RUN=true skipped the provider call entirely. */
+  dryRun: boolean;
   /** Non-fatal problems, e.g. duplicate protection not yet installed. */
   warnings: string[];
 };
@@ -118,8 +131,11 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     skipped: [],
     failed: [],
     batchError: null,
+    errorKind: null,
+    friendlyError: null,
     creditsBefore: null,
     creditsAfter: null,
+    dryRun: isSmsDryRun(),
     warnings: [],
   };
 
@@ -240,9 +256,17 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   if (before != null && after != null && before !== after) {
     result.warnings.push(`Semaphore credits went from ${before} to ${after}.`);
   }
+  if (result.dryRun) {
+    result.warnings.push('DRY RUN: no message left the server (SMS_DRY_RUN=true).');
+  }
 
   if (response.batchError) {
     result.batchError = response.batchError;
+    // Raw provider body is already saved by writeLog below; the friendly text
+    // is what the UI shows so staff know what to fix.
+    const classified = classifySemaphoreError(response.batchError);
+    result.errorKind = classified.kind;
+    result.friendlyError = classified.friendly;
   }
 
   // Map each provider row back to the mother it belongs to.
@@ -257,7 +281,13 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
       phone: row.number || match?.phone || null,
       pregnantMotherId: match?.motherId ?? null,
       status: ok ? 'sent' : 'failed',
-      detail: row.error ?? (ok ? `Semaphore status: ${row.status}` : null),
+      detail:
+        row.error ??
+        (row.status === 'dry_run'
+          ? 'DRY RUN — no SMS was sent (SMS_DRY_RUN=true).'
+          : ok
+            ? `Semaphore status: ${row.status}`
+            : null),
       providerMessageId: row.messageId,
     });
   }

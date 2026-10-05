@@ -51,6 +51,58 @@ function apiKey(): string {
   return key;
 }
 
+/** True when SMS_DRY_RUN=true: sendSmsBatch skips the network entirely. */
+export function isSmsDryRun(): boolean {
+  return process.env.SMS_DRY_RUN?.trim().toLowerCase() === 'true';
+}
+
+/** Masks an API key for logs: first 4 + ... + last 2, never the full key. */
+export function maskApiKey(key: string): string {
+  const trimmed = key.trim();
+  if (trimmed.length <= 8) return '****';
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-2)}`;
+}
+
+export type SemaphoreErrorKind =
+  | 'invalid_apikey'
+  | 'no_sender_name'
+  | 'no_credits'
+  | 'invalid_number'
+  | 'network'
+  | 'unconfigured'
+  | 'other';
+
+/**
+ * Maps provider/config errors to a stable kind plus friendly staff-facing text.
+ * The raw provider message is preserved in the result detail / sms_logs row.
+ */
+export function classifySemaphoreError(message: string | null | undefined): {
+  kind: SemaphoreErrorKind;
+  friendly: string;
+} {
+  const text = (message ?? '').toLowerCase();
+  if (!text) return { kind: 'other', friendly: 'The SMS provider did not explain the failure. Check the SMS Log for the raw response.' };
+  if (text.includes('not configured') || text.includes('semaphore_api_key is missing')) {
+    return { kind: 'unconfigured', friendly: 'SMS is not configured yet (SEMAPHORE_API_KEY is missing). Add the key and restart the server.' };
+  }
+  if (text.includes('apikey') && (text.includes('invalid') || text.includes('required') || text.includes('incorrect'))) {
+    return { kind: 'invalid_apikey', friendly: 'The Semaphore API key was rejected. Copy a fresh key from the Semaphore dashboard into SEMAPHORE_API_KEY and restart the server.' };
+  }
+  if (text.includes('sender') && (text.includes('invalid') || text.includes('no active') || text.includes('not found') || text.includes('registered'))) {
+    return { kind: 'no_sender_name', friendly: 'No approved sender name on this Semaphore account. Apply for one in the Semaphore dashboard and wait for approval, then retry without setting SEMAPHORE_SENDER_NAME.' };
+  }
+  if (text.includes('credit') || text.includes('balance') || text.includes('insufficient') || text.includes('zero balance')) {
+    return { kind: 'no_credits', friendly: 'The Semaphore account is out of credits. Top up in the Semaphore dashboard, then check /api/sms/health for the new balance.' };
+  }
+  if (text.includes('number') && (text.includes('invalid') || text.includes('format') || text.includes('not a valid'))) {
+    return { kind: 'invalid_number', friendly: 'A recipient number was rejected by the provider. Confirm it is a Philippine mobile (09XXXXXXXXX) and try SEMAPHORE_NUMBER_FORMAT=63 if the +63 form is refused.' };
+  }
+  if (text.includes('could not reach semaphore') || text.includes('fetch failed') || text.includes('network')) {
+    return { kind: 'network', friendly: 'Could not reach Semaphore (network error). Check connectivity and retry — nothing was charged.' };
+  }
+  return { kind: 'other', friendly: 'Sending failed. Open the SMS Log entry for the exact provider reason.' };
+}
+
 /** Pulls a human-readable message out of Semaphore's several error shapes. */
 function extractError(payload: unknown, fallback: string): string {
   if (!payload) return fallback;
@@ -127,9 +179,31 @@ export async function sendSmsBatch(input: {
     return { ok: false, httpStatus: 0, raw: null, recipients: [], batchError: 'No numbers supplied.', accepted: false };
   }
 
+  // DRY RUN: skip the network entirely (SMS_DRY_RUN=true). No /messages call,
+  // no credits touched. The masked payload is logged so the wiring can be
+  // verified safely, and a fake success is returned so the normal log path
+  // records the attempt as a dry run.
+  if (isSmsDryRun()) {
+    const senderName = input.senderName?.trim() || process.env.SEMAPHORE_SENDER_NAME?.trim() || null;
+    console.log(
+      `[sms dry-run] skipped POST ${BASE}/messages apikey=${maskApiKey(key)} numbers=${numbers.join(',')} sendername=${senderName ?? '(default)'}`,
+    );
+    const raw = [{ dry_run: true, numbers, sender_name: senderName ?? '(default)' }];
+    return {
+      ok: true,
+      httpStatus: 0,
+      raw,
+      recipients: numbers.map((number) => ({ number, messageId: `dry-run-${number}`, status: 'dry_run', error: null })),
+      batchError: null,
+      accepted: true,
+    };
+  }
+
+  const format = (process.env.SEMAPHORE_NUMBER_FORMAT?.trim() === '63' ? '63' : 'plus63') as 'plus63' | '63';
+  const payloadNumbers = format === '63' ? numbers.map((n) => n.replace(/^\+/, '')) : numbers;
   const body = new URLSearchParams({
     apikey: key,
-    number: numbers.join(','),
+    number: payloadNumbers.join(','),
     message,
   });
   const senderName = input.senderName?.trim() || process.env.SEMAPHORE_SENDER_NAME?.trim();
