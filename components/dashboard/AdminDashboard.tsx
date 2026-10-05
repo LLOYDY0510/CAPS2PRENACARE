@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import Link from 'next/link';
-import { Users, AlertTriangle, ShieldCheck, UserCog, Calendar, ArrowRight, ChevronRight } from 'lucide-react';
+import { Users, AlertTriangle, ShieldCheck, UserCog, ArrowRight, ChevronRight } from 'lucide-react';
 import RiskBadge from '@/components/ui/RiskBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
