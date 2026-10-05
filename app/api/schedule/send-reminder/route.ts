@@ -125,6 +125,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       logId: result.logId,
       batchError: result.batchError,
+      friendlyError: result.friendlyError,
+      errorKind: result.errorKind,
+      dryRun: result.dryRun,
       warnings: result.warnings,
       sent: result.sent,
       skipped: result.skipped,
