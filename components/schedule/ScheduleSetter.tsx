@@ -7,7 +7,7 @@ import { formatE164, toE164 } from '@/utils/sms/phone';
 import { relativeDayLabel, weekdayLabel } from '@/utils/sms/clock';
 import Button from '@/components/ui/Button';
 import { Alert } from '@/components/ui/ToastAlert';
-import { CalendarDays, Send, Plus, Trash2, Edit, AlertCircle, CheckCircle2, Phone, Clock } from 'lucide-react';
+import { CalendarDays, Send, Plus, Trash2, Edit, Clock } from 'lucide-react';
 
 export type ScheduleRow = {
   id: string;
