@@ -7,7 +7,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
 import Link from 'next/link';
-import { HeartPulse, Users, AlertTriangle, ShieldCheck, HelpCircle, ArrowRight, ChevronRight } from 'lucide-react';
+import { HeartPulse, Users, AlertTriangle, ShieldCheck, HelpCircle, ChevronRight } from 'lucide-react';
 
 type MotherIndicatorRow = {
   pregnant_mother_id: string | null;
