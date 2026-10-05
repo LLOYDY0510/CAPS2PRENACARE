@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ScheduleEditor, { type ScheduleEditorValue, type ScheduleMother, type Trimester } from './ScheduleEditor';
+import { friendlySmsError, DryRunBadge } from './smsStatusUi';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { relativeDayLabel, weekdayLabel } from '@/utils/sms/clock';
 import Button from '@/components/ui/Button';
@@ -64,6 +65,24 @@ export default function ScheduleSetter({
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, SendOutcome[]>>({});
+  // null = unknown (health endpoint is admin-only).
+  const [dryRun, setDryRun] = useState<boolean | null>(null);
+  const [senderNameSet, setSenderNameSet] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/sms/health')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        if (typeof data.dryRun === 'boolean') setDryRun(data.dryRun);
+        if (typeof data.senderNameSet === 'boolean') setSenderNameSet(data.senderNameSet);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const scopedMothers =
     role === 'bhw_purok' && userPurok
@@ -173,8 +192,13 @@ export default function ScheduleSetter({
         body: JSON.stringify({ scheduleId: schedule.id }),
       });
       const payload = await response.json();
+      if (typeof payload.dryRun === 'boolean') setDryRun(payload.dryRun);
       if (!response.ok) {
-        setError(payload.error ?? 'Could not send the reminder.');
+        setError(
+          friendlySmsError(payload.batchError, payload.friendlyError) ??
+            payload.error ??
+            'Could not send the reminder.',
+        );
         return;
       }
       const all: SendOutcome[] = [...(payload.sent ?? []), ...(payload.skipped ?? []), ...(payload.failed ?? [])];
@@ -184,10 +208,11 @@ export default function ScheduleSetter({
       const failed = payload.failed?.length ?? 0;
       setNotice(
         [
+          payload.dryRun ? 'DRY RUN — no SMS left the server.' : null,
           sent > 0 ? `${sent} SMS sent.` : null,
           skipped > 0 ? `${skipped} skipped (already sent).` : null,
           failed > 0 ? `${failed} failed.` : null,
-          payload.batchError ?? null,
+          friendlySmsError(payload.batchError, payload.friendlyError),
         ]
           .filter(Boolean)
           .join(' ') || 'Nothing to send.',
@@ -218,7 +243,9 @@ export default function ScheduleSetter({
         <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-6 flex-wrap">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SMS Provider</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                SMS Provider {dryRun === true && <DryRunBadge />}
+              </p>
               <p className="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">
                 {smsStatus.account.accountName ?? 'Not connected'}
                 {smsStatus.account.status ? ` (${smsStatus.account.status})` : ''}
@@ -247,6 +274,18 @@ export default function ScheduleSetter({
             <p className="text-xs font-semibold text-red-500">{smsStatus.accountError}</p>
           )}
         </div>
+      )}
+
+      {/* Readiness warnings (item 6): no sender name configured, zero balance */}
+      {smsStatus && smsStatus.account.creditBalance === 0 && (
+        <Alert type="warning">
+          Semaphore balance is 0 — no SMS can be sent. Top up credits in the Semaphore dashboard, then re-check via /api/sms/health.
+        </Alert>
+      )}
+      {senderNameSet === false && (
+        <Alert type="warning">
+          No SEMAPHORE_SENDER_NAME is configured. Semaphore will use the account&apos;s default sender — confirm one Sender Name is Active and marked Default in the Semaphore dashboard, or set an approved name.
+        </Alert>
       )}
 
       {canEdit && mode === 'idle' && (
