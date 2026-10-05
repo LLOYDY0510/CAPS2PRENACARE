@@ -8,6 +8,7 @@ import {
   classifySemaphoreError,
   type SemaphoreErrorKind,
   type SemaphoreRecipientResult,
+  type SemaphoreSendResult,
 } from './semaphore';
 import { toE164 } from './phone';
 import { createMaternalNotification } from '@/utils/notifications';
@@ -244,11 +245,32 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   // account endpoint and a null balance must not fail the send.
   const before = await safeAccount();
 
-  const response = await sendSmsBatch({
-    numbers: toSend.map((p) => p.phone),
-    message,
-    senderName: input.senderName,
-  });
+  let response: SemaphoreSendResult;
+  try {
+    response = await sendSmsBatch({
+      numbers: toSend.map((p) => p.phone),
+      message,
+      senderName: input.senderName,
+    });
+  } catch (error) {
+    // sendSmsBatch throws before the network when configuration is missing
+    // (e.g. no SEMAPHORE_API_KEY). Classify it, log the row with the reason,
+    // and surface friendly text instead of an unhandled 500.
+    const msg = error instanceof Error ? error.message : 'Unknown SMS provider error.';
+    const classified = classifySemaphoreError(msg);
+    result.batchError = msg;
+    result.errorKind = classified.kind;
+    result.friendlyError = classified.friendly;
+    result.failed = toSend.map((p) => ({
+      phone: p.phone,
+      pregnantMotherId: p.motherId,
+      status: 'failed' as const,
+      detail: msg,
+      providerMessageId: null,
+    }));
+    await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.failed });
+    return result;
+  }
 
   const after = await safeAccount();
   result.creditsBefore = before;
