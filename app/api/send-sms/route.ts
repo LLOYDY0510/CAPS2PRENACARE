@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('SMS send error:', err);
     return NextResponse.json(
-      { error: 'Something went wrong sending the SMS.' },
+      { error: err instanceof Error ? err.message : 'Something went wrong sending the SMS.' },
       { status: 500 },
     );
   }

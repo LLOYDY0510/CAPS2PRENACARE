@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -10,12 +10,10 @@ import {
   Baby,
   CalendarDays,
   ChevronDown,
-  ChevronRight,
   ClipboardCheck,
   FileText,
   HeartPulse,
   LayoutDashboard,
-  LogOut,
   Map as MapIcon,
   Menu,
   MessageSquare,
@@ -140,19 +138,13 @@ export default function Sidebar({
     })),
   ];
 
-  // Debounced search query across pregnant_mothers and prenatal_schedules
+  // Debounced search query across pregnant_mothers and prenatal_schedules.
+  // All synchronous state updates live in handleQueryChange; this effect only
+  // schedules the debounced fetch and applies its async result.
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q) {
-      setPatientResults([]);
-      setScheduleResults([]);
-      setIsSearching(false);
-      setSelectedIndex(-1);
-      return;
-    }
+    if (!q) return;
 
-    setIsSearching(true);
-    setSelectedIndex(-1);
     const timer = setTimeout(async () => {
       try {
         const [mothersRes, schedulesRes] = await Promise.all([
@@ -237,6 +229,21 @@ export default function Sidebar({
     } else if (e.key === 'Enter') {
       e.preventDefault();
       handleSearchSubmit();
+    }
+  }
+
+  function handleQueryChange(value: string) {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setPatientResults([]);
+      setScheduleResults([]);
+      setIsSearching(false);
+      setSelectedIndex(-1);
+      setSearchOpen(false);
+    } else {
+      setIsSearching(true);
+      setSelectedIndex(-1);
+      setSearchOpen(true);
     }
   }
 
@@ -454,10 +461,7 @@ export default function Sidebar({
                   value={searchQuery}
                   onFocus={() => setSearchOpen(true)}
                   onKeyDown={handleSearchKeyDown}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchOpen(true);
-                  }}
+                  onChange={(e) => handleQueryChange(e.target.value)}
                   className="w-full h-11 pl-11 pr-10 bg-white/90 hover:bg-white focus:bg-white text-xs sm:text-sm font-medium rounded-full border border-slate-200/80 focus:border-[var(--brand)] text-slate-800 placeholder:text-slate-400 shadow-xs transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/15"
                 />
                 {isSearching ? (

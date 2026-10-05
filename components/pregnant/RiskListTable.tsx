@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/ui/Button';
@@ -41,15 +41,12 @@ export default function RiskListTable({
     );
   }, [records, search]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const page = Math.min(currentPage, totalPages);
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   return (
     <div className="space-y-4">
@@ -58,7 +55,10 @@ export default function RiskListTable({
         <div className="flex-1 max-w-md">
           <SearchBar
             value={search}
-            onChange={setSearch}
+            onChange={(val) => {
+              setSearch(val);
+              setCurrentPage(1);
+            }}
             placeholder="Search by name, serial no, or zone..."
           />
         </div>
@@ -118,7 +118,7 @@ export default function RiskListTable({
         {totalPages > 1 && (
           <div className="mt-4 pt-4 border-t border-slate-100">
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
               totalItems={filtered.length}

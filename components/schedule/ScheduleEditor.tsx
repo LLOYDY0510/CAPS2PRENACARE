@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import SearchBar from '@/components/ui/SearchBar';
-import { CalendarDays, Users, Check, X, Search, RotateCcw } from 'lucide-react';
+import { CalendarDays, Users, X } from 'lucide-react';
 
 export type ScheduleMother = {
   id: string;

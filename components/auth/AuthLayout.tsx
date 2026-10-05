@@ -5,13 +5,16 @@ import AuthIllustration from '@/components/auth/AuthIllustration';
 export default function AuthLayout({
   children,
   illustration,
-  brand,
+  // Accepted for API compatibility (callers pass `brand`); the layout renders
+  // the default illustration panel instead. Referenced so lint stays clean.
+  brand: _brand,
 }: {
   children: ReactNode;
   illustration?: ReactNode;
   brand?: ReactNode;
 }) {
   const leftSidePanel = illustration ?? <AuthIllustration />;
+  void _brand;
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-[#eef3f7] font-sans text-slate-800 overflow-x-hidden">

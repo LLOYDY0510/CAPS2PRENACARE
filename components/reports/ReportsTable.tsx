@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import Pagination from '@/components/ui/Pagination';
 import ReportExport, { type ReportRow } from '@/components/reports/ReportExport';
 import RiskBadge from '@/components/ui/RiskBadge';
 import StatCard from '@/components/ui/StatCard';
-import { Printer, RotateCcw, FileText, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Printer, RotateCcw, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 
 export type ReportRowWithId = ReportRow & { _id: string };
 
@@ -122,21 +122,12 @@ export default function ReportsTable({
   }, [byType, search, zoneFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [reportType, search, zoneFilter]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   const stats = useMemo(() => ({
     total:    byType.length,
@@ -187,7 +178,7 @@ export default function ReportsTable({
               return (
                 <button
                   key={t.value}
-                  onClick={() => { setReportType(t.value); setSearch(''); setZoneFilter('all'); }}
+                  onClick={() => { setReportType(t.value); setSearch(''); setZoneFilter('all'); setCurrentPage(1); }}
                   className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
                     active
                       ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/20'
@@ -215,7 +206,7 @@ export default function ReportsTable({
             <div className="flex-1 min-w-[220px]">
               <SearchBar
                 value={search}
-                onChange={setSearch}
+                onChange={(val) => { setSearch(val); setCurrentPage(1); }}
                 placeholder="Search report by name or serial no..."
               />
             </div>
@@ -223,7 +214,7 @@ export default function ReportsTable({
               <div className="w-40">
                 <Select
                   value={zoneFilter}
-                  onChange={(e) => setZoneFilter(e.target.value)}
+                  onChange={(e) => { setZoneFilter(e.target.value); setCurrentPage(1); }}
                   options={[
                     { value: 'all', label: 'All Zones' },
                     ...zones.map((z) => ({ value: z, label: `Zone ${z}` })),
@@ -232,7 +223,7 @@ export default function ReportsTable({
               </div>
             )}
             {hasSecondary && (
-              <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setZoneFilter('all'); }} leftIcon={<RotateCcw size={14} />}>
+              <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setZoneFilter('all'); setCurrentPage(1); }} leftIcon={<RotateCcw size={14} />}>
                 Clear
               </Button>
             )}
@@ -278,7 +269,7 @@ export default function ReportsTable({
                 </tr>
               )}
               {paginated.map((r, idx) => {
-                const rowNumber = (currentPage - 1) * PAGE_SIZE + idx + 1;
+                const rowNumber = (page - 1) * PAGE_SIZE + idx + 1;
                 return (
                   <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-3 text-slate-400 font-semibold">{rowNumber}</td>
@@ -304,7 +295,7 @@ export default function ReportsTable({
         {/* Pagination Component */}
         <div className="no-print">
           <Pagination
-            currentPage={currentPage}
+            currentPage={page}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
             totalItems={filtered.length}

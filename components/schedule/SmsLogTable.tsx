@@ -1,12 +1,12 @@
 'use client';
 
-import { Fragment, useState, useMemo, useEffect } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
-import { Input, Select } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
-import { Send, ChevronDown, ChevronUp, AlertCircle, RotateCcw } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 export type SmsLogRow = {
   id: string;
@@ -100,21 +100,12 @@ export default function SmsLogTable({
   }, [logs, search, status, type]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, status, type]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   const hasFilters = !!search || status !== 'all' || type !== 'all';
 
@@ -192,13 +183,13 @@ export default function SmsLogTable({
       <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           <div className="flex-1 min-w-[220px]">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search message, sender, or number..." />
+            <SearchBar value={search} onChange={(val) => { setSearch(val); setCurrentPage(1); }} placeholder="Search message, sender, or number..." />
           </div>
 
           <div className="w-36">
             <Select
               value={status}
-              onChange={(e) => setStatus(e.target.value as 'all' | 'success' | 'failed')}
+              onChange={(e) => { setStatus(e.target.value as 'all' | 'success' | 'failed'); setCurrentPage(1); }}
               options={[
                 { value: 'all', label: 'All Statuses' },
                 { value: 'success', label: 'Accepted' },
@@ -210,7 +201,7 @@ export default function SmsLogTable({
           <div className="w-48">
             <Select
               value={type}
-              onChange={(e) => setType(e.target.value as typeof type)}
+              onChange={(e) => { setType(e.target.value as typeof type); setCurrentPage(1); }}
               options={[
                 { value: 'all', label: 'All Types' },
                 ...Object.entries(TYPE_LABELS).map(([val, lbl]) => ({ value: val, label: lbl })),
@@ -219,7 +210,7 @@ export default function SmsLogTable({
           </div>
 
           {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatus('all'); setType('all'); }} leftIcon={<RotateCcw size={14} />}>
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatus('all'); setType('all'); setCurrentPage(1); }} leftIcon={<RotateCcw size={14} />}>
               Clear
             </Button>
           )}
@@ -407,7 +398,7 @@ export default function SmsLogTable({
 
         {/* Pagination Component */}
         <Pagination
-          currentPage={currentPage}
+          currentPage={page}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           totalItems={filtered.length}

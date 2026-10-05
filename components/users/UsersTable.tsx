@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import UserRoleEditor from '@/components/users/UserRoleEditor';
 import EmptyState from '@/components/ui/EmptyState';
@@ -68,21 +68,12 @@ export default function UsersTable({
   }, [profiles, search, roleFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, roleFilter]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+  }, [filtered, page]);
 
   const hasFilters = search || roleFilter !== 'all';
 
@@ -91,13 +82,13 @@ export default function UsersTable({
       <div className="flex flex-wrap gap-3 items-center">
         <SearchBar
           value={search}
-          onChange={setSearch}
+          onChange={(val) => { setSearch(val); setCurrentPage(1); }}
           placeholder="Search by name or email…"
         />
 
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
           className="form-select"
           style={{ width: 'auto', minWidth: '160px' }}
           aria-label="Filter by role"
@@ -110,7 +101,7 @@ export default function UsersTable({
 
         {hasFilters && (
           <button
-            onClick={() => { setSearch(''); setRoleFilter('all'); }}
+            onClick={() => { setSearch(''); setRoleFilter('all'); setCurrentPage(1); }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
           >
             <X size={14} />
@@ -168,7 +159,7 @@ export default function UsersTable({
 
         {/* Pagination Component */}
         <Pagination
-          currentPage={currentPage}
+          currentPage={page}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           totalItems={filtered.length}

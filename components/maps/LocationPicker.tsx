@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -194,35 +194,36 @@ export default function LocationPicker({
   const mapRef = useRef<L.Map>(null);
 
   // Debounced geocoding function to respect API rate limits
-  const performGeocoding = useCallback(
-    debounce(async (lat: number, lng: number) => {
-      setIsGeocoding(true);
-      setGeocodeError(null);
+  const performGeocoding = useMemo(
+    () =>
+      debounce(async (lat: number, lng: number) => {
+        setIsGeocoding(true);
+        setGeocodeError(null);
 
-      try {
-        const result = await reverseGeocode(lat, lng);
-        if (result) {
-          const parsed = parseLocationFromGeocode(result);
-          const data: LocationData = {
-            lat,
-            lng,
-            address: parsed.fullAddress,
-            barangay: parsed.barangay,
-            purok: parsed.purok,
-            confidence: parsed.confidence,
-          };
-          setLocationData(data);
-          onLocationDetected?.(data);
-        } else {
-          setGeocodeError('Could not retrieve location details');
+        try {
+          const result = await reverseGeocode(lat, lng);
+          if (result) {
+            const parsed = parseLocationFromGeocode(result);
+            const data: LocationData = {
+              lat,
+              lng,
+              address: parsed.fullAddress,
+              barangay: parsed.barangay,
+              purok: parsed.purok,
+              confidence: parsed.confidence,
+            };
+            setLocationData(data);
+            onLocationDetected?.(data);
+          } else {
+            setGeocodeError('Could not retrieve location details');
+          }
+        } catch (error) {
+          setGeocodeError('Error fetching location details');
+          console.error('Geocoding error:', error);
+        } finally {
+          setIsGeocoding(false);
         }
-      } catch (error) {
-        setGeocodeError('Error fetching location details');
-        console.error('Geocoding error:', error);
-      } finally {
-        setIsGeocoding(false);
-      }
-    }, 1000), // 1 second debounce
+      }, 1000), // 1 second debounce
     [onLocationDetected]
   );
 
