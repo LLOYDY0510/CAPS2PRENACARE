@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 import EmptyState from '@/components/ui/EmptyState';
@@ -107,28 +107,19 @@ export default function BhwTable({
   }, [users, search]);
 
   const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
+  const page = Math.min(currentPage, totalPages);
 
   const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
+    const start = (page - 1) * PAGE_SIZE;
     return filteredUsers.slice(start, start + PAGE_SIZE);
-  }, [filteredUsers, currentPage]);
+  }, [filteredUsers, page]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center">
         <SearchBar
           value={search}
-          onChange={setSearch}
+          onChange={(val) => { setSearch(val); setCurrentPage(1); }}
           placeholder="Search by name, email, or purok…"
         />
         <span className="ml-auto text-xs text-slate-500 font-medium">
@@ -276,7 +267,7 @@ export default function BhwTable({
 
         {/* Pagination Component */}
         <Pagination
-          currentPage={currentPage}
+          currentPage={page}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           totalItems={filteredUsers.length}
