@@ -53,7 +53,7 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-xs text-slate-600 hover:text-slate-900 transition-all"
+        className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-xs text-slate-600 hover:text-slate-900 transition-all min-w-[44px] min-h-[44px]"
         aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
       >
