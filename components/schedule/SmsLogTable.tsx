@@ -1,11 +1,13 @@
 'use client';
 
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
 import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
+import { friendlySmsError, DryRunBadge } from '@/components/schedule/smsStatusUi';
 import { Send, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 export type SmsLogRow = {
@@ -72,6 +74,7 @@ export default function SmsLogTable({
   logs: SmsLogRow[];
   followUps: FollowUpRow[];
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'success' | 'failed'>('all');
   const [type, setType] = useState<'all' | SmsLogRow['message_type']>('all');
@@ -80,6 +83,21 @@ export default function SmsLogTable({
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, { tone: 'ok' | 'error'; text: string }>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // null = unknown (health endpoint is admin-only; non-admins simply never see the badge).
+  const [dryRun, setDryRun] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/sms/health')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data && typeof data.dryRun === 'boolean') setDryRun(data.dryRun);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -140,11 +158,18 @@ export default function SmsLogTable({
         }),
       });
       const payload = await response.json();
+      if (typeof payload.dryRun === 'boolean') setDryRun(payload.dryRun);
 
       if (!response.ok) {
         setFeedback((prev) => ({
           ...prev,
-          [item.id]: { tone: 'error', text: payload.error ?? 'The message was not sent.' },
+          [item.id]: {
+            tone: 'error',
+            text:
+              friendlySmsError(payload.batchError, payload.friendlyError) ??
+              payload.error ??
+              'The message was not sent.',
+          },
         }));
         return;
       }
@@ -157,16 +182,18 @@ export default function SmsLogTable({
         [item.id]: {
           tone: sent > 0 ? 'ok' : 'error',
           text: [
+            payload.dryRun ? 'DRY RUN — no SMS left the server' : null,
             sent > 0 ? `Sent to ${formatE164(toE164(item.contactNumber))}` : null,
             skipped > 0 ? 'skipped (already sent today)' : null,
             failed > 0 ? 'failed' : null,
-            payload.batchError ?? null,
+            friendlySmsError(payload.batchError, payload.friendlyError),
           ]
             .filter(Boolean)
             .join(' · '),
         },
       }));
-      window.location.reload();
+      // Refresh server-rendered log rows without wiping client feedback/badge.
+      router.refresh();
     } catch {
       setFeedback((prev) => ({
         ...prev,
@@ -216,7 +243,8 @@ export default function SmsLogTable({
           )}
         </div>
 
-        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+        <span className="flex items-center gap-2 text-xs font-bold text-slate-500 whitespace-nowrap">
+          {dryRun === true && <DryRunBadge />}
           {filtered.length} of {logs.length} entries
         </span>
       </div>
