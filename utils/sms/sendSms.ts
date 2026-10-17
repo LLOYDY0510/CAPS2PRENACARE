@@ -2,7 +2,14 @@ import { localDate } from '@/utils/calendar';
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { createAdminClient } from '@/utils/supabase/admin';
-import { sendSmsBatch, getSemaphoreAccount, type SemaphoreRecipientResult } from './semaphore';
+import {
+  sendSmsBatch,
+  getSemaphoreAccount,
+  isSmsDryRun,
+  classifySemaphoreError,
+  type SemaphoreErrorKind,
+  type SemaphoreRecipientResult,
+} from './semaphore';
 import { toE164 } from './phone';
 import { createMaternalNotification } from '@/utils/notifications';
 import { getSmsSchemaCapabilities, MIGRATION_014_HINT } from './schema';
@@ -36,7 +43,7 @@ export type SmsTarget = {
 export type RecipientOutcome = {
   phone: string | null;
   pregnantMotherId: string | null;
-  status: 'sent' | 'failed' | 'skipped_duplicate' | 'skipped_invalid';
+  status: 'sent' | 'failed' | 'skipped_duplicate' | 'skipped_invalid' | 'skipped_dry_run';
   detail: string | null;
   providerMessageId: string | null;
   providerStatus?: string;
@@ -48,8 +55,14 @@ export type SendSmsResult = {
   skipped: RecipientOutcome[];
   failed: RecipientOutcome[];
   batchError: string | null;
+  /** Stable machine-readable cause for the failure, if any. */
+  errorKind: SemaphoreErrorKind | null;
+  /** Staff-friendly explanation of the failure, if any. */
+  friendlyError: string | null;
   creditsBefore: number | null;
   creditsAfter: number | null;
+  /** True when SMS_DRY_RUN=true skipped the provider call entirely. */
+  dryRun: boolean;
   /** Non-fatal problems, e.g. duplicate protection not yet installed. */
   warnings: string[];
   submittedNumbers: number;
@@ -98,7 +111,7 @@ type SendSmsInput = {
   force?: boolean;
 };
 
-/* Sends a real SMS through Semaphore and records exactly what came back. */
+/* Identify logical recipients separately from shared phone submissions. */
 function smsTargetKey(target: { phone: string; motherId: string | null }): string {
   return JSON.stringify([target.phone, target.motherId]);
 }
@@ -114,8 +127,11 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     skipped: [],
     failed: [],
     batchError: null,
+    errorKind: null,
+    friendlyError: null,
     creditsBefore: null,
     creditsAfter: null,
+    dryRun: isSmsDryRun(),
     warnings: [],
     submittedNumbers: 0,
   };
@@ -164,6 +180,12 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   if (sendable.length === 0) {
     result.batchError = 'No recipient has a usable mobile number.';
     result.logId = await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.failed });
+    return result;
+  }
+
+  if(result.dryRun){
+    result.skipped.push(...sendable.map(target=>({phone:target.phone,pregnantMotherId:target.motherId,status:'skipped_dry_run' as const,detail:'Dry run: no SMS submitted and no dispatch claimed.',providerMessageId:null})));
+    result.warnings.push('Dry run: no SMS submitted and no dispatch claimed.');
     return result;
   }
 
@@ -244,7 +266,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     numbers: Array.from(new Set(toSend.map((p) => p.phone))),
     message,
     senderName: input.senderName,
-  }).catch((error) => ({ ok: false, httpStatus: 400, raw: null,
+  }).catch((error) => ({ ok: false, httpStatus: 0, raw: null,
     recipients: [] as SemaphoreRecipientResult[], accepted: false,
     batchError: error instanceof Error ? error.message : 'SMS configuration failed.' }));
 
@@ -254,9 +276,17 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   if (before != null && after != null && before !== after) {
     result.warnings.push(`Semaphore credits went from ${before} to ${after}.`);
   }
+  if (result.dryRun) {
+    result.warnings.push('DRY RUN: no message left the server (SMS_DRY_RUN=true).');
+  }
 
   if (response.batchError) {
     result.batchError = response.batchError;
+    // Raw provider body is already saved by writeLog below; the friendly text
+    // is what the UI shows so staff know what to fix.
+    const classified = classifySemaphoreError(response.batchError);
+    result.errorKind = classified.kind;
+    result.friendlyError = classified.friendly;
   }
 
   // Map each provider row back to the mother it belongs to.

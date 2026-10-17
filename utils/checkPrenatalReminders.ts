@@ -212,7 +212,7 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
     await recordReminderAttempt(supabase, schedule.id);
 
     report.reminded += result.sent.length;
-    report.alreadySent += result.skipped.length;
+    report.alreadySent += result.skipped.filter(item=>item.status==='skipped_duplicate').length;
     report.failed += result.failed.length;
 
     report.details.push({
@@ -353,7 +353,7 @@ export async function createMissedVisitFollowUps(): Promise<number> {
 
     markAttempted(schedule.id);
     await recordReminderAttempt(supabase, schedule.id);
-    const complete = result.failed.length === 0 && result.sent.length + result.skipped.length >= missedMotherIds.length &&
+    const complete = !result.dryRun && result.failed.length === 0 && result.sent.length + result.skipped.length >= missedMotherIds.length &&
       !result.skipped.some((item) => item.detail?.includes('reconciliation'));
 
     if (result.sent.length) {

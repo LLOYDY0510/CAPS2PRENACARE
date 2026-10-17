@@ -2,9 +2,10 @@
 import Modal, { ConfirmDialog } from '@/components/ui/Modal';
 import { localDate } from '@/utils/calendar';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ScheduleEditor, { type ScheduleEditorValue, type ScheduleMother, type Trimester } from './ScheduleEditor';
+import { friendlySmsError, DryRunBadge } from './smsStatusUi';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { relativeDayLabel, weekdayLabel } from '@/utils/sms/clock';
 import Button from '@/components/ui/Button';
@@ -68,6 +69,22 @@ export default function ScheduleSetter({
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, SendOutcome[]>>({});
+  // null = unknown (health endpoint is admin-only).
+  const [dryRun, setDryRun] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/sms/health')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        if (typeof data.dryRun === 'boolean') setDryRun(data.dryRun);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const scopedMothers =
     role === 'bhw' && userPurok
@@ -177,21 +194,27 @@ export default function ScheduleSetter({
         body: JSON.stringify({ scheduleId: schedule.id }),
       });
       const payload = await response.json();
+      if (typeof payload.dryRun === 'boolean') setDryRun(payload.dryRun);
       if (!response.ok) {
-        setError(payload.error ?? 'Could not send the reminder.');
+        setError(
+          friendlySmsError(payload.batchError, payload.friendlyError) ??
+            payload.error ??
+            'Could not send the reminder.',
+        );
         return;
       }
       const all: SendOutcome[] = [...(payload.sent ?? []), ...(payload.skipped ?? []), ...(payload.failed ?? [])];
       setOutcomes((prev) => ({ ...prev, [schedule.id]: all }));
       const sent = payload.sent?.length ?? 0;
-      const skipped = payload.skipped?.length ?? 0;
+      const skipped = (payload.skipped??[]).filter((row:SendOutcome)=>row.status==='skipped_duplicate').length;
       const failed = payload.failed?.length ?? 0;
       setNotice(
         [
+          payload.dryRun ? 'Dry run: no SMS was submitted.' : null,
           sent > 0 ? `${payload.submittedNumbers ?? sent} SMS accepted for ${sent} recipient(s).` : null,
           skipped > 0 ? `${skipped} skipped (already sent).` : null,
           failed > 0 ? `${failed} failed.` : null,
-          payload.batchError ?? null,
+          friendlySmsError(payload.batchError, payload.friendlyError),
         ]
           .filter(Boolean)
           .join(' ') || 'Nothing to send.',
@@ -207,7 +230,7 @@ export default function ScheduleSetter({
   const target=typeof mode==='object'?schedules.find(row=>row.id===mode.edit):null;
   return <div className="space-y-6">
     {error&&<p className="alert-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-    <div className="flex justify-between items-center"><p className="text-sm">SMS Gateway Public Cloud · {smsStatus.account.status??'Not configured'}</p>{canEdit&&<Button onClick={()=>setMode('create')}>Add Schedule</Button>}</div>
+    <div className="flex justify-between items-center"><p className="text-sm">SMS Gateway Public Cloud · {dryRun===true&&<DryRunBadge/>}{smsStatus.account.status??'Not configured'}</p>{canEdit&&<Button onClick={()=>setMode('create')}>Add Schedule</Button>}</div>
     <Modal isOpen={mode!=='idle'} title={mode==='create'?'Add Schedule':'Edit Schedule'} maxWidth="xl" onClose={()=>{if(!busy&&window.confirm('Close this form? Unsaved changes will be lost.'))setMode('idle');}}>
       <ScheduleEditor key={target?.id??'new'} mothers={scopedMothers} initial={target?{visitDate:target.visit_date,trimester:(target.trimester??'1st') as Trimester,notes:target.notes??'',motherIds:target.recipients.map(row=>row.pregnant_mother_id)}:{visitDate:'',trimester:'1st',notes:'',motherIds:[]}} submitLabel="Save Schedule" busy={busy} onSubmit={value=>target?handleUpdate(target.id,value):handleCreate(value)} onCancel={()=>setMode('idle')}/>
     </Modal>

@@ -1,5 +1,6 @@
+import { classifySmsError } from './errors';
 import { sendGatewayBatch, gatewayStatus } from './androidGateway';
-/* The single place in the app that talks to Semaphore. */
+/* Legacy provider compatibility and the active cloud adapter. */
 
 const BASE = 'https://api.semaphore.co/api/v4';
 
@@ -41,6 +42,38 @@ function apiKey(): string {
     throw new SemaphoreError('SMS service is not configured.', 500, 'SEMAPHORE_API_KEY is missing.');
   }
   return key;
+}
+
+/** True when SMS_DRY_RUN=true: sendSmsBatch skips the network entirely. */
+export function isSmsDryRun(): boolean {
+  return process.env.SMS_DRY_RUN?.trim().toLowerCase() === 'true';
+}
+
+/** Masks an API key for logs: first 4 + ... + last 2, never the full key. */
+export function maskApiKey(key: string): string {
+  const trimmed = key.trim();
+  if (trimmed.length <= 8) return '****';
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-2)}`;
+}
+
+export type SemaphoreErrorKind =
+  | 'invalid_apikey'
+  | 'no_sender_name'
+  | 'no_credits'
+  | 'invalid_number'
+  | 'network'
+  | 'unconfigured'
+  | 'other';
+
+/**
+ * Maps provider/config errors to a stable kind plus friendly staff-facing text.
+ * The raw provider message is preserved in the result detail / sms_logs row.
+ */
+export function classifySemaphoreError(message: string | null | undefined): {
+  kind: SemaphoreErrorKind;
+  friendly: string;
+} {
+  return classifySmsError(message);
 }
 
 /** Pulls a human-readable message out of Semaphore's several error shapes. */
@@ -113,9 +146,31 @@ export async function legacySemaphoreSendSmsBatch(input: {
     return { ok: false, httpStatus: 0, raw: null, recipients: [], batchError: 'No numbers supplied.', accepted: false };
   }
 
+  // DRY RUN: skip the network entirely (SMS_DRY_RUN=true). No /messages call,
+  // no credits touched. The masked payload is logged so the wiring can be
+  // verified safely, and a fake success is returned so the normal log path
+  // records the attempt as a dry run.
+  if (isSmsDryRun()) {
+    const senderName = input.senderName?.trim() || process.env.SEMAPHORE_SENDER_NAME?.trim() || null;
+    console.log(
+      `[sms dry-run] skipped POST ${BASE}/messages apikey=${maskApiKey(key)} numbers=${numbers.join(',')} sendername=${senderName ?? '(default)'}`,
+    );
+    const raw = [{ dry_run: true, numbers, sender_name: senderName ?? '(default)' }];
+    return {
+      ok: true,
+      httpStatus: 0,
+      raw,
+      recipients: numbers.map((number) => ({ number, messageId: `dry-run-${number}`, status: 'dry_run', error: null })),
+      batchError: null,
+      accepted: true,
+    };
+  }
+
+  const format = (process.env.SEMAPHORE_NUMBER_FORMAT?.trim() === '63' ? '63' : 'plus63') as 'plus63' | '63';
+  const payloadNumbers = format === '63' ? numbers.map((n) => n.replace(/^\+/, '')) : numbers;
   const body = new URLSearchParams({
     apikey: key,
-    number: numbers.join(','),
+    number: payloadNumbers.join(','),
     message,
   });
   const senderName = input.senderName?.trim() || process.env.SEMAPHORE_SENDER_NAME?.trim();
@@ -235,5 +290,5 @@ export async function legacyGetSemaphoreAccount(): Promise<SemaphoreAccount> {
 }
 
 // Compatibility entry points use the active Android cloud transport.
-export async function sendSmsBatch(input: {numbers:string[];message:string;senderName?:string|null}):Promise<SemaphoreSendResult> { return sendGatewayBatch(input); }
+export async function sendSmsBatch(input: {numbers:string[];message:string;senderName?:string|null}):Promise<SemaphoreSendResult> { if(isSmsDryRun())return {ok:true,httpStatus:200,raw:{dryRun:true},recipients:input.numbers.map(number=>({number,messageId:null,status:'dry_run',error:null})),batchError:null,accepted:false}; return sendGatewayBatch(input); }
 export async function getSemaphoreAccount():Promise<SemaphoreAccount> { return gatewayStatus(); }

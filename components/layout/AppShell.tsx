@@ -13,7 +13,7 @@ export default function AppShell({ menuItems, fullName, role, children }: {
   const [open, setOpen] = useState(false);
   useEffect(()=>{void fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'view',path:pathname})});},[pathname]);
   return <div className="app-shell">
-    <button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle navigation" aria-expanded={open}><Menu size={22}/></button>
+    <button className="mobile-menu min-w-[44px] min-h-[44px]" onClick={() => setOpen(!open)} aria-label="Toggle navigation" aria-expanded={open}><Menu size={22}/></button>
     {open && <button className="nav-overlay" aria-label="Close navigation" onClick={() => setOpen(false)}/>}
     <aside className={`app-sidebar ${open ? 'is-open' : ''}`} aria-label="Main navigation">
       <div className="flex justify-between items-center"><Link href="/dashboard" className="text-xl font-bold">PrenaTrack</Link><button className="md:hidden p-2" aria-label="Close navigation" onClick={() => setOpen(false)}><X size={20}/></button></div>

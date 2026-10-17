@@ -443,7 +443,7 @@ export function LegacySidebar({
                 type="button"
                 onClick={() => setOpenAt(mobileOpen ? null : pathname)}
                 aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-                className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-white border border-neutral-100 shadow-xs text-neutral-700 hover:bg-neutral-50 transition-colors"
+                className="lg:hidden flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white border border-neutral-100 shadow-xs text-neutral-700 hover:bg-neutral-50 transition-colors"
               >
                 {mobileOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
