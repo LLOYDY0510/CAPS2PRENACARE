@@ -1,4 +1,5 @@
 import 'server-only';
+import { createAuditedFetch } from '@/utils/audit/request';
 import { createClient } from '@supabase/supabase-js';
 
 /* Server-only privileged client. */
@@ -15,7 +16,7 @@ export function createAdminClient(actorId?: string) {
   }
 
   return createClient(supabaseUrl, secretKey, {
-    ...(actorId ? { global: { headers: { 'x-prenatrack-actor': actorId } } } : {}),
+    global: {fetch:createAuditedFetch(actorId), ...(actorId ? {headers:{'x-prenatrack-actor':actorId}} : {})},
     auth: {
       autoRefreshToken: false,
       persistSession: false,

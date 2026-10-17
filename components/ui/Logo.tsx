@@ -1,9 +1,10 @@
 import Image from 'next/image';
 
 /* The single place the app renders a logo. */
-export type LogoVariant = 'prenatrack' | 'barangay';
+export type LogoVariant = 'prenatrack' | 'barangay' | 'mark';
 
 const LOGOS: Record<LogoVariant, { src: string; alt: string }> = {
+  mark: { src: '/prenatrack_logo_for_login_page.png', alt: 'PrenaTrack' },
   prenatrack: { src: '/prenatrack_logo.png', alt: 'Prenatrack' },
   barangay: { src: '/logo.jpg', alt: 'Barangay Health Center' },
 };

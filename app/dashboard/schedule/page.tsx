@@ -51,13 +51,13 @@ export default async function PrenatalSchedulePage({searchParams}: {searchParams
       />
 
       {loadError && (
-        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
+        <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           <p className="font-bold">The prenatal schedules could not be loaded.</p>
-          <p className="text-xs mt-0.5">{loadError}</p>
+          <p className="error-message text-xs mt-0.5">{loadError}</p>
         </div>
       )}
 
-      {logError&&<p role="alert">Schedule logs could not be loaded.</p>}
+      {logError&&<p role="alert" className="error-message">Schedule logs could not be loaded.</p>}
       <ScheduleSetter
         events={events??[]}
         schedules={schedules}

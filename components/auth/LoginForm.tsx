@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
@@ -21,9 +21,13 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const pending = useRef(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending.current) return;
+    pending.current = true;
     setError('');
     setNotice('');
     setLoading(true);
@@ -31,17 +35,23 @@ export default function LoginForm() {
     try {
       const response=await fetch('/api/auth/sign-in',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
       const result=await response.json();
-      if(!response.ok){setError(result.error??'Sign-in failed.');return;}
+      if(!response.ok) throw new Error(result.error??'Sign-in failed.');
       if(result.warning)setNotice(result.warning);
       persistRememberPreference(rememberMe);
-    } catch {setError('The sign-in service could not be reached.');return;}
-    finally {setLoading(false);}
-    router.push('/dashboard');
-    router.refresh();
+      setRedirecting(true);
+      router.replace('/dashboard');
+      router.refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'The sign-in service could not be reached.');
+      setRedirecting(false);
+      pending.current = false;
+      setLoading(false);
+    }
   }
 
   async function handleForgot(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending.current) return;
     setError('');
     setNotice('');
 
@@ -50,18 +60,20 @@ export default function LoginForm() {
       return;
     }
 
+    pending.current = true;
     setLoading(true);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-
-    if (resetError) {
-      setError(resetError.message);
-      return;
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw resetError;
+      setNotice('If an account exists for that email, a password reset link is on its way.');
+    } catch {
+      setError('The reset link could not be requested. Please try again.');
+    } finally {
+      pending.current = false;
+      setLoading(false);
     }
-
-    setNotice('If an account exists for that email, a password reset link is on its way.');
   }
 
   return (
@@ -71,7 +83,9 @@ export default function LoginForm() {
         <div className="flex items-center gap-6">
           <button
             type="button"
+            disabled={loading}
             onClick={() => {
+              if (pending.current) return;
               setMode('signin');
               setError('');
               setNotice('');
@@ -104,7 +118,7 @@ export default function LoginForm() {
 
       {/* Alerts */}
       {error && (
-        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
+        <div className="error-message p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}
@@ -174,7 +188,9 @@ export default function LoginForm() {
             </label>
             <button
               type="button"
-              onClick={() => {
+              disabled={loading}
+            onClick={() => {
+              if (pending.current) return;
                 setMode('forgot');
                 setError('');
                 setNotice('');
@@ -195,7 +211,7 @@ export default function LoginForm() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>{mode === 'signin' ? 'Signing in…' : 'Sending link…'}</span>
+              <span>{redirecting ? 'Redirecting…' : mode === 'signin' ? 'Signing in…' : 'Sending link…'}</span>
             </>
           ) : (
             <span>{mode === 'signin' ? 'Sign In' : 'Send Reset Link'}</span>
@@ -206,7 +222,9 @@ export default function LoginForm() {
         {mode === 'forgot' && (
           <button
             type="button"
+            disabled={loading}
             onClick={() => {
+              if (pending.current) return;
               setMode('signin');
               setError('');
               setNotice('');

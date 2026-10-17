@@ -77,7 +77,7 @@ export default async function PregnantRecordsPage({
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
+        <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           Failed to load records: {error.message}
         </div>
       )}

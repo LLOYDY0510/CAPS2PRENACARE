@@ -1,3 +1,5 @@
+import SectionHeading from '@/components/ui/SectionHeading';
+import { ShieldCheck, ClipboardList } from 'lucide-react';
 import InfoRow from '@/components/ui/InfoRow';
 import { AccountNotLinked, RecordNotFound } from '@/components/ui/PatientNotices';
 import RiskBadge from '@/components/ui/RiskBadge';
@@ -37,16 +39,16 @@ export default async function MyRecordsPage() {
         subtitle={record.serial_no}
       />
 
-      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200/60 p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-800">Risk Assessment</h2>
+          <SectionHeading title="Risk Assessment" icon={ShieldCheck}/>
           <RiskBadge riskLevel={record.risk_level} />
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200/60 p-6">
-        <h2 className="text-lg font-bold text-neutral-800 mb-4">Medical Records</h2>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-6">
+      <div className="card p-6">
+        <SectionHeading title="Medical Records" icon={ClipboardList}/>
+        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5 mb-6">
           <InfoRow label="Blood Pressure" value={record.blood_pressure} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
           <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />

@@ -13,36 +13,39 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, leftIcon, rightIcon, className = '', id, autoFilled, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
 
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
+          <label htmlFor={inputId} className="block text-sm font-semibold text-neutral-700">
             {label}
           </label>
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <span className="absolute left-3.5 text-neutral-400 pointer-events-none">{leftIcon}</span>
+            <span className="absolute left-3.5 text-neutral-500 pointer-events-none">{leftIcon}</span>
           )}
           <input
+            aria-invalid={!!error}
+            aria-describedby={[props['aria-describedby'],error?`${inputId}-error`:helperText?`${inputId}-help`:null].filter(Boolean).join(' ')||undefined}
             id={inputId}
             ref={ref}
             className={`w-full h-11 ${leftIcon ? 'pl-10' : 'pl-4'} ${
               rightIcon ? 'pr-10' : 'pr-4'
-            } bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-400 text-xs sm:text-sm font-medium rounded-2xl border ${
-              error ? 'border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-100' : 'border-neutral-200/80 focus:border-[var(--brand)] focus:ring-2 focus:ring-green-100'
+            } bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-500 text-base font-medium rounded-xl border ${
+              error ? 'border-red-700 focus:border-red-700 focus:ring-2 focus:ring-red-100' : 'border-[var(--control-border)] focus:border-[var(--brand)] focus:ring-2 focus:ring-green-100'
             } shadow-xs transition-all outline-none disabled:opacity-60 disabled:bg-neutral-100 ${className}`}
             {...props}
           />
           {rightIcon && (
-            <span className="absolute right-3.5 text-neutral-400">{rightIcon}</span>
+            <span className="absolute right-3.5 text-neutral-500">{rightIcon}</span>
           )}
         </div>
-        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
+        {error && <p id={`${inputId}-error`} role="alert" className="error-message text-xs font-semibold text-green-800 mt-1">{error}</p>}
         {!error && helperText && (
-          <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
+          <p id={`${inputId}-help`} className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
             {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
             {helperText}
           </p>
@@ -63,20 +66,23 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, helperText, options, children, className = '', id, autoFilled, ...props }, ref) => {
-    const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const selectId = id || generatedId;
 
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
+          <label htmlFor={selectId} className="block text-sm font-semibold text-neutral-700">
             {label}
           </label>
         )}
         <select
+          aria-invalid={!!error}
+          aria-describedby={[props['aria-describedby'],error?`${selectId}-error`:helperText?`${selectId}-help`:null].filter(Boolean).join(' ')||undefined}
           id={selectId}
           ref={ref}
-          className={`w-full h-11 px-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 text-xs sm:text-sm font-medium rounded-2xl border ${
-            error ? 'border-green-300 focus:border-green-500' : 'border-neutral-200/80 focus:border-[var(--brand)]'
+          className={`w-full h-11 px-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 text-base font-medium rounded-xl border ${
+            error ? 'border-red-700 focus:border-red-700' : 'border-[var(--control-border)] focus:border-[var(--brand)]'
           } shadow-xs transition-all outline-none disabled:opacity-60 ${className}`}
           {...props}
         >
@@ -88,9 +94,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               ))
             : children}
         </select>
-        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
+        {error && <p id={`${selectId}-error`} role="alert" className="error-message text-xs font-semibold text-green-800 mt-1">{error}</p>}
         {!error && helperText && (
-          <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
+          <p id={`${selectId}-help`} className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
             {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
             {helperText}
           </p>
@@ -109,25 +115,28 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, helperText, className = '', id, ...props }, ref) => {
-    const areaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const areaId = id || generatedId;
 
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={areaId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
+          <label htmlFor={areaId} className="block text-sm font-semibold text-neutral-700">
             {label}
           </label>
         )}
         <textarea
+          aria-invalid={!!error}
+          aria-describedby={[props['aria-describedby'],error?`${areaId}-error`:helperText?`${areaId}-help`:null].filter(Boolean).join(' ')||undefined}
           id={areaId}
           ref={ref}
-          className={`w-full p-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-400 text-xs sm:text-sm font-medium rounded-2xl border ${
-            error ? 'border-green-300 focus:border-green-500' : 'border-neutral-200/80 focus:border-[var(--brand)]'
+          className={`w-full p-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-500 text-base font-medium rounded-xl border ${
+            error ? 'border-red-700 focus:border-red-700' : 'border-[var(--control-border)] focus:border-[var(--brand)]'
           } shadow-xs transition-all outline-none disabled:opacity-60 min-h-[100px] ${className}`}
           {...props}
         />
-        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
-        {!error && helperText && <p className="text-xs text-neutral-500 mt-1">{helperText}</p>}
+        {error && <p id={`${areaId}-error`} role="alert" className="error-message text-xs font-semibold text-green-800 mt-1">{error}</p>}
+        {!error && helperText && <p id={`${areaId}-help`} className="text-xs text-neutral-500 mt-1">{helperText}</p>}
       </div>
     );
   }
@@ -160,7 +169,7 @@ export function Toggle({ checked, onChange, label, disabled = false }: TogglePro
           }`}
         />
       </button>
-      {label && <span className="text-xs sm:text-sm font-semibold text-neutral-700">{label}</span>}
+      {label && <span className="text-base font-semibold text-neutral-700">{label}</span>}
     </label>
   );
 }

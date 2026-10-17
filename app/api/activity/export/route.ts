@@ -7,7 +7,7 @@ export async function GET() {
   for(let offset=0;;offset+=500){
     const {data,error}=await auth.supabase.from('activity_logs').select('occurred_at,actor_name,description,ip_address,browser').lte('occurred_at',cutoff).order('occurred_at').order('id').range(offset,offset+499);
     if(error)return Response.json({error:'Export failed.'},{status:500});
-    for(const row of data??[])rows.push([row.occurred_at,row.actor_name,row.description,row.ip_address??'',row.browser??'Unknown'].map(value=>'"'+String(value).replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"').join(','));
+    for(const row of data??[])rows.push([row.occurred_at,row.actor_name,row.description,row.ip_address??'Unavailable (not captured)',row.browser??'Unknown'].map(value=>'"'+String(value).replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"').join(','));
     if((data?.length??0)<500)break;
   }
   await recordActivity(auth.profile,'export','Exported activity logs');

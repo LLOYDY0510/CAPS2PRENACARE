@@ -10,5 +10,5 @@ export default async function ManageBhwPage(){
   if(role!=='admin'&&!profile?.access_all_zones)query=query.eq('purok',profile?.purok??'');
   const [{data,error},{data:mothers,error:motherError}]=await Promise.all([collectRows((start,end)=>query.range(start,end)),collectRows((start,end)=>supabase.from('pregnant_mothers').select('purok').order('id').range(start,end))]);
   const counts:Record<string,number>={};mothers?.forEach(row=>{if(row.purok)counts[row.purok]=(counts[row.purok]??0)+1;});
-  return <><PageHeader title="BHW for Zones"/>{error||motherError?<p role="alert">The directory could not be loaded.</p>:<BhwTable initialUsers={data??[]} countsByPurok={counts} canManage={role==='admin'||profile?.can_manage_bhw===true}/>}</>;
+  return <><PageHeader title="BHW for Zones"/>{error||motherError?<p role="alert" className="error-message">The directory could not be loaded.</p>:<BhwTable initialUsers={data??[]} countsByPurok={counts} canManage={role==='admin'||profile?.can_manage_bhw===true}/>}</>;
 }

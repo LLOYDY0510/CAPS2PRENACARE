@@ -40,10 +40,10 @@ export function Alert({ type = 'info', title, children, onClose, className = '' 
       icon: <AlertTriangle size={18} />,
     },
     error: {
-      bg: 'bg-green-50/80',
-      border: 'border-green-200/80',
-      text: 'text-green-900',
-      iconBg: 'bg-green-100 text-green-700',
+      bg: 'bg-red-50/80',
+      border: 'border-red-200/80',
+      text: 'text-red-900',
+      iconBg: 'bg-red-100 text-red-700',
       icon: <AlertCircle size={18} />,
     },
   };
@@ -53,7 +53,7 @@ export function Alert({ type = 'info', title, children, onClose, className = '' 
   return (
     <div
       className={`flex items-start gap-3 p-4 rounded-2xl border ${style.bg} ${style.border} ${style.text} shadow-xs transition-all ${className}`}
-      role="alert"
+      role={type==='error'?'alert':'status'}
     >
       <div className={`p-1.5 rounded-xl ${style.iconBg} shrink-0 mt-0.5`}>{style.icon}</div>
       <div className="flex-1 min-w-0 text-xs sm:text-sm">

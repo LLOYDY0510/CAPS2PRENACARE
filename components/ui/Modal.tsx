@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useEffect, useId, useRef } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, PanelsTopLeft } from 'lucide-react';
 import Button from './Button';
+
+let scrollLocks = 0;
+let originalOverflow = '';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -30,10 +33,13 @@ export default function Modal({
     if (!isOpen || !dialog.current) return;
     const node = dialog.current;
     const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
+    if (scrollLocks === 0) originalOverflow = document.body.style.overflow;
+    scrollLocks++;
     document.body.style.overflow = 'hidden';
     node.showModal();
+    (node.querySelector('[data-cancel]') as HTMLElement | null)?.focus();
     function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' || e.key === 'Tab') e.stopPropagation();
       if (e.key === 'Escape') { e.preventDefault(); close.current(); }
       if (e.key !== 'Tab') return;
       const focusable = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]'));
@@ -44,17 +50,20 @@ export default function Modal({
     node.addEventListener('keydown', handleKeyDown);
     return () => {
       node.removeEventListener('keydown', handleKeyDown);
-      node.close(); document.body.style.overflow = overflow; previous?.focus();
+      node.close();
+      scrollLocks--;
+      if (scrollLocks === 0) document.body.style.overflow = originalOverflow;
+      if (previous?.isConnected) previous.focus();
     };
   }, [isOpen]);
   if (!isOpen) return null;
   const widthClasses = { sm: 'max-w-sm', md: 'max-w-xl', lg: 'max-w-4xl', xl: 'max-w-6xl' };
   return <dialog ref={dialog} className={`app-dialog ${widthClasses[maxWidth]}`} aria-labelledby={titleId}
-    aria-describedby={description ? descriptionId : undefined} onCancel={(event) => { event.preventDefault(); onClose(); }}>
-    <header className="flex justify-between items-start gap-4 border-b pb-4 mb-5">
-      <div><h2 id={titleId} className="text-xl font-bold">{title ?? 'Details'}</h2>
-        {description && <p id={descriptionId} className="text-sm mt-2">{description}</p>}</div>
-      <button type="button" onClick={onClose} aria-label="Close dialog" className="p-3"><X size={20}/></button>
+    aria-describedby={description ? descriptionId : undefined} onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }}>
+    <header className="dialog-heading">
+      <div className="dialog-title"><span className="section-icon" aria-hidden="true"><PanelsTopLeft size={21}/></span><div><h2 id={titleId} className="text-xl font-bold">{title ?? 'Details'}</h2>
+        {description && <p id={descriptionId}>{description}</p>}</div></div>
+      <button type="button" onClick={onClose} aria-label="Close dialog" className="dialog-close"><X size={20}/></button>
     </header>
     {children}
   </dialog>;
@@ -84,7 +93,7 @@ export function ConfirmDialog({
   isLoading = false,
 }: ConfirmDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={() => { if (!isLoading) onClose(); }} title={title} maxWidth="sm">
       <div className="flex flex-col items-center text-center space-y-4">
         <div
           className={`w-14 h-14 rounded-full flex items-center justify-center ${
@@ -98,7 +107,7 @@ export function ConfirmDialog({
           <p className="text-xs text-neutral-500">{description}</p>
         </div>
         <div className="flex items-center gap-3 w-full pt-2">
-          <Button variant="outline" className="flex-1" onClick={onClose} disabled={isLoading}>
+          <Button data-cancel variant="outline" className="flex-1" onClick={onClose} disabled={isLoading}>
             {cancelText}
           </Button>
           <Button

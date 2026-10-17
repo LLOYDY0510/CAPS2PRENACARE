@@ -180,7 +180,7 @@ export default function SmsLogTable({
       setFeedback((prev) => ({
         ...prev,
         [item.id]: {
-          tone: sent > 0 ? 'ok' : 'error',
+          tone: failed > 0 || payload.batchError ? 'error' : sent > 0 ? 'ok' : 'error',
           text: [
             payload.dryRun ? 'DRY RUN — no SMS left the server' : null,
             sent > 0 ? `Sent to ${formatE164(toE164(item.contactNumber))}` : null,
@@ -295,7 +295,7 @@ export default function SmsLogTable({
                     </div>
                   </div>
                   {note && (
-                    <p className={`text-xs font-semibold ${note.tone === 'ok' ? 'text-green-700' : 'text-green-600'}`}>
+                    <p className={`text-xs font-semibold ${note.tone === 'ok' ? 'text-green-700' : 'error-message'}`}>
                       {note.text}
                     </p>
                   )}
@@ -354,7 +354,7 @@ export default function SmsLogTable({
                       <td className="py-3.5 px-4 max-w-xs">
                         <p className="line-clamp-2 text-neutral-700 font-medium">{log.message}</p>
                         {log.error_message && (
-                          <p className="text-xs text-green-600 font-semibold mt-1">{log.error_message}</p>
+                          <p className="error-message text-xs text-green-600 font-semibold mt-1">{log.error_message}</p>
                         )}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -408,7 +408,7 @@ export default function SmsLogTable({
                                   <span className="text-neutral-400">· ref {receipt.providerMessageId}</span>
                                 )}
                                 {receipt.errorMessage && (
-                                  <span className="text-green-600 font-semibold">{receipt.errorMessage}</span>
+                                  <span className="error-message text-green-600 font-semibold">{receipt.errorMessage}</span>
                                 )}
                               </div>
                             ))}

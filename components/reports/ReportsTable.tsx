@@ -9,7 +9,8 @@ import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import ReportExport, { type ReportRow } from '@/components/reports/ReportExport';
 import RiskBadge from '@/components/ui/RiskBadge';
-import { Printer, RotateCcw } from 'lucide-react';
+import SectionHeading from '@/components/ui/SectionHeading';
+import { Printer, RotateCcw, ChartNoAxesCombined } from 'lucide-react';
 
 export type ReportRowWithId = ReportRow & { _id: string };
 
@@ -149,11 +150,8 @@ export default function ReportsTable({
       {/* SCREEN CONTROLS */}
       <div className="no-print space-y-6">
         {/* Export & Print Bar */}
-        <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-5 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-bold text-neutral-900">{activeReportDef.label}</h2>
-            <p className="text-xs text-neutral-500 font-medium mt-0.5">{activeReportDef.description}</p>
-          </div>
+        <div className="bg-[var(--surface-alt)] rounded-2xl border border-neutral-100 p-5 flex flex-wrap items-center justify-between gap-4">
+          <SectionHeading title={activeReportDef.label} description={activeReportDef.description} icon={ChartNoAxesCombined}/>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handlePrint} leftIcon={<Printer size={16} />}>
               Print Report

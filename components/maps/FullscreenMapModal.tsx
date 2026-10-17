@@ -2,6 +2,7 @@
 
 import { useLocationSelection, openLocation } from '@/utils/maps/useLocationSelection';
 
+import Modal from '@/components/ui/Modal';
 import { useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -81,7 +82,7 @@ export default function FullscreenMapModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Select Location" maxWidth="xl">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 bg-white">
@@ -154,7 +155,7 @@ export default function FullscreenMapModal({
               {geocodeError && (
                 <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
                   <AlertCircle size={12} className="text-green-600 shrink-0" />
-                  <span className="text-[11px] font-semibold text-green-800">{geocodeError}</span>
+                  <span className="error-message text-[11px] font-semibold text-green-800">{geocodeError}</span>
                 </div>
               )}
 
@@ -231,6 +232,6 @@ export default function FullscreenMapModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Copy, Send, Check, ArrowRight } from 'lucide-react';
+import SectionHeading from '@/components/ui/SectionHeading';
+import { Copy, Send, Check, ArrowRight, HeartPulse } from 'lucide-react';
 
 export type MatchedIndicatorDetail = {
   id: string;
@@ -91,15 +92,15 @@ export default function RiskTipsSection({
   });
 
   return <section className="card p-6">
-    <h2 className="text-lg font-bold mb-4">Automatic Risk Tips &amp; Clinical Advice</h2>
-    {sendError&&<p role="alert">{sendError}</p>}
+    <SectionHeading title="Automatic Risk Tips & Clinical Advice" description="Review assessment-based guidance before sharing with a patient" icon={HeartPulse}/>
+    {sendError&&<p role="alert" className="error-message">{sendError}</p>}
     <div className="flex flex-wrap gap-3 mb-4">
       <input aria-label="Filter patient rows" className="form-input" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="Filter patients"/>
       <select aria-label="Indicator" value={selectedIndicator} onChange={e=>{setSelectedIndicator(e.target.value);setPage(1);}}><option value="all">All indicators</option>{availableIndicators.map(i=><option key={i.id} value={i.id}>{i.label}</option>)}</select>
       <select aria-label="Urgency" value={selectedUrgency} onChange={e=>{setSelectedUrgency(e.target.value);setPage(1);}}><option value="all">All urgency levels</option><option value="high">High priority</option><option value="moderate">Moderate</option></select>
     </div>
     <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Patient</th><th>Serial No.</th><th>Zone/Purok</th><th>Assessment/Indicator</th><th>Advice</th><th>Clinical Action</th><th>Actions</th></tr></thead><tbody>
-    {filteredMothers.slice((page-1)*25,page*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
+    {filteredMothers.slice((page-1)*25,page*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}><Copy size={15} aria-hidden="true"/>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}><Send size={15} aria-hidden="true"/>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
     {!filteredMothers.length&&<tr><td colSpan={7}>No patients match the selected indicators.</td></tr>}
     </tbody></table></div><nav aria-label="Advice pages" className="flex gap-4 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page}</span><button disabled={page*25>=filteredMothers.length} onClick={()=>setPage(page+1)}>Next</button></nav></section>;
 }

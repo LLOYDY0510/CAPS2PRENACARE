@@ -33,7 +33,7 @@ export default async function RiskMapPage() {
         badge="Zone Intelligence"
       />
 
-      {error ? <p role="alert">Map records could not be loaded.</p> : <RiskMapClient records={records ?? []} />}
+      {error ? <p role="alert" className="error-message">Map records could not be loaded.</p> : <RiskMapClient records={records ?? []} />}
     </div>
   );
 }

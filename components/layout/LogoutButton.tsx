@@ -18,5 +18,5 @@ export default function LogoutButton({ collapsed = false }: { collapsed?: boolea
   }
 
   void collapsed;
-  return <button type="button" onClick={handleLogout} className="nav-link w-full text-left"><LogOut size={18}/><span>Logout</span></button>;
+  return <button type="button" onClick={handleLogout} className="nav-link w-full text-left"><LogOut size={20} aria-hidden="true"/><span>Logout</span></button>;
 }

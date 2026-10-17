@@ -31,7 +31,7 @@ export default async function ManageUsersPage() {
           icon={Users}
           subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
         />
-        <div className="alert-error">
+        <div className="error-message alert-error">
           Failed to load accounts: {error?.message ?? mothersError?.message}
         </div>
       </div>
