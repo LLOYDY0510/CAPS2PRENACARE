@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
+import { LayoutDashboard } from 'lucide-react';
+import { pageIcons } from './visuals';
 
-export default function PageHeader({ title, subtitle, actions }: {
+export default function PageHeader({ title, subtitle, actions, icon }: {
   title: string; subtitle?: string; icon?: React.ComponentType<{ className?: string; size?: number }>; badge?: string; actions?: ReactNode;
 }) {
-  return <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
-    <div><h1 className="text-2xl font-bold">{title}</h1>{subtitle && <p className="text-sm text-neutral-600 mt-2">{subtitle}</p>}</div>
-    {actions && <div className="flex gap-2">{actions}</div>}
+  const Icon=icon||pageIcons[title]||LayoutDashboard;
+  return <header className="workspace-page-header">
+    <div className="page-heading"><span className="page-icon" aria-hidden="true"><Icon size={26}/></span><div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div></div>
+    {actions&&<div className="page-actions">{actions}</div>}
   </header>;
 }

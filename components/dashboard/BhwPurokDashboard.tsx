@@ -31,7 +31,7 @@ export async function LegacyBhwPurokDashboard() {
     return (
       <div className="space-y-6">
         <PageHeader title="BHW Dashboard" icon={Users} />
-        <div className="alert-error" role="alert">Failed to load your profile: {profileError.message}</div>
+        <div className="error-message alert-error" role="alert">Failed to load your profile: {profileError.message}</div>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export async function LegacyBhwPurokDashboard() {
     return (
       <div className="space-y-6">
         <PageHeader title="BHW Dashboard" icon={Users} />
-        <div className="alert-error" role="alert">Failed to load mothers: {recordsError.message}</div>
+        <div className="error-message alert-error" role="alert">Failed to load mothers: {recordsError.message}</div>
       </div>
     );
   }
@@ -130,7 +130,7 @@ export async function LegacyBhwPurokDashboard() {
       />
 
       {!hasPurok && (
-        <div className="p-4 rounded-2xl bg-green-50 border border-green-200/80 text-green-700 text-xs font-semibold flex items-center gap-3 shadow-xs" role="alert">
+        <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200/80 text-green-700 text-xs font-semibold flex items-center gap-3 shadow-xs" role="alert">
           <AlertCircle size={18} className="shrink-0 text-green-600" />
           <span>Your account has no purok assignment yet, so no mother records are visible. Ask your BHW Head or administrator to assign your purok.</span>
         </div>
@@ -209,7 +209,7 @@ export async function LegacyBhwPurokDashboard() {
           </div>
 
           {missedError ? (
-            <p className="text-xs text-green-500">Failed to load missed checkups: {missedError.message}</p>
+            <p className="error-message text-xs text-green-500">Failed to load missed checkups: {missedError.message}</p>
           ) : missedCheckupsInPurok.length === 0 ? (
             <p className="text-xs text-neutral-400 font-medium text-center py-6">No missed checkups recorded for your purok</p>
           ) : (
@@ -245,7 +245,7 @@ export async function LegacyBhwPurokDashboard() {
           </div>
 
           {upcomingError ? (
-            <p className="text-xs text-green-500">Failed to load upcoming checkups: {upcomingError.message}</p>
+            <p className="error-message text-xs text-green-500">Failed to load upcoming checkups: {upcomingError.message}</p>
           ) : upcomingCheckupsWithMother.length > 0 ? (
             <div className="space-y-2.5">
               {upcomingCheckupsWithMother.map(({ schedule, mother }) => (

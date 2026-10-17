@@ -48,7 +48,7 @@ export default async function NurseDashboard() {
     return (
       <div className="space-y-6">
         <PageHeader title="Nurse Dashboard" icon={HeartPulse} />
-        <div className="alert-error" role="alert">
+        <div className="error-message alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
         </div>
       </div>
@@ -105,7 +105,7 @@ export default async function NurseDashboard() {
   });
 
   return (
-    <div className="space-y-6 anim-fade-up">
+    <div className="space-y-7">
       {/* Page header */}
       <PageHeader
         title="Nurse Dashboard"

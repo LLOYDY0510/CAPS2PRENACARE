@@ -202,7 +202,7 @@ export default function UserRoleEditor({
       <td className="px-6 py-4 text-right">
         <div className="flex flex-col items-end gap-1.5">
           {error && (
-            <p className="text-xs text-green-600 font-medium" role="alert">
+            <p className="error-message text-xs text-green-600 font-medium" role="alert">
               {error}
             </p>
           )}

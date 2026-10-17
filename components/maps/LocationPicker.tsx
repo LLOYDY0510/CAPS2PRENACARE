@@ -78,7 +78,7 @@ function LocationDetailsCard({
       {geocodeError && (
         <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
           <AlertCircle size={12} className="text-green-600 shrink-0" />
-          <span className="text-[11px] font-semibold text-green-800">{geocodeError}</span>
+          <span className="error-message text-[11px] font-semibold text-green-800">{geocodeError}</span>
         </div>
       )}
 

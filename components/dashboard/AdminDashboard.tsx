@@ -31,7 +31,7 @@ export async function LegacyAdminDashboard() {
     return (
       <div className="space-y-6">
         <PageHeader title="Admin Dashboard" icon={UserCog} />
-        <div className="alert-error" role="alert">
+        <div className="error-message alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
         </div>
       </div>

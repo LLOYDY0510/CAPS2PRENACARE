@@ -31,7 +31,7 @@ export async function LegacyBhwHeadDashboard() {
     return (
       <div className="space-y-6">
         <PageHeader title="BHW Head Dashboard" icon={LayoutDashboard} />
-        <div className="alert-error" role="alert">
+        <div className="error-message alert-error" role="alert">
           Failed to load dashboard data: {loadError.message}
         </div>
       </div>

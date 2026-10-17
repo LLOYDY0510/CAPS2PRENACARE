@@ -108,7 +108,7 @@ export default function CreateAccountForm() {
       </header>
 
       {error && (
-        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
+        <div className="error-message p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}

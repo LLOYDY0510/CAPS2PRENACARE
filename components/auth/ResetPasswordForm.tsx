@@ -56,7 +56,7 @@ export default function ResetPasswordForm() {
       </header>
 
       {error && (
-        <div className="alert-error" role="alert">
+        <div className="error-message alert-error" role="alert">
           {error}
         </div>
       )}

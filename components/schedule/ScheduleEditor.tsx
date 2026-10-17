@@ -2,7 +2,7 @@
 
 import { localDate } from '@/utils/calendar';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import SearchBar from '@/components/ui/SearchBar';
@@ -25,6 +25,7 @@ export type ScheduleEditorValue = {
 };
 
 export default function ScheduleEditor({
+  onDirtyChange,
   mothers,
   initial,
   submitLabel,
@@ -32,6 +33,7 @@ export default function ScheduleEditor({
   onCancel,
   busy,
 }: {
+  onDirtyChange?: (dirty:boolean)=>void;
   mothers: ScheduleMother[];
   initial: ScheduleEditorValue;
   submitLabel: string;
@@ -46,6 +48,8 @@ export default function ScheduleEditor({
   const [purokFilter, setPurokFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(()=>{onDirtyChange?.(visitDate!==initial.visitDate||trimester!==initial.trimester||notes!==initial.notes||selected.size!==initial.motherIds.length||initial.motherIds.some(id=>!selected.has(id)));},[visitDate,trimester,notes,selected,initial,onDirtyChange]);
 
   const puroks = useMemo(() => {
     const values = mothers.map((m) => m.purok).filter((p): p is string => !!p);
@@ -134,7 +138,7 @@ export default function ScheduleEditor({
   return (
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
       {error && (
-        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
+        <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}

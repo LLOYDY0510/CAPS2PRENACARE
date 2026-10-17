@@ -37,7 +37,7 @@ export default async function PrenatalCheckupsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Prenatal Checkups" icon={ClipboardCheck} />
-        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
+        <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           Failed to load checkup data: {loadError.message}
         </div>
       </div>

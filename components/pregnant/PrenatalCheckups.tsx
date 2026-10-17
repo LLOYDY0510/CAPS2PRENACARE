@@ -1,4 +1,5 @@
 'use client';
+import { useConfirmation } from '@/components/ui/useConfirmation';
 
 import { useState } from 'react';
 import { isValidBloodPressure } from '@/utils/maternalForm';
@@ -52,6 +53,7 @@ export default function PrenatalCheckups({
     return acc;
   }, {} as Record<string, Checkup[]>);
 
+  const { confirm, confirmation } = useConfirmation();
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -110,7 +112,8 @@ export default function PrenatalCheckups({
   }
 
   async function handleDelete(id: string) {
-    const confirmed = window.confirm('Delete this checkup record?');
+    if (deletingId) return;
+    const confirmed = await confirm({title:'Delete checkup?',description:'This checkup record will be removed.',confirmText:'Delete Checkup'});
     if (!confirmed) return;
 
     setError('');
@@ -140,6 +143,7 @@ export default function PrenatalCheckups({
   return (
     <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
       {/* Header & Tabs */}
+      {confirmation}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
         <div>
           <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">

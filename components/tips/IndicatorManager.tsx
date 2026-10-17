@@ -1,4 +1,5 @@
 'use client';
+import { useConfirmation } from '@/components/ui/useConfirmation';
 import Modal from '@/components/ui/Modal';
 import {getRiskTipForIndicator} from '@/utils/riskTips';
 
@@ -41,8 +42,10 @@ export default function IndicatorManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
 
+  const { confirm, confirmation } = useConfirmation();
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    if(saving)return;
     setError('');
 
     if (!label.trim()) {
@@ -83,30 +86,39 @@ export default function IndicatorManager({
   }
 
   async function toggleActive(indicator: Indicator) {
-    await supabase
-      .from('risk_indicators')
-      .update({ active: !indicator.active })
-      .eq('id', indicator.id);
-    router.refresh();
+    if(saving)return;setSaving(true);setError('');
+    try {
+      const {error:failure}=await supabase.from('risk_indicators').update({active:!indicator.active}).eq('id',indicator.id);
+      if(failure)throw failure;router.refresh();
+    }catch{setError('The indicator could not be updated.');}finally{setSaving(false);}
   }
 
   async function saveLabel(indicator: Indicator) {
-    if (!editLabel.trim()) return;
-    const {error: saveError} = await supabase.from('risk_indicators').update({ advice_message: editLabel.trim() }).eq('id', indicator.id);
-    if (saveError) { setError(saveError.message); return; }
-    setEditingId(null);
-    router.refresh();
+    if(saving)return;
+    if(!editLabel.trim()){setError('An advice message is required.');return;}
+    setSaving(true);setError('');
+    try {
+      const {error:failure}=await supabase.from('risk_indicators').update({advice_message:editLabel.trim()}).eq('id',indicator.id);
+      if(failure)throw failure;setEditingId(null);router.refresh();
+    }catch{setError('The advice message could not be saved.');}finally{setSaving(false);}
   }
 
   async function handleDelete(id: string) {
-    const confirmed = window.confirm('Delete this indicator? This cannot be undone.');
+    if (saving) return;
+    const confirmed = await confirm({title:'Delete indicator?',description:'This cannot be undone.',confirmText:'Delete Indicator'});
     if (!confirmed) return;
-    await supabase.from('risk_indicators').delete().eq('id', id);
-    router.refresh();
+    setSaving(true);
+    try {
+      const {error: failure} = await supabase.from('risk_indicators').delete().eq('id', id);
+      if (failure) throw failure;
+      router.refresh();
+    } catch { setError('The indicator could not be deleted.'); }
+    finally { setSaving(false); }
   }
 
   return (
     <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
+      {confirmation}
       <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
         <div>
           <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
@@ -118,17 +130,18 @@ export default function IndicatorManager({
         <Button
           variant={showForm ? 'outline' : 'primary'}
           size="sm"
-          onClick={() => setShowForm((s) => !s)}
+          disabled={saving}
+          onClick={() => {setError('');setEditingId(null);setShowForm(true);}}
           leftIcon={showForm ? undefined : <Plus size={16} />}
         >
           {showForm ? 'Cancel' : 'Add Indicator'}
         </Button>
       </div>
 
-      {showForm && (
+      <Modal isOpen={showForm} title="New Risk Indicator Protocol" onClose={()=>{if(!saving)setShowForm(false);}}>
         <form onSubmit={handleAdd} className="bg-neutral-50/90 rounded-2xl border border-neutral-200/80 p-5 space-y-4">
-          <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">New Risk Indicator Protocol</h3>
-          {error && <p className="text-xs font-semibold text-green-600">{error}</p>}
+
+          {error && <p role="alert" className="error-message text-xs font-semibold">{error}</p>}
 
           <Input
             label="Label / Description"
@@ -166,8 +179,9 @@ export default function IndicatorManager({
             </Button>
           </div>
         </form>
-      )}
+      </Modal>
 
+      {error && !showForm && <p role="alert" className="error-message">{error}</p>}
       <div className="space-y-3">
         {initialIndicators.length === 0 && (
           <p className="text-xs text-neutral-400 font-medium py-8 text-center">No indicators configured yet.</p>
@@ -191,7 +205,8 @@ export default function IndicatorManager({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => { setEditingId(ind.id); setEditLabel(ind.advice_message ?? getRiskTipForIndicator(ind.label, ind.indicator_type, ind.threshold_value).tipAdvice); }}
+          disabled={saving}
+                onClick={() => { setError('');setShowForm(false);setEditingId(ind.id); setEditLabel(ind.advice_message ?? getRiskTipForIndicator(ind.label, ind.indicator_type, ind.threshold_value).tipAdvice); }}
                 leftIcon={<Edit size={14} />}
               >
                 Edit
@@ -199,6 +214,7 @@ export default function IndicatorManager({
               <Button
                 variant={ind.active ? 'danger' : 'secondary'}
                 size="sm"
+          disabled={saving}
                 onClick={() => toggleActive(ind)}
                 leftIcon={<Power size={14} />}
               >
@@ -207,6 +223,7 @@ export default function IndicatorManager({
               <Button
                 variant="ghost"
                 size="sm"
+          disabled={saving}
                 onClick={() => handleDelete(ind.id)}
                 leftIcon={<Trash2 size={14} />}
               >
@@ -216,7 +233,8 @@ export default function IndicatorManager({
           </div>
         ))}
       </div>
-      <Modal isOpen={editingId!==null} onClose={()=>setEditingId(null)} title="Edit advice message">
+      <Modal isOpen={editingId!==null} onClose={()=>{if(!saving)setEditingId(null);}} title="Edit advice message">
+        {error && <p role="alert" className="error-message">{error}</p>}
         <label className="block">Message<textarea className="form-textarea w-full mt-2" rows={6} maxLength={5000} value={editLabel} onChange={e=>setEditLabel(e.target.value)}/></label>
         <div className="flex gap-3 mt-4"><Button onClick={()=>{const indicator=initialIndicators.find(row=>row.id===editingId);if(indicator) void saveLabel(indicator);}}>Save Message</Button><Button variant="outline" onClick={()=>setEditingId(null)}>Cancel</Button></div>
       </Modal>
