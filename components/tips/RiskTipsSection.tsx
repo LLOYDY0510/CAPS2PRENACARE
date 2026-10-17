@@ -30,41 +30,42 @@ export type AtRiskMother = {
 export default function RiskTipsSection({
   mothers,
   availableIndicators,
+  canSend = false,
 }: {
+  canSend?: boolean;
   mothers: AtRiskMother[];
   availableIndicators: { id: string; label: string }[];
 }) {
+  const [page,setPage] = useState(1);
   const [search, setSearch]                     = useState('');
   const [selectedIndicator, setSelectedIndicator] = useState<string>('all');
   const [selectedUrgency, setSelectedUrgency]   = useState<string>('all');
   const [copiedId, setCopiedId]                 = useState<string | null>(null);
   const [sendingId, setSendingId]               = useState<string | null>(null);
+  const [sendError, setSendError] = useState('');
   const [sentId, setSentId]                     = useState<string | null>(null);
 
   function handleCopy(text: string, id: string) {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    if (!navigator.clipboard) { setSendError('Clipboard access is unavailable. Copy the displayed text manually.'); return; }
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id); setTimeout(() => setCopiedId(null), 2000);
+    }).catch(() => setSendError('The text could not be copied.'));
   }
 
   async function handleSend(mother: AtRiskMother, item: MatchedIndicatorDetail) {
+    if (!canSend) return;
     const message = `${item.tipAdvice}\n\nRecommended action: ${item.clinicalAction}`;
-    setSendingId(`${mother.id}-${item.id}`);
-    const response = await fetch('/api/notifications/dispatch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'risk_alert',
-        pregnantMotherId: mother.id,
-        title: item.tipTitle,
-        message,
-      }),
-    });
-    setSendingId(null);
-    if (response.ok) {
-      setSentId(`${mother.id}-${item.id}`);
-      setTimeout(() => setSentId(null), 2500);
-    }
+    setSendingId(`${mother.id}-${item.id}`); setSendError('');
+    try {
+      const response = await fetch('/api/notifications/dispatch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'risk_alert', pregnantMotherId: mother.id, title: item.tipTitle, message }),
+      });
+      if (!response.ok) throw new Error('The advice could not be sent. Please try again.');
+      setSentId(`${mother.id}-${item.id}`); setTimeout(() => setSentId(null), 2500);
+    } catch (error) { setSendError(error instanceof Error ? error.message : 'Dispatch failed.'); }
+    finally { setSendingId(null); }
+
   }
 
   const filteredMothers = mothers.filter((m) => {
@@ -89,147 +90,57 @@ export default function RiskTipsSection({
     return true;
   });
 
-  const totalMatchedTips   = mothers.reduce((sum, m) => sum + m.matchedIndicators.length, 0);
-  const highPriorityCount  = mothers.reduce(
-    (sum, m) => sum + m.matchedIndicators.filter((i) => i.urgency === 'high').length, 0
-  );
-
-  return (
-    <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 mb-4">
-
-      {/* ── Section header ── */}
-      <div
-        className="section-header px-5 py-4 flex-wrap gap-3"
-      >
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-800">Automatic Risk Tips &amp; Clinical Advice</h2>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-red-100 text-red-700 border border-red-200">
-              LIVE
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Tips are generated automatically when a registered mother matches an active Risk Indicator.
-          </p>
-        </div>
-
-        {/* Summary counters */}
-        <div className="flex items-center gap-4 text-xs">
-          <Stat label="Flagged" value={mothers.length} color="text-red-600" />
-          <div className="w-px h-7 bg-slate-200" />
-          <Stat label="Active Tips" value={totalMatchedTips} color="text-slate-800" />
-          <div className="w-px h-7 bg-slate-200" />
-          <Stat label="High Priority" value={highPriorityCount} color="text-amber-600" />
-        </div>
-      </div>
-
-      {/* ── Filter bar ── */}
-      <div
-        className="grid gap-3 px-5 py-4 border-b border-slate-200/60 bg-slate-50/50"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        }}
-      >
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, serial, or zone…"
-          className="form-input text-xs"
-        />
-        <select
-          value={selectedIndicator}
-          onChange={(e) => setSelectedIndicator(e.target.value)}
-          className="form-select text-xs"
-        >
-          <option value="all">All Risk Indicators</option>
-          {availableIndicators.map((ind) => (
-            <option key={ind.id} value={ind.id}>{ind.label}</option>
-          ))}
-        </select>
-        <select
-          value={selectedUrgency}
-          onChange={(e) => setSelectedUrgency(e.target.value)}
-          className="form-select text-xs"
-        >
-          <option value="all">All Urgency Levels</option>
-          <option value="high">High Priority</option>
-          <option value="moderate">Moderate</option>
-        </select>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="p-5">
-        {filteredMothers.length === 0 ? (
-          <div className="text-center py-10 px-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-            <p className="text-sm font-semibold text-slate-800 mb-1">
-              {mothers.length === 0
-                ? 'No mothers currently match active Risk Indicators.'
-                : 'No results for the selected filter criteria.'}
-            </p>
-            <p className="text-xs text-slate-500 max-w-[420px] mx-auto">
-              {mothers.length === 0
-                ? 'When a pregnant mother is tagged with an active Risk Indicator, clinical advice will appear here automatically.'
-                : 'Try clearing the search or selecting "All Risk Indicators".'}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3.5">
-            {filteredMothers.map((mother) => (
-              <MotherCard
-                key={mother.id}
-                mother={mother}
-                copiedId={copiedId}
-                onCopy={handleCopy}
-                sendingId={sendingId}
-                sentId={sentId}
-                onSend={handleSend}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+  return <section className="card p-6">
+    <h2 className="text-lg font-bold mb-4">Automatic Risk Tips &amp; Clinical Advice</h2>
+    {sendError&&<p role="alert">{sendError}</p>}
+    <div className="flex flex-wrap gap-3 mb-4">
+      <input aria-label="Filter patient rows" className="form-input" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="Filter patients"/>
+      <select aria-label="Indicator" value={selectedIndicator} onChange={e=>{setSelectedIndicator(e.target.value);setPage(1);}}><option value="all">All indicators</option>{availableIndicators.map(i=><option key={i.id} value={i.id}>{i.label}</option>)}</select>
+      <select aria-label="Urgency" value={selectedUrgency} onChange={e=>{setSelectedUrgency(e.target.value);setPage(1);}}><option value="all">All urgency levels</option><option value="high">High priority</option><option value="moderate">Moderate</option></select>
     </div>
-  );
+    <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Patient</th><th>Serial No.</th><th>Zone/Purok</th><th>Assessment/Indicator</th><th>Advice</th><th>Clinical Action</th><th>Actions</th></tr></thead><tbody>
+    {filteredMothers.slice((page-1)*25,page*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
+    {!filteredMothers.length&&<tr><td colSpan={7}>No patients match the selected indicators.</td></tr>}
+    </tbody></table></div><nav aria-label="Advice pages" className="flex gap-4 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page}</span><button disabled={page*25>=filteredMothers.length} onClick={()=>setPage(page+1)}>Next</button></nav></section>;
 }
 
-/* ─────────────────────────────────────
-   Mother risk card
-   ───────────────────────────────────── */
-function MotherCard({
+/* Mother risk card */
+export function MotherCard({
   mother,
   copiedId,
   onCopy,
   sendingId,
   sentId,
   onSend,
+  canSend,
 }: {
   mother: AtRiskMother;
   copiedId: string | null;
   onCopy: (text: string, id: string) => void;
   sendingId: string | null;
   sentId: string | null;
+  canSend: boolean;
   onSend: (mother: AtRiskMother, item: MatchedIndicatorDetail) => void;
 }) {
   return (
-    <div className="border border-slate-200/60 rounded-2xl bg-white overflow-hidden">
+    <div className="border border-neutral-200/60 rounded-2xl bg-white overflow-hidden">
       {/* Mother meta */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-200/60 bg-slate-50/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-neutral-200/60 bg-neutral-50/50">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-slate-800">
+            <span className="font-semibold text-sm text-neutral-800">
               {mother.fullName}
             </span>
             {mother.serialNo && (
-              <span className="text-[11px] font-mono bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md">
+              <span className="text-[11px] font-mono bg-neutral-200 text-neutral-600 px-1.5 py-0.5 rounded-md">
                 {mother.serialNo}
               </span>
             )}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
               High Risk
             </span>
           </div>
-          <div className="flex gap-4 mt-1 text-xs text-slate-500 flex-wrap">
+          <div className="flex gap-4 mt-1 text-xs text-neutral-500 flex-wrap">
             <span>Zone: {mother.purok ? `${mother.purok}` : '—'}</span>
             <span>Age: {mother.age ?? '—'}</span>
             <span>BP: {mother.bloodPressure ?? '—'}</span>
@@ -257,6 +168,7 @@ function MotherCard({
 
           return (
             <TipCard
+              canSend={canSend}
               key={copyKey}
               item={item}
               isCopied={isCopied}
@@ -272,9 +184,7 @@ function MotherCard({
   );
 }
 
-/* ─────────────────────────────────────
-   Individual tip card
-   ───────────────────────────────────── */
+/* Individual tip card */
 function TipCard({
   item,
   isCopied,
@@ -282,12 +192,14 @@ function TipCard({
   isSending,
   isSent,
   onSend,
+  canSend,
 }: {
   item: MatchedIndicatorDetail;
   isCopied: boolean;
   onCopy: () => void;
   isSending: boolean;
   isSent: boolean;
+  canSend: boolean;
   onSend: () => void;
 }) {
   const isHigh = item.urgency === 'high';
@@ -296,17 +208,17 @@ function TipCard({
     <div
       className={`border-l-4 rounded-xl p-3 text-xs ${
         isHigh
-          ? 'border-red-500 bg-red-50/50'
-          : 'border-amber-500 bg-amber-50/50'
+          ? 'border-green-500 bg-green-50/50'
+          : 'border-green-500 bg-green-50/50'
       }`}
     >
       {/* Tip header row */}
       <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-neutral-800">
             {item.tipTitle}
           </span>
-          <span className="text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
+          <span className="text-[11px] text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-md">
             Indicator: {item.label}
           </span>
         </div>
@@ -314,8 +226,8 @@ function TipCard({
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
             isHigh
-              ? 'bg-red-100 text-red-700 border border-red-200'
-              : 'bg-amber-100 text-amber-700 border border-amber-200'
+              ? 'bg-green-100 text-green-700 border border-green-200'
+              : 'bg-green-100 text-green-700 border border-green-200'
           }`}>
             {isHigh ? 'High Priority' : 'Moderate'}
           </span>
@@ -331,8 +243,8 @@ function TipCard({
             type="button"
             onClick={onSend}
             className="btn-secondary text-[11px]"
-            disabled={isSending}
-            title="Send this health advice to the pregnant mother"
+            disabled={!canSend || isSending}
+            title={canSend ? 'Send this health advice to the pregnant mother' : 'Only nurses can send clinical advice'}
           >
             {isSending ? 'Sending…' : isSent ? <><Check size={10} /> Sent</> : <><Send size={10} /> Send</>}
           </button>
@@ -340,17 +252,17 @@ function TipCard({
       </div>
 
       {/* Advice */}
-      <p className="text-slate-700 leading-relaxed mb-2">
-        <strong className="text-slate-800 font-semibold">Clinical Advice: </strong>
+      <p className="text-neutral-700 leading-relaxed mb-2">
+        <strong className="text-neutral-800 font-semibold">Clinical Advice: </strong>
         {item.tipAdvice}
       </p>
 
       {/* Action */}
-      <div className="bg-white border border-slate-200 rounded-lg p-2 flex gap-2">
-        <span className="font-semibold text-teal-600 whitespace-nowrap">
+      <div className="bg-white border border-neutral-200 rounded-lg p-2 flex gap-2">
+        <span className="font-semibold text-green-600 whitespace-nowrap">
           Nurse Action:
         </span>
-        <span className="text-slate-600 leading-relaxed">
+        <span className="text-neutral-600 leading-relaxed">
           {item.clinicalAction}
         </span>
       </div>
@@ -358,13 +270,11 @@ function TipCard({
   );
 }
 
-/* ─────────────────────────────────────
-   Inline stat counter
-   ───────────────────────────────────── */
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+/* Inline stat counter */
+export function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="text-right">
-      <p className="text-[11px] text-slate-400 mb-0.5">{label}</p>
+      <p className="text-[11px] text-neutral-400 mb-0.5">{label}</p>
       <p className={`text-lg font-bold leading-none ${color}`}>{value}</p>
     </div>
   );

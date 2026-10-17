@@ -27,8 +27,8 @@ export default async function MyInfoPage() {
         subtitle={record.serial_no}
       />
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-6">
-        <h2 className="text-lg font-bold text-slate-800 mb-4">Personal Details</h2>
+      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200/60 p-6">
+        <h2 className="text-lg font-bold text-neutral-800 mb-4">Personal Details</h2>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <InfoRow label="Date Registered" value={record.date_registered} />
           <InfoRow label="Address" value={record.address} />

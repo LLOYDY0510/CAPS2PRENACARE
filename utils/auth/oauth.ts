@@ -1,13 +1,4 @@
-/**
- * Which social sign-in buttons are live.
- *
- * Supabase has no client-side endpoint that lists the OAuth providers enabled
- * on a project, so the allow-list is supplied by configuration:
- *   NEXT_PUBLIC_OAUTH_PROVIDERS="google,github"
- *
- * When the variable is unset or empty every button renders disabled, which is
- * the correct state for a project with no provider configured.
- */
+/* Which social sign-in buttons are live. */
 
 export type OAuthProviderId = 'google' | 'github';
 

@@ -35,7 +35,7 @@ export default function Tooltip({
       {children}
       {isVisible && (
         <div
-          className={`absolute z-50 px-3 py-1.5 bg-slate-900/90 text-white text-xs font-semibold rounded-xl shadow-xl whitespace-nowrap pointer-events-none transition-opacity duration-150 ${positionClasses[position]}`}
+          className={`absolute z-50 px-3 py-1.5 bg-neutral-900/90 text-white text-xs font-semibold rounded-xl shadow-xl whitespace-nowrap pointer-events-none transition-opacity duration-150 ${positionClasses[position]}`}
           role="tooltip"
         >
           {content}

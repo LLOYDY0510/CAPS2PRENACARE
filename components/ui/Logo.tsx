@@ -1,15 +1,6 @@
 import Image from 'next/image';
 
-/**
- * The single place the app renders a logo.
- *
- * Both brand marks live in /public:
- *   - `prenatrack_logo.png` — the Prenatrack product mark.
- *   - `logo.jpg`            — the barangay / health-centre mark.
- *
- * Keeping every render in this component means the two images only ever need
- * to be referenced (and swapped) once.
- */
+/* The single place the app renders a logo. */
 export type LogoVariant = 'prenatrack' | 'barangay';
 
 const LOGOS: Record<LogoVariant, { src: string; alt: string }> = {

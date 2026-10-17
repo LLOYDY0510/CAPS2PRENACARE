@@ -1,3 +1,4 @@
+import { localDate } from '@/utils/calendar';
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -8,7 +9,6 @@ import {
   classifySemaphoreError,
   type SemaphoreErrorKind,
   type SemaphoreRecipientResult,
-  type SemaphoreSendResult,
 } from './semaphore';
 import { toE164 } from './phone';
 import { createMaternalNotification } from '@/utils/notifications';
@@ -43,9 +43,10 @@ export type SmsTarget = {
 export type RecipientOutcome = {
   phone: string | null;
   pregnantMotherId: string | null;
-  status: 'sent' | 'failed' | 'skipped_duplicate' | 'skipped_invalid';
+  status: 'sent' | 'failed' | 'skipped_duplicate' | 'skipped_invalid' | 'skipped_dry_run';
   detail: string | null;
   providerMessageId: string | null;
+  providerStatus?: string;
 };
 
 export type SendSmsResult = {
@@ -64,20 +65,10 @@ export type SendSmsResult = {
   dryRun: boolean;
   /** Non-fatal problems, e.g. duplicate protection not yet installed. */
   warnings: string[];
+  submittedNumbers: number;
 };
 
-/**
- * The dedupe key is the contract that stops a reminder being sent twice.
- *
- *  - auto, on a schedule : one automatic reminder per (schedule, mother), ever.
- *  - manual, on a schedule: one manual push per (schedule, mother, day), so
- *                          pressing "Send now" twice in a row is a no-op.
- *  - ad-hoc (no schedule): one push per (mother, message text, day), so a nurse
- *                          can still send two *different* alerts in one day.
- *
- * The unique index on sms_recipient_receipts.dedupe_key is the real guard, so
- * two concurrent requests cannot both get through.
- */
+/* The dedupe key is the contract that stops a reminder being sent twice. */
 export function buildDedupeKey(input: {
   sendKind: SendKind;
   scheduleId: string | null;
@@ -85,15 +76,20 @@ export function buildDedupeKey(input: {
   phone: string;
   message: string;
   day?: string;
+  messageType?: SmsMessageType;
+  revision?: string;
 }): string {
   const { sendKind, scheduleId, motherId, phone, message } = input;
-  const day = input.day ?? new Date().toISOString().slice(0, 10);
+  const day = input.day ?? localDate();
+
+  const purpose = input.messageType ?? 'general';
+  const revision = input.revision ?? createHash('sha256').update(message).digest('hex').slice(0, 16);
 
   if (sendKind === 'auto' && scheduleId && motherId) {
-    return `auto:${scheduleId}:${motherId}`;
+    return `auto:${scheduleId}:${motherId}:${purpose}:${revision}`;
   }
   if (scheduleId && motherId) {
-    return `manual:${scheduleId}:${motherId}:${day}`;
+    return `manual:${scheduleId}:${motherId}:${purpose}:${revision}:${day}`;
   }
   const subject = motherId ?? phone;
   const content = createHash('sha256').update(message).digest('hex').slice(0, 16);
@@ -110,17 +106,16 @@ type SendSmsInput = {
   senderName?: string;
   /** Set for the automatic job so the caller's daily run stays idempotent. */
   dedupeDay?: string;
+  dedupeRevision?: string;
   /** Bypass the dedupe check (still enforced by the unique index). */
   force?: boolean;
 };
 
-/**
- * Sends a real SMS through Semaphore and records exactly what came back.
- *
- * Every exit path writes an sms_logs row, so a failed send is as visible in the
- * SMS Log as a successful one. That is the difference from the previous
- * implementation, which marked a schedule as "reminded" and logged nothing.
- */
+/* Identify logical recipients separately from shared phone submissions. */
+function smsTargetKey(target: { phone: string; motherId: string | null }): string {
+  return JSON.stringify([target.phone, target.motherId]);
+}
+
 export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult> {
   const supabase = createAdminClient();
   const { targets, message, messageType, sendKind } = input;
@@ -138,6 +133,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     creditsAfter: null,
     dryRun: isSmsDryRun(),
     warnings: [],
+    submittedNumbers: 0,
   };
 
   if (!message.trim()) {
@@ -151,7 +147,8 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
 
   const { hasReceipts } = await getSmsSchemaCapabilities();
   if (!hasReceipts) {
-    result.warnings.push(MIGRATION_014_HINT);
+    result.batchError = MIGRATION_014_HINT;
+    return result;
   }
 
   // Normalise first: an unusable number can never be sent, and logging it as
@@ -162,9 +159,11 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     raw: target.contactNumber,
   }));
 
-  const sendable = prepared.filter(
+  const validTargets = prepared.filter(
     (p): p is { motherId: string | null; phone: string; raw: string | null } => p.phone !== null,
   );
+
+  const sendable = Array.from(new Map(validTargets.map((target) => [smsTargetKey(target), target])).values());
 
   for (const p of prepared) {
     if (p.phone === null) {
@@ -180,7 +179,13 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
 
   if (sendable.length === 0) {
     result.batchError = 'No recipient has a usable mobile number.';
-    await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.failed });
+    result.logId = await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.failed });
+    return result;
+  }
+
+  if(result.dryRun){
+    result.skipped.push(...sendable.map(target=>({phone:target.phone,pregnantMotherId:target.motherId,status:'skipped_dry_run' as const,detail:'Dry run: no SMS submitted and no dispatch claimed.',providerMessageId:null})));
+    result.warnings.push('Dry run: no SMS submitted and no dispatch claimed.');
     return result;
   }
 
@@ -189,7 +194,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   // proceeds and the caller is warned rather than silently risking a repeat.
   const dedupeKeys = new Map(
     sendable.map((p) => [
-      p.phone,
+      smsTargetKey(p),
       buildDedupeKey({
         sendKind,
         scheduleId,
@@ -197,6 +202,8 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
         phone: p.phone,
         message,
         day: input.dedupeDay,
+        messageType: input.messageType,
+        revision: input.dedupeRevision,
       }),
     ]),
   );
@@ -206,6 +213,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     const { data: existing, error: existingError } = await supabase
       .from('sms_recipient_receipts')
       .select('dedupe_key')
+      .in('provider_status', ['queued', 'pending', 'sent', 'delivered'])
       .in('dedupe_key', Array.from(new Set(dedupeKeys.values())));
 
     if (existingError) {
@@ -218,7 +226,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
 
   const toSend: typeof sendable = [];
   for (const p of sendable) {
-    const key = dedupeKeys.get(p.phone)!;
+    const key = dedupeKeys.get(smsTargetKey(p))!;
     if (alreadySent.has(key)) {
       result.skipped.push({
         phone: p.phone,
@@ -230,13 +238,22 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
         providerMessageId: null,
       });
     } else {
-      toSend.push(p);
+      const { data: claimed, error: claimError } = await supabase.rpc('claim_sms_dispatch', {
+        dispatch_key: key,
+      });
+      if (claimError) {
+        result.batchError = `SMS dispatch protection is unavailable: ${claimError.message}`;
+        for (const reserved of toSend) await supabase.rpc('finish_sms_dispatch', { dispatch_key: dedupeKeys.get(smsTargetKey(reserved)), dispatch_state: 'failed' });
+        return result;
+      }
+      if (claimed) toSend.push(p);
+      else result.skipped.push({ phone: p.phone, pregnantMotherId: p.motherId,
+        status: 'skipped_duplicate', detail: 'This dispatch was already accepted or is awaiting reconciliation.', providerMessageId: null });
     }
   }
 
   if (toSend.length === 0) {
     result.batchError = 'Every recipient was already sent this message.';
-    await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.skipped });
     return result;
   }
 
@@ -245,32 +262,13 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   // account endpoint and a null balance must not fail the send.
   const before = await safeAccount();
 
-  let response: SemaphoreSendResult;
-  try {
-    response = await sendSmsBatch({
-      numbers: toSend.map((p) => p.phone),
-      message,
-      senderName: input.senderName,
-    });
-  } catch (error) {
-    // sendSmsBatch throws before the network when configuration is missing
-    // (e.g. no SEMAPHORE_API_KEY). Classify it, log the row with the reason,
-    // and surface friendly text instead of an unhandled 500.
-    const msg = error instanceof Error ? error.message : 'Unknown SMS provider error.';
-    const classified = classifySemaphoreError(msg);
-    result.batchError = msg;
-    result.errorKind = classified.kind;
-    result.friendlyError = classified.friendly;
-    result.failed = toSend.map((p) => ({
-      phone: p.phone,
-      pregnantMotherId: p.motherId,
-      status: 'failed' as const,
-      detail: msg,
-      providerMessageId: null,
-    }));
-    await writeLog(supabase, { ...input, scheduleId, raw: null, httpStatus: 0, outcomes: result.failed });
-    return result;
-  }
+  const response = await sendSmsBatch({
+    numbers: Array.from(new Set(toSend.map((p) => p.phone))),
+    message,
+    senderName: input.senderName,
+  }).catch((error) => ({ ok: false, httpStatus: 0, raw: null,
+    recipients: [] as SemaphoreRecipientResult[], accepted: false,
+    batchError: error instanceof Error ? error.message : 'SMS configuration failed.' }));
 
   const after = await safeAccount();
   result.creditsBefore = before;
@@ -292,46 +290,43 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   }
 
   // Map each provider row back to the mother it belongs to.
-  const byNumber = new Map<string, (typeof toSend)[number]>();
-  for (const p of toSend) byNumber.set(p.phone.replace(/[^\d]/g, ''), p);
-
+  const byNumber = new Map<string, typeof toSend>();
+  for (const target of toSend) {
+    const key = target.phone.replace(/[^\d]/g, '');
+    byNumber.set(key, [...(byNumber.get(key) ?? []), target]);
+  }
   const outcomes: RecipientOutcome[] = [];
+  const answered = new Set<string>();
   for (const row of response.recipients) {
-    const match = byNumber.get(row.number.replace(/[^\d]/g, ''));
-    const ok = row.status !== 'failed' && !row.error;
-    outcomes.push({
-      phone: row.number || match?.phone || null,
-      pregnantMotherId: match?.motherId ?? null,
-      status: ok ? 'sent' : 'failed',
-      detail:
-        row.error ??
-        (row.status === 'dry_run'
-          ? 'DRY RUN — no SMS was sent (SMS_DRY_RUN=true).'
-          : ok
-            ? `Semaphore status: ${row.status}`
-            : null),
-      providerMessageId: row.messageId,
+    const phone = toE164(row.number);
+    const targets = byNumber.get((phone ?? row.number).replace(/[^\d]/g, '')) ?? [];
+    if (!targets.length) continue;
+    answered.add(targets[0].phone);
+    const accepted = ['pending', 'queued', 'sent', 'delivered'].includes(row.status.toLowerCase()) && !row.error;
+    for (const target of targets) outcomes.push({
+      phone: target.phone, pregnantMotherId: target.motherId,
+      status: accepted ? 'sent' : 'failed', detail: row.error ?? `SMS Gateway status: ${row.status}`,
+      providerMessageId: row.messageId, providerStatus: row.status.toLowerCase(),
     });
   }
+  for (const target of toSend) {
+    if (answered.has(target.phone)) continue;
+    outcomes.push({ phone: target.phone, pregnantMotherId: target.motherId, status: 'failed',
+      detail: response.batchError ?? 'SMS Gateway did not return a result for this number.', providerMessageId: null });
+  }
+  result.submittedNumbers = new Set(outcomes.filter((outcome) => outcome.status === 'sent').map((outcome) => outcome.phone)).size;
 
-  // A batch the provider accepted but answered only partially must not be
-  // reported as fully sent. When the whole batch was refused there is no
-  // per-recipient row, so the provider's own reason is attached to each
-  // mother - that is the message the BHW manager needs to see.
-  if (response.recipients.length < toSend.length) {
-    const answered = new Set(response.recipients.map((r) => r.number.replace(/[^\d]/g, '')));
-    for (const p of toSend) {
-      if (answered.has(p.phone.replace(/[^\d]/g, ''))) continue;
-      outcomes.push({
-        phone: p.phone,
-        pregnantMotherId: p.motherId,
-        status: 'failed',
-        detail:
-          response.batchError ??
-          'Semaphore did not return a result for this number.',
-        providerMessageId: null,
-      });
-    }
+  for (const target of toSend) {
+    const outcome = outcomes.find((item) => toE164(item.phone) === target.phone && item.pregnantMotherId === target.motherId);
+    const accepted = outcome?.status === 'sent';
+    const definiteFailure = response.httpStatus >= 400 && response.httpStatus < 500 ||
+      (response.httpStatus > 0 && outcome?.providerStatus === 'failed');
+    if (!accepted && !definiteFailure) result.warnings.push('Provider acceptance is uncertain. Review the dispatch before retrying.');
+    const { error } = await supabase.rpc('finish_sms_dispatch', {
+      dispatch_key: dedupeKeys.get(smsTargetKey(target)),
+      dispatch_state: accepted ? 'accepted' : definiteFailure ? 'failed' : 'unknown',
+    });
+    if (error) result.warnings.push('Dispatch outcome could not be persisted; automatic retries remain blocked.');
   }
 
   const logId = await writeLog(supabase, {
@@ -344,6 +339,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     outcomes,
   });
   result.logId = logId;
+  if (!logId) result.warnings.push('SMS audit storage failed. Dispatch claims were retained.');
 
   for (const outcome of outcomes) {
     if (outcome.status === 'sent') result.sent.push(outcome);
@@ -359,7 +355,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     for (const motherId of motherIds) {
       await createMaternalNotification(supabase, {
         pregnantMotherId: motherId,
-        eventKey: `${messageType}:${logId ?? 'log'}:${motherId}`,
+        eventKey: `${messageType}:${scheduleId ?? logId ?? 'log'}:${input.dedupeRevision ?? input.dedupeDay ?? 'current'}:${motherId}`,
         category: messageType === 'prenatal_reminder' ? 'prenatal_reminder' : 'missed_visit',
         title: messageType === 'prenatal_reminder' ? 'Prenatal schedule reminder' : 'Missed prenatal visit follow-up',
         message,
@@ -378,6 +374,7 @@ type WriteLogInput = {
   scheduleId: string | null;
   sentBy?: string | null;
   dedupeDay?: string;
+  dedupeRevision?: string;
   creditsBefore?: number | null;
   creditsAfter?: number | null;
   raw: unknown;
@@ -400,22 +397,23 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
   const { hasReceipts } = await getSmsSchemaCapabilities();
 
   const row: Record<string, unknown> = {
+    provider: 'android_sms_gateway',
     recipient_count: outcomes.length,
     recipient_numbers: outcomes.map((o) => o.phone).filter((p): p is string => !!p),
     message: input.message,
     status: sentCount > 0 ? 'success' : 'failed',
-    delivery_status: allFailed ? 'failed' : sentCount > 0 ? 'sent' : 'unknown',
+    delivery_status: allFailed ? 'failed' : outcomes.filter((o) => o.status === 'sent').every((o) => o.providerStatus === 'delivered') ? 'delivered' : 'queued',
     message_type: input.messageType,
     recipient_mother_ids: outcomes
       .map((o) => o.pregnantMotherId)
       .filter((id): id is string => !!id),
     provider_message_id: outcomes.find((o) => o.providerMessageId)?.providerMessageId ?? null,
-    error_message: outcomes.find((o) => o.detail)?.detail ?? null,
+    error_message: outcomes.find((o) => o.status !== 'sent' && o.detail)?.detail ?? null,
     sent_by: input.sentBy ?? null,
   };
   if (hasReceipts) {
     // Verbatim provider body, so a delivery can be audited later.
-    row.semaphore_response = input.raw as Record<string, unknown> | null;
+    row.provider_response = input.raw as Record<string, unknown> | null;
     row.send_kind = input.sendKind;
     if (input.scheduleId) row.schedule_id = input.scheduleId;
     if (input.creditsBefore != null) row.credits_before = input.creditsBefore;
@@ -438,6 +436,8 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
   const receiptRows = outcomes
     .filter((o) => o.status === 'sent' || o.status === 'failed')
     .map((o) => ({
+      provider: 'android_sms_gateway',
+      device_id: process.env.SMS_GATEWAY_DEVICE_ID ?? null,
       sms_log_id: log.id,
       schedule_id: input.scheduleId,
       pregnant_mother_id: o.pregnantMotherId,
@@ -449,20 +449,21 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
         phone: o.phone ?? 'unknown',
         message: input.message,
         day: input.dedupeDay,
+        messageType: input.messageType,
+        revision: input.dedupeRevision,
       }),
       send_kind: input.sendKind,
       provider_message_id: o.providerMessageId,
-      provider_status: o.status === 'sent' ? 'sent' : 'failed',
+      provider_status: o.providerStatus ?? (o.status === 'sent' ? 'queued' : 'failed'),
       error_message: o.detail,
       sent_by: input.sentBy ?? null,
     }));
 
   if (receiptRows.length > 0 && hasReceipts) {
-    // ignoreDuplicates keeps this safe even if two requests race: the loser's
-    // receipt is rejected and the message is still recorded in sms_logs.
+    // Dispatch claims protect the send; receipts retain provider outcomes.
     const { error: receiptError } = await supabase
       .from('sms_recipient_receipts')
-      .upsert(receiptRows, { onConflict: 'dedupe_key', ignoreDuplicates: true });
+      .upsert(receiptRows, { onConflict: 'dedupe_key' });
     if (receiptError) {
       console.error('sms_recipient_receipts insert failed', receiptError.message);
     }

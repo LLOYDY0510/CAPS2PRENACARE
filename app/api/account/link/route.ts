@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
     }
 
     const adminClient = createAdminClient();
+    const { data: current, error: currentError } = await adminClient.from('profiles')
+      .select('role, pregnant_mother_id').eq('id', user.id).maybeSingle();
+    if (currentError) return NextResponse.json({ error: currentError.message }, { status: 500 });
+    if (current?.pregnant_mother_id || (current?.role && !['pending', 'patient'].includes(current.role))) {
+      return NextResponse.json({ error: 'This account is already assigned. Contact an administrator.' }, { status: 409 });
+    }
+
 
     const { data: mother, error: motherError } = await adminClient
       .from('pregnant_mothers')
@@ -78,31 +85,13 @@ export async function POST(req: NextRequest) {
 
     // The role is assigned here, server side, from the verified record match.
     const { data: profile, error: profileError } = await adminClient
-      .from('profiles')
-      .upsert(
-        {
-          id: user.id,
-          email: (user.email ?? '').trim().toLowerCase(),
-          full_name: mother.full_name,
-          role: 'pregnant_mother',
-          pregnant_mother_id: mother.id,
-        },
-        { onConflict: 'id' }
-      )
-      .select('id, role, pregnant_mother_id, full_name')
+      .rpc('link_maternal_account', { account_uuid: user.id, mother_uuid: mother.id })
       .maybeSingle();
 
     if (profileError) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
-    if (profile?.pregnant_mother_id && profile.pregnant_mother_id !== mother.id) {
-      return NextResponse.json(
-        { error: 'Your account is already linked to a different record.' },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json({ success: true, role: profile?.role ?? 'pregnant_mother' });
+    return NextResponse.json({ success: !!profile, role: 'patient' });
   } catch (err) {
     console.error('Account link error:', err);
     return NextResponse.json(

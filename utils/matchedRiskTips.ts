@@ -1,3 +1,4 @@
+import { gravida } from '@/utils/calendar';
 import { getRiskTipForIndicator, type RiskTipResult } from '@/utils/riskTips';
 
 export type RiskIndicatorInput = {
@@ -5,6 +6,7 @@ export type RiskIndicatorInput = {
   label: string;
   indicator_type: string;
   threshold_value: number | null;
+  advice_message?: string | null;
 };
 
 export type MotherRiskInput = {
@@ -38,11 +40,12 @@ export function getMatchedRiskTips(
       indicatorType: indicator.indicator_type,
       thresholdValue: indicator.threshold_value,
       ...getRiskTipForIndicator(indicator.label, indicator.indicator_type, indicator.threshold_value),
+      ...(indicator.advice_message?.trim() ? { tipAdvice: indicator.advice_message.trim() } : {}),
     });
   };
 
   recordedIndicators.forEach(addIndicator);
-  const isFirstPregnancy = mother.gravida_para?.toLowerCase().startsWith('g1') ?? false;
+  const isFirstPregnancy = gravida(mother.gravida_para) === 1;
   activeIndicators.forEach((indicator) => {
     const ageMatches = indicator.indicator_type === 'age_below'
       && mother.age != null
@@ -57,7 +60,7 @@ export function getMatchedRiskTips(
   });
 
   if (mother.risk_level === 'high' && matched.length === 0) {
-    const label = mother.blood_pressure ? `High Blood Pressure (${mother.blood_pressure})` : 'High Risk Case';
+    const label = 'High Risk Case';
     matched.push({
       id: `general-${mother.id}`,
       label,

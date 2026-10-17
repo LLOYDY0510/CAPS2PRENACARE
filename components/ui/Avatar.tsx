@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 export interface AvatarProps {
   name: string;
@@ -28,7 +29,10 @@ export default function Avatar({ name, size = 'md', src, className = '' }: Avata
 
   if (src) {
     return (
-      <img
+      <Image
+        unoptimized
+        width={{ sm: 28, md: 36, lg: 48, xl: 64 }[size]}
+        height={{ sm: 28, md: 36, lg: 48, xl: 64 }[size]}
         src={src}
         alt={name}
         className={`${sizeClasses[size]} rounded-full object-cover border border-white shadow-xs ${className}`}

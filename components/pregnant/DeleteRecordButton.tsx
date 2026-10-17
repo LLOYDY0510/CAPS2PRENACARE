@@ -26,7 +26,7 @@ export default function DeleteRecordButton({ id }: { id: string }) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-red-500 hover:bg-red-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-green-500 hover:bg-green-600 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors shadow-sm"
     >
       {deleting ? (
         <>

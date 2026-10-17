@@ -10,7 +10,7 @@ import { UserX, FileX } from 'lucide-react';
 export function AccountNotLinked({ className = '' }: { className?: string }) {
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8">
+      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200/60 p-8">
         <EmptyState
           icon={UserX}
           title="Account not linked"
@@ -24,7 +24,7 @@ export function AccountNotLinked({ className = '' }: { className?: string }) {
 export function RecordNotFound({ className = '' }: { className?: string }) {
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8">
+      <div className="bg-white rounded-3xl shadow-sm border border-neutral-200/60 p-8">
         <EmptyState
           icon={FileX}
           title="Record not found"

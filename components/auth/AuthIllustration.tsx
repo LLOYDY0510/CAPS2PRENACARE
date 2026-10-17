@@ -1,30 +1,22 @@
 import Image from 'next/image';
 import { HeartPulse, Calendar, MapPin, ClipboardList, ShieldCheck } from 'lucide-react';
 
-/**
- * Left-side maternal health themed illustration panel.
- * - Soft greenish gradient backdrop matching design system tokens
- * - Animated ambient green glows in the background layer
- * - Center illustration using public/prenatrack_logo_for_login_page.png
- * - Floating soft elements around it (calendar, health record, map pin, heart badge)
- * - Small welcome line at bottom
- * - Hidden on mobile view (< 1024px)
- */
+/* Left-side maternal health themed illustration panel. */
 export default function AuthIllustration() {
   return (
     <div className="hidden lg:flex flex-col justify-between p-8 xl:p-10 bg-gradient-to-br from-[var(--brand-light)] via-[#E3F2F0] to-[var(--brand-subtle)] border-r border-[var(--border-light)] relative overflow-hidden select-none">
       {/* Animated Green Ambient Glows in the background of left illustration section */}
-      <div 
-        aria-hidden="true" 
-        className="absolute -top-12 -left-12 w-64 h-64 rounded-full bg-[var(--brand)] opacity-30 blur-3xl pointer-events-none animate-green-pulse" 
+      <div
+        aria-hidden="true"
+        className="absolute -top-12 -left-12 w-64 h-64 rounded-full bg-[var(--brand)] opacity-30 blur-3xl pointer-events-none animate-green-pulse"
       />
-      <div 
-        aria-hidden="true" 
-        className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-[var(--brand-subtle)] opacity-60 blur-3xl pointer-events-none animate-green-pulse-alt" 
+      <div
+        aria-hidden="true"
+        className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-[var(--brand-subtle)] opacity-60 blur-3xl pointer-events-none animate-green-pulse-alt"
       />
-      <div 
-        aria-hidden="true" 
-        className="absolute -bottom-12 -right-12 w-64 h-64 rounded-full bg-[var(--brand-dark)] opacity-25 blur-3xl pointer-events-none animate-green-pulse" 
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-12 -right-12 w-64 h-64 rounded-full bg-[var(--brand-dark)] opacity-25 blur-3xl pointer-events-none animate-green-pulse"
       />
 
       {/* Floating Soft Badge Header */}

@@ -1,3 +1,4 @@
+import { collectRows } from '@/utils/supabase/collectRows';
 import RiskMapClient from '@/components/maps/RiskMapClient';
 import { requireRoles } from '@/utils/auth/roles';
 import { canEditRiskMap } from '@/utils/auth/permissions';
@@ -7,15 +8,15 @@ import { Map } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function RiskMapPage() {
-  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw']);
 
   let recordsQuery = supabase
     .from('pregnant_mothers')
     .select('id, serial_no, full_name, purok, age, address, contact_number, lmp, edd, gravida_para, risk_level, latitude, longitude')
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
-  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
-  const { data: records } = await recordsQuery;
+  if (role === 'bhw' && !profile?.access_all_zones && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records, error } = await collectRows((start,end)=>recordsQuery.order('id').range(start,end));
 
   const canEdit = canEditRiskMap(role);
 
@@ -32,7 +33,7 @@ export default async function RiskMapPage() {
         badge="Zone Intelligence"
       />
 
-      <RiskMapClient records={records ?? []} />
+      {error ? <p role="alert">Map records could not be loaded.</p> : <RiskMapClient records={records ?? []} />}
     </div>
   );
 }

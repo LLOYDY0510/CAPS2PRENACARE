@@ -1,18 +1,9 @@
-/**
- * Calendar helpers pinned to Asia/Manila.
- *
- * The server may run in UTC, but a prenatal visit is a local appointment: a
- * schedule set for "tomorrow" in the barangay must resolve to the same date
- * whether the request is served at 00:30 or 23:30 local time.
- */
+/* Calendar helpers pinned to Asia/Manila. */
 
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+import { localDate } from '@/utils/calendar';
 
-/** YYYY-MM-DD for a Manila calendar day `days` away from today. */
 export function manilaDatePlusFor(days: number): string {
-  const shifted = new Date(Date.now() + MANILA_OFFSET_MS);
-  shifted.setUTCDate(shifted.getUTCDate() + days);
-  return shifted.toISOString().slice(0, 10);
+  return localDate(days);
 }
 
 export function manilaToday(): string {

@@ -1,8 +1,9 @@
+import { collectRows } from '@/utils/supabase/collectRows';
 import Link from 'next/link';
 import PregnantRecordsTable from '@/components/pregnant/PregnantRecordsTable';
 import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
-import { getPrenatalVisitStatus } from '@/utils/prenatalStatus';
+import { visitStatusFor } from '@/utils/prenatalProjection';
 import { canAccessPurok } from '@/utils/auth/permissions';
 import PageHeader from '@/components/ui/PageHeader';
 import { Baby, Plus } from 'lucide-react';
@@ -14,7 +15,7 @@ export default async function PregnantRecordsPage({
   searchParams?: Promise<{ q?: string; search?: string }>;
 }) {
   const { q, search } = (await searchParams) ?? {};
-  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw']);
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
   const recordsSelect =
@@ -26,32 +27,28 @@ export default async function PregnantRecordsPage({
     .from('pregnant_mothers')
     .select(recordsSelect)
     .order('serial_no', { ascending: true });
-  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
-  let { data: records, error } = await recordsQuery;
+  if (role === 'bhw' && !profile?.access_all_zones && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  let { data: records, error } = await collectRows((start,end)=>recordsQuery.order('id').range(start,end));
 
   if (error?.message.includes('checkup_recorded')) {
     let legacyQuery = supabase
       .from('pregnant_mothers')
       .select(legacyRecordsSelect)
       .order('serial_no', { ascending: true });
-    if (role === 'bhw_purok' && profile?.purok) legacyQuery = legacyQuery.eq('purok', profile.purok);
-    const legacyResult = await legacyQuery;
+    if (role === 'bhw' && !profile?.access_all_zones && profile?.purok) legacyQuery = legacyQuery.eq('purok', profile.purok);
+    const legacyResult = await collectRows((start,end)=>legacyQuery.order('id').range(start,end));
     records = legacyResult.data?.map((record) => ({ ...record, checkup_recorded: false })) ?? null;
     error = legacyResult.error;
   }
 
-  const { data: checkupRows } = await supabase
+  const { data: checkupRows } = await collectRows((start,end)=>supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end));
   const completedTrimesters: Record<string, Set<string>> = {};
   (checkupRows ?? []).forEach((checkup) => {
     const trimester = checkup.trimester;
     if (!['1st', '2nd', '3rd'].includes(trimester)) return;
-    const status = getPrenatalVisitStatus({
-      scheduledFor: checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date,
-      actualCheckupDate: checkup.actual_checkup_date,
-      recordedStatus: checkup.status,
-    });
+    const status = visitStatusFor(checkup);
     if (status === 'completed') {
       if (!completedTrimesters[checkup.pregnant_mother_id]) completedTrimesters[checkup.pregnant_mother_id] = new Set();
       completedTrimesters[checkup.pregnant_mother_id].add(trimester);
@@ -60,7 +57,7 @@ export default async function PregnantRecordsPage({
   const recordsWithCheckupCount = (records ?? []).map((record) => ({
     ...record,
     checkupCount: completedTrimesters[record.id]?.size ?? 0,
-    canEditRecord: canEdit && canAccessPurok(role, profile?.purok ?? null, record.purok),
+    canEditRecord: canEdit && canAccessPurok(role, profile?.purok ?? null, record.purok, profile?.access_all_zones),
   }));
 
   return (
@@ -80,7 +77,7 @@ export default async function PregnantRecordsPage({
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           Failed to load records: {error.message}
         </div>
       )}

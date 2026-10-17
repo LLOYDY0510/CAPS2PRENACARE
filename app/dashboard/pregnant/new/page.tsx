@@ -1,5 +1,7 @@
 'use client';
 
+import { localDate } from '@/utils/calendar';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -25,8 +27,8 @@ const LocationPicker = dynamic<{
 }>(() => import('@/components/maps/LocationPicker'), {
   ssr: false,
   loading: () => (
-    <div className="h-[280px] flex items-center justify-center bg-slate-50 rounded-2xl border border-slate-100">
-      <p className="text-slate-400 text-xs font-semibold">Loading map location picker...</p>
+    <div className="h-[280px] flex items-center justify-center bg-neutral-50 rounded-2xl border border-neutral-100">
+      <p className="text-neutral-400 text-xs font-semibold">Loading map location picker...</p>
     </div>
   ),
 });
@@ -43,7 +45,7 @@ export default function RegisterPregnantMotherPage() {
   const supabase = createClient();
 
   const [form, setForm] = useState({
-    date_registered: new Date().toISOString().slice(0, 10),
+    date_registered: localDate(),
     first_name: '',
     middle_name: '',
     last_name: '',
@@ -162,16 +164,6 @@ export default function RegisterPregnantMotherPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      const currentYear = new Date().getFullYear();
-      const { count } = await supabase
-        .from('pregnant_mothers')
-        .select('id', { count: 'exact', head: true })
-        .gte('date_registered', `${currentYear}-01-01`)
-        .lte('date_registered', `${currentYear}-12-31`);
-
-      const nextNumber = (count ?? 0) + 1;
-      const serial_no = `SPM-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
-
       const full_name = [form.first_name, form.middle_name, form.last_name]
         .filter(Boolean)
         .join(' ');
@@ -212,7 +204,6 @@ export default function RegisterPregnantMotherPage() {
       const { data: inserted, error: insertError } = await supabase
         .from('pregnant_mothers')
         .insert({
-          serial_no,
           date_registered: form.date_registered,
           first_name: form.first_name,
           middle_name: form.middle_name || null,
@@ -263,14 +254,14 @@ export default function RegisterPregnantMotherPage() {
         await Promise.all([
           fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'nurse', title: 'High-risk mother registered', message: `${full_name} was registered as high risk and needs enhanced prenatal monitoring.` }) }),
           fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'High-risk maternal alert', message: `${full_name} was registered as high risk.` }) }),
-          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'High-risk mother in your purok', message: `${full_name} was registered as high risk in your assigned purok.` }) }) : Promise.resolve(),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw', recipientPurok: form.purok, title: 'High-risk mother in your purok', message: `${full_name} was registered as high risk in your assigned purok.` }) }) : Promise.resolve(),
         ]);
       }
 
       if (inserted) {
         await Promise.all([
           fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'admin', title: 'New pregnant mother registered', message: `${full_name} was added to the maternal registry.` }) }),
-          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw_purok', recipientPurok: form.purok, title: 'New mother in your purok', message: `${full_name} was added to the maternal registry in your assigned purok.` }) }) : Promise.resolve(),
+          form.purok ? fetch('/api/notifications/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'role_alert', recipientRole: 'bhw', recipientPurok: form.purok, title: 'New mother in your purok', message: `${full_name} was added to the maternal registry in your assigned purok.` }) }) : Promise.resolve(),
         ]);
       }
 
@@ -291,9 +282,9 @@ export default function RegisterPregnantMotherPage() {
           badge="RA 10173 Compliant"
         />
 
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
-          <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-600 space-y-4 leading-relaxed font-medium">
-            <p className="bg-teal-50/60 p-4 rounded-2xl border border-teal-100 text-teal-900 font-semibold">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
+          <div className="prose prose-slate max-w-none text-xs sm:text-sm text-neutral-600 space-y-4 leading-relaxed font-medium">
+            <p className="bg-green-50/60 p-4 rounded-2xl border border-green-100 text-green-900 font-semibold">
               In compliance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>, this health system collects personal and health-related information for prenatal care monitoring, scheduling, and reporting by authorized barangay health workers, midwives, and nurses.
             </p>
             <p>
@@ -304,12 +295,12 @@ export default function RegisterPregnantMotherPage() {
             </p>
           </div>
 
-          <label className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer text-xs sm:text-sm font-semibold text-slate-700 hover:bg-teal-50/50 transition-colors">
+          <label className="flex items-start gap-3 p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 cursor-pointer text-xs sm:text-sm font-semibold text-neutral-700 hover:bg-green-50/50 transition-colors">
             <input
               type="checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 rounded-lg border-slate-300 text-[var(--brand)] focus:ring-[var(--brand)] w-4 h-4"
+              className="mt-0.5 rounded-lg border-neutral-300 text-[var(--brand)] focus:ring-[var(--brand)] w-4 h-4"
             />
             <span>
               I confirm that the pregnant mother (or her authorized representative) has been informed of and agrees to the collection and processing of her personal information as described above.
@@ -347,14 +338,14 @@ export default function RegisterPregnantMotherPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+          <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
             {error}
           </div>
         )}
 
         {/* Section 1: Personal & Demographics */}
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
-          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-7 space-y-5">
+          <h3 className="text-base font-bold text-neutral-900 border-b border-neutral-100 pb-3 flex items-center gap-2">
             <FileText size={18} className="text-[var(--brand)]" />
             <span>Personal Information</span>
           </h3>
@@ -368,7 +359,7 @@ export default function RegisterPregnantMotherPage() {
               required
             />
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+              <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
                 Full Name * (First, M.I., Last)
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -378,7 +369,7 @@ export default function RegisterPregnantMotherPage() {
                   onChange={(e) => updateField('first_name', e.target.value)}
                   placeholder="First name"
                   required
-                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                  className="h-11 px-3 bg-neutral-50 hover:bg-neutral-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-neutral-200 focus:border-[var(--brand)] outline-none"
                 />
                 <input
                   type="text"
@@ -386,7 +377,7 @@ export default function RegisterPregnantMotherPage() {
                   onChange={(e) => updateField('middle_name', e.target.value)}
                   placeholder="M.I."
                   maxLength={2}
-                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                  className="h-11 px-3 bg-neutral-50 hover:bg-neutral-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-neutral-200 focus:border-[var(--brand)] outline-none"
                 />
                 <input
                   type="text"
@@ -394,7 +385,7 @@ export default function RegisterPregnantMotherPage() {
                   onChange={(e) => updateField('last_name', e.target.value)}
                   placeholder="Last name"
                   required
-                  className="h-11 px-3 bg-slate-50 hover:bg-slate-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 focus:border-[var(--brand)] outline-none"
+                  className="h-11 px-3 bg-neutral-50 hover:bg-neutral-50 focus:bg-white text-xs sm:text-sm font-medium rounded-2xl border border-neutral-200 focus:border-[var(--brand)] outline-none"
                 />
               </div>
             </div>
@@ -440,9 +431,9 @@ export default function RegisterPregnantMotherPage() {
         </div>
 
         {/* Section 2: Obstetric Details */}
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
-          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-            <FileText size={18} className="text-indigo-600" />
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-7 space-y-5">
+          <h3 className="text-base font-bold text-neutral-900 border-b border-neutral-100 pb-3 flex items-center gap-2">
+            <FileText size={18} className="text-green-600" />
             <span>Obstetric History &amp; Measurements</span>
           </h3>
 
@@ -513,13 +504,13 @@ export default function RegisterPregnantMotherPage() {
 
         {/* Section 3: Risk Indicators & Location */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
+          <div className="lg:col-span-2 bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-7 space-y-4">
+            <h3 className="text-base font-bold text-neutral-900 border-b border-neutral-100 pb-3 flex items-center gap-2">
+              <AlertTriangle size={18} className="text-green-500" />
               <span>High-Risk Indicators</span>
             </h3>
             {indicators.length === 0 ? (
-              <p className="text-xs text-slate-400 font-medium">No active checklist indicators configured.</p>
+              <p className="text-xs text-neutral-400 font-medium">No active checklist indicators configured.</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                 {indicators.map((ind) => {
@@ -528,14 +519,14 @@ export default function RegisterPregnantMotherPage() {
                     <label
                       key={ind.id}
                       className={`flex items-start gap-3 p-3 rounded-2xl border transition-colors cursor-pointer ${
-                        checked ? 'bg-amber-50/70 border-amber-200/80 text-amber-900' : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100/70'
+                        checked ? 'bg-green-50/70 border-green-200/80 text-green-900' : 'bg-neutral-50 border-neutral-100 text-neutral-700 hover:bg-neutral-100/70'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleIndicator(ind.id)}
-                        className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                        className="mt-0.5 rounded border-neutral-300 text-green-600 focus:ring-green-500"
                       />
                       <span className="text-xs font-semibold">{ind.label}</span>
                     </label>
@@ -543,14 +534,14 @@ export default function RegisterPregnantMotherPage() {
                 })}
               </div>
             )}
-            <p className="text-[11px] text-slate-400 font-medium pt-2">
+            <p className="text-[11px] text-neutral-400 font-medium pt-2">
               Risk level (High/Low) is automatically evaluated based on age, first pregnancy status, and checked indicators.
             </p>
           </div>
 
-          <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <MapPin size={18} className="text-emerald-600" />
+          <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-7 space-y-4">
+            <h3 className="text-base font-bold text-neutral-900 border-b border-neutral-100 pb-3 flex items-center gap-2">
+              <MapPin size={18} className="text-green-600" />
               <span>Map Pin (Residence)</span>
             </h3>
             <LocationPicker
@@ -559,14 +550,14 @@ export default function RegisterPregnantMotherPage() {
               onChange={(lat, lng) => setLocation({ lat, lng })}
               onLocationDetected={handleLocationDetected}
             />
-            <p className="text-[11px] text-slate-400 font-medium">
+            <p className="text-[11px] text-neutral-400 font-medium">
               Click on the map or drag the pin to set the residence location. Location details will appear below the map. Click &quot;Apply Location to Form&quot; to auto-fill the address and zone fields. Use the fullscreen button for precise house location selection.
             </p>
           </div>
         </div>
 
         {/* Submit Bar */}
-        <div className="flex items-center gap-3 justify-end pt-4 border-t border-slate-200/60">
+        <div className="flex items-center gap-3 justify-end pt-4 border-t border-neutral-200/60">
           <Button
             type="button"
             variant="outline"

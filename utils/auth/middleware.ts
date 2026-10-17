@@ -2,10 +2,6 @@ import { redirect } from 'next/navigation';
 import { getCurrentProfile } from './roles';
 import {
   canAccessPurok,
-  canEditRiskMap,
-  canManageHealthTips,
-  canManageRiskIndicators,
-  canManageUsers,
   hasPermission,
   ROLE_PERMISSIONS,
 } from './permissions';
@@ -16,6 +12,7 @@ type PermissionKey = keyof typeof ROLE_PERMISSIONS[UserRole];
 async function requireAuth() {
   const result = await getCurrentProfile();
   if (!result.user) redirect('/login');
+  if (result.profile?.account_status !== 'active') redirect('/dashboard');
   const role = (result.profile?.role ?? 'pending') as UserRole;
   return { ...result, role };
 }
@@ -36,11 +33,7 @@ export async function requirePermission(permission: PermissionKey) {
  * Middleware to protect routes that require user management access
  */
 export async function requireUserManagement() {
-  const result = await requireAuth();
-  if (!canManageUsers(result.role)) {
-    redirect('/dashboard');
-  }
-  return result;
+  return requirePermission('canManageUsers');
 }
 
 /**
@@ -49,7 +42,7 @@ export async function requireUserManagement() {
  */
 export async function requireBhwManagement() {
   const result = await requireAuth();
-  if (!['admin', 'bhw_head'].includes(result.role)) {
+  if (result.profile?.account_status !== 'active' || !(result.role === 'admin' || (result.role === 'bhw' && result.profile?.can_manage_bhw))) {
     redirect('/dashboard');
   }
   return result;
@@ -59,44 +52,28 @@ export async function requireBhwManagement() {
  * Middleware to protect routes that require role management access
  */
 export async function requireRoleManagement() {
-  const result = await requireAuth();
-  if (!canManageUsers(result.role)) {
-    redirect('/dashboard');
-  }
-  return result;
+  return requirePermission('canManageRoles');
 }
 
 /**
  * Middleware to protect routes that require risk map editing access
  */
 export async function requireRiskMapEdit() {
-  const result = await requireAuth();
-  if (!canEditRiskMap(result.role)) {
-    redirect('/dashboard');
-  }
-  return result;
+  return requirePermission('canEditRiskMap');
 }
 
 /**
  * Middleware to protect routes that require health tips management access
  */
 export async function requireHealthTipsManagement() {
-  const result = await requireAuth();
-  if (!canManageHealthTips(result.role)) {
-    redirect('/dashboard');
-  }
-  return result;
+  return requirePermission('canManageHealthTips');
 }
 
 /**
  * Middleware to protect routes that require risk indicators management access
  */
 export async function requireRiskIndicatorsManagement() {
-  const result = await requireAuth();
-  if (!canManageRiskIndicators(result.role)) {
-    redirect('/dashboard');
-  }
-  return result;
+  return requirePermission('canManageRiskIndicators');
 }
 
 /**

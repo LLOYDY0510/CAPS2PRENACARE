@@ -1,3 +1,4 @@
+import { collectRows } from '@/utils/supabase/collectRows';
 import UsersTable from '@/components/users/UsersTable';
 import { requireUserManagement } from '@/utils/auth/middleware';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -12,21 +13,21 @@ export default async function ManageUsersPage() {
   await requireUserManagement();
   const supabase = createAdminClient();
 
-  const { data: profiles, error } = await supabase
+  const { data: profiles, error } = await collectRows((start, end) => supabase
     .from('profiles')
-    .select('id, email, full_name, role, purok, pregnant_mother_id, created_at')
-    .order('created_at', { ascending: false });
+    .select('id, email, full_name, role, purok, pregnant_mother_id, created_at, account_status, can_manage_bhw, access_all_zones')
+    .order('created_at', { ascending: false }).order('id').range(start, end));
 
-  const { data: allMothers, error: mothersError } = await supabase
+  const { data: allMothers, error: mothersError } = await collectRows((start, end) => supabase
     .from('pregnant_mothers')
     .select('id, full_name, serial_no')
-    .order('serial_no', { ascending: true });
+    .order('serial_no', { ascending: true }).order('id').range(start, end));
 
   if (error || mothersError) {
     return (
       <div>
         <PageHeader
-          title="Manage Users"
+          title="User Management"
           icon={Users}
           subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
         />
@@ -46,7 +47,7 @@ export default async function ManageUsersPage() {
   return (
     <div>
       <PageHeader
-        title="Manage Users"
+        title="User Management"
         icon={Users}
         subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
       />

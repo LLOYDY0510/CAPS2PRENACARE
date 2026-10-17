@@ -1,22 +1,18 @@
+import { localDate, validDate } from '@/utils/calendar';
+
 export function calculateAge(dateOfBirth: string | null | undefined, today = new Date()): number | null {
   if (!dateOfBirth) return null;
-  
-  // Try parsing with different date formats
-  let birthDate: Date;
-  
-  // Try YYYY-MM-DD format first
-  if (dateOfBirth.includes('-')) {
-    birthDate = new Date(dateOfBirth);
-  } else {
-    // Try other formats
-    birthDate = new Date(dateOfBirth);
-  }
-  
-  if (Number.isNaN(birthDate.getTime())) return null;
 
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDelta = today.getMonth() - birthDate.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) age -= 1;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) && !validDate(dateOfBirth)) return null;
+  const parsed = new Date(dateOfBirth);
+  if (!Number.isFinite(parsed.getTime())) return null;
+  const birth = validDate(dateOfBirth) ? dateOfBirth : parsed.toISOString().slice(0, 10);
+  const current = localDate(0, today);
+  const [year, month, day] = current.split('-').map(Number);
+  const [birthYear, birthMonth, birthDay] = birth.split('-').map(Number);
+  let age = year - birthYear;
+  if (month < birthMonth || (month === birthMonth && day < birthDay)) age--;
+
   return age >= 0 ? age : null;
 }
 

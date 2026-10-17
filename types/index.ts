@@ -1,12 +1,6 @@
 // types/index.ts
 
-export type UserRole =
-  | 'bhw_head'
-  | 'bhw_purok'
-  | 'nurse'
-  | 'admin'
-  | 'pregnant_mother'
-  | 'pending';
+export type UserRole = 'patient' | 'nurse' | 'bhw' | 'admin';
 
 export type Profile = {
   id: string;
@@ -16,6 +10,9 @@ export type Profile = {
   purok: string | null;
   pregnant_mother_id: string | null;
   created_at: string;
+  account_status: 'pending' | 'active' | 'disabled';
+  can_manage_bhw: boolean;
+  access_all_zones: boolean;
 };
 
 export type RiskLevel = 'low' | 'high';

@@ -1,3 +1,4 @@
+import { localDate } from '@/utils/calendar';
 export type PrenatalVisitStatus = 'upcoming' | 'missed' | 'completed';
 
 type VisitStatusInput = {
@@ -11,7 +12,7 @@ export function getPrenatalVisitStatus({
   scheduledFor,
   actualCheckupDate,
   recordedStatus,
-  today = new Date().toISOString().slice(0, 10),
+  today = localDate(),
 }: VisitStatusInput): PrenatalVisitStatus {
   if (actualCheckupDate || recordedStatus === 'completed') return 'completed';
   if (!scheduledFor || scheduledFor >= today) return 'upcoming';

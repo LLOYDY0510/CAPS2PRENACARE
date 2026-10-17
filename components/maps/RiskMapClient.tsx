@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { RotateCcw } from 'lucide-react';
 
-/* ─── Types ─── */
+/* Types */
 type RiskPoint = {
   id: string;
   serial_no: string | null;
@@ -26,20 +26,20 @@ type RiskPoint = {
 
 type RiskFilter = 'all' | 'high' | 'low';
 
-/* ─── Dynamic import of the actual map (SSR off) ─── */
+/* Dynamic import of the actual map (SSR off) */
 const RiskMap = dynamic<{ records: RiskPoint[]; pendingClick?: (lat: number, lng: number) => void }>(
   () => import('@/components/maps/RiskMap'),
   {
     ssr: false,
     loading: () => (
-      <div className="h-[520px] w-full flex items-center justify-center bg-slate-50 rounded-[28px] border border-slate-100">
-        <p className="text-slate-400 text-xs font-semibold">Loading interactive map...</p>
+      <div className="h-[520px] w-full flex items-center justify-center bg-neutral-50 rounded-[28px] border border-neutral-100">
+        <p className="text-neutral-400 text-xs font-semibold">Loading interactive map...</p>
       </div>
     ),
   }
 );
 
-/* ─── Legend pin swatch ─── */
+/* Legend pin swatch */
 function PinSwatch({ color, stroke }: { color: string; stroke: string }) {
   return (
     <svg
@@ -62,8 +62,8 @@ function PinSwatch({ color, stroke }: { color: string; stroke: string }) {
 }
 
 const RISK_META = {
-  high: { label: 'High Risk', fill: '#DC2626', stroke: '#991B1B' },
-  low: { label: 'Low Risk', fill: '#16A34A', stroke: '#14532D' },
+  high: { label: 'High Risk', fill: '#14532D', stroke: '#111111' },
+  low: { label: 'Low Risk', fill: '#86EFAC', stroke: '#14532D' },
 } as const;
 
 const FILTER_TABS: { key: RiskFilter; label: string }[] = [
@@ -115,7 +115,7 @@ export default function RiskMapClient({
   return (
     <div className="space-y-4">
       {/* Controls Card */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-[24px] border border-neutral-100 shadow-lg shadow-neutral-200/40 p-4 sm:p-5 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-[240px]">
           <SearchBar
             value={search}
@@ -135,7 +135,7 @@ export default function RiskMapClient({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-full border border-slate-200/60">
+        <div className="flex items-center gap-1.5 p-1 bg-neutral-100/90 rounded-full border border-neutral-200/60">
           {FILTER_TABS.map(({ key, label }) => {
             const active = riskFilter === key;
             return (
@@ -143,7 +143,7 @@ export default function RiskMapClient({
                 key={key}
                 onClick={() => setRiskFilter(key)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  active ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  active ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 {key !== 'all' && (
@@ -166,14 +166,14 @@ export default function RiskMapClient({
       </div>
 
       {/* Legend & Stats Banner */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-600">
+      <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-neutral-600">
         <div className="flex items-center gap-5 flex-wrap">
-          <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Legend:</span>
+          <span className="font-bold text-neutral-800 uppercase tracking-wider text-[11px]">Legend:</span>
           {Object.entries(RISK_META).map(([key, { label, fill, stroke }]) => (
             <span key={key} className="flex items-center gap-2">
               <PinSwatch color={fill} stroke={stroke} />
               <span>{label}</span>
-              <span className="text-slate-400 font-bold">
+              <span className="text-neutral-400 font-bold">
                 ({records.filter((r) => r.risk_level === key).length})
               </span>
             </span>
@@ -181,12 +181,12 @@ export default function RiskMapClient({
         </div>
 
         <div>
-          Showing <span className="text-slate-900 font-bold">{filtered.length}</span> of {records.length} mapped records
+          Showing <span className="text-neutral-900 font-bold">{filtered.length}</span> of {records.length} mapped records
         </div>
       </div>
 
       {/* Map Card */}
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-3 overflow-hidden">
+      <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-3 overflow-hidden">
         <RiskMap records={filtered} pendingClick={pendingClick} />
       </div>
     </div>

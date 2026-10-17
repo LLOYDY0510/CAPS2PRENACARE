@@ -1,36 +1,24 @@
+import { assertMotherScope, assertScheduleScope } from '@/utils/auth/scope';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { canManageSchedules } from '@/utils/auth/permissions';
+import { requireApiPermission } from '@/utils/auth/api';
 import { deleteSchedule, updateSchedule, type Trimester } from '@/utils/schedules/service';
 
 export const dynamic = 'force-dynamic';
 
 async function requireScheduleManager() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!canManageSchedules(profile?.role ?? 'pending')) {
-    return {
-      error: NextResponse.json(
-        { error: 'Only the BHW Manager, nurse, or admin can change prenatal schedules.' },
-        { status: 403 },
-      ),
-    };
-  }
-  return { supabase, user };
+  return requireApiPermission('canManageSchedules');
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ scheduleId: string }> }) {
   try {
     const auth = await requireScheduleManager();
     if (auth.error) return auth.error;
 
     const body = await req.json();
-    const scheduleId = typeof body?.scheduleId === 'string' ? body.scheduleId : null;
+    const { scheduleId } = await context.params;
+    if (body?.scheduleId && body.scheduleId !== scheduleId) {
+      return NextResponse.json({ error: 'Conflicting schedule IDs.' }, { status: 400 });
+    }
     if (!scheduleId) {
       return NextResponse.json({ error: 'scheduleId is required.' }, { status: 400 });
     }
@@ -47,6 +35,9 @@ export async function PATCH(req: NextRequest) {
       patch.motherIds = body.motherIds.filter((v: unknown): v is string => typeof v === 'string');
     }
 
+    await assertScheduleScope(auth.profile, scheduleId);
+    if (patch.motherIds) await assertMotherScope(auth.profile, patch.motherIds);
+    patch.setBy = auth.user.id;
     const result = await updateSchedule(scheduleId, patch);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ schedule: result.data });
@@ -58,17 +49,21 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ scheduleId: string }> }) {
   try {
     const auth = await requireScheduleManager();
     if (auth.error) return auth.error;
 
-    const scheduleId = req.nextUrl.searchParams.get('scheduleId');
+    const { scheduleId } = await context.params;
+    if (req.nextUrl.searchParams.has('scheduleId') && req.nextUrl.searchParams.get('scheduleId') !== scheduleId) {
+      return NextResponse.json({ error: 'Conflicting schedule IDs.' }, { status: 400 });
+    }
     if (!scheduleId) {
       return NextResponse.json({ error: 'scheduleId is required.' }, { status: 400 });
     }
 
-    const result = await deleteSchedule(scheduleId);
+    await assertScheduleScope(auth.profile, scheduleId);
+    const result = await deleteSchedule(scheduleId, auth.user.id);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (error) {

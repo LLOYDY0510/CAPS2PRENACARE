@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 export default function DashboardError({
   error,
   reset,
@@ -7,6 +9,7 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
   return (
     <div>
       <div className="page-header">
@@ -23,9 +26,9 @@ export default function DashboardError({
         <button type="button" onClick={() => reset()} className="btn-primary">
           Try again
         </button>
-        <a href="/dashboard" className="btn-secondary">
+        <button type="button" onClick={() => { router.push('/dashboard'); }} className="btn-secondary">
           Back to dashboard
-        </a>
+        </button>
       </div>
     </div>
   );

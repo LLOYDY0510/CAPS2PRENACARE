@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { isStaffRole } from '@/utils/auth/roles';
+import { requireApiPermission } from '@/utils/auth/api';
 import { one } from '@/utils/embedded';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-    }
-
-    // Verify requesting user is staff
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, purok')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile || !isStaffRole(profile.role)) {
-      return NextResponse.json({ error: 'Only staff can create follow-ups.' }, { status: 403 });
-    }
+    const auth = await requireApiPermission('canManageReferrals');
+    if (auth.error) return auth.error;
+    const { supabase, profile } = auth;
 
     const { scheduleId, pregnantMotherId, reason, status, nextContactDate } = await req.json();
 
@@ -35,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check purok access for BHW users
-    if (profile.role === 'bhw_purok') {
+    if (profile.role === 'bhw' && !profile.access_all_zones) {
       const { data: mother } = await supabase
         .from('pregnant_mothers')
         .select('purok')
@@ -76,25 +59,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-    }
-
-    // Verify requesting user is staff
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, purok')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile || !isStaffRole(profile.role)) {
-      return NextResponse.json({ error: 'Only staff can view follow-ups.' }, { status: 403 });
-    }
+    const auth = await requireApiPermission('canManageReferrals');
+    if (auth.error) return auth.error;
+    const { supabase, profile } = auth;
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
@@ -126,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
 
     // For BHW users, filter by their purok
-    if (profile.role === 'bhw_purok') {
+    if (profile.role === 'bhw' && !profile.access_all_zones) {
       query = query.eq('pregnant_mothers.purok', profile.purok);
     }
 
@@ -148,25 +115,9 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-    }
-
-    // Verify requesting user is staff
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, purok')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile || !isStaffRole(profile.role)) {
-      return NextResponse.json({ error: 'Only staff can update follow-ups.' }, { status: 403 });
-    }
+    const auth = await requireApiPermission('canManageReferrals');
+    if (auth.error) return auth.error;
+    const { supabase, profile } = auth;
 
     const { followUpId, status, smsStatus, nextContactDate } = await req.json();
 
@@ -175,7 +126,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Check purok access for BHW users
-    if (profile.role === 'bhw_purok') {
+    if (profile.role === 'bhw' && !profile.access_all_zones) {
       const { data: followUp } = await supabase
         .from('prenatal_follow_ups')
         .select(`

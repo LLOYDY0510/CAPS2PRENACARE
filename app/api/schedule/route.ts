@@ -1,28 +1,12 @@
+import { assertMotherScope } from '@/utils/auth/scope';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { canManageSchedules } from '@/utils/auth/permissions';
+import { requireApiPermission } from '@/utils/auth/api';
 import { createSchedule, listSchedules, type Trimester } from '@/utils/schedules/service';
 
 export const dynamic = 'force-dynamic';
 
 async function requireScheduleManager() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  const role = profile?.role ?? 'pending';
-  if (!canManageSchedules(role)) {
-    return {
-      error: NextResponse.json(
-        { error: 'Only the BHW Manager, nurse, or admin can manage prenatal schedules.' },
-        { status: 403 },
-      ),
-    };
-  }
-  return { supabase, user, role };
+  return requireApiPermission('canManageSchedules');
 }
 
 function parseMotherIds(value: unknown): string[] | null {
@@ -55,6 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A list of pregnant mothers is required.' }, { status: 400 });
     }
 
+    await assertMotherScope(auth.profile, motherIds);
     const result = await createSchedule({
       visitDate: String(body?.visitDate ?? ''),
       trimester: body?.trimester as Trimester,

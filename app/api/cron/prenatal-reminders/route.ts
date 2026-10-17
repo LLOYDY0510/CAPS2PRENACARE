@@ -4,17 +4,7 @@ import { checkAndSendPrenatalReminders } from '@/utils/checkPrenatalReminders';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Endpoint for an external scheduler (Supabase Cron + pg_net, Vercel Cron, or
- * any cron-capable host) to trigger the daily reminder run.
- *
- * The previous implementation only ran when a staff member opened the
- * dashboard, so on a quiet day no reminder was ever sent. Calling this on a
- * schedule makes the "one day before" promise actually hold.
- *
- * Authenticate with the CRON_SECRET header. When CRON_SECRET is unset the
- * endpoint refuses every request rather than running the job unprotected.
- */
+/* Endpoint for an external scheduler (Supabase Cron + pg_net, Vercel Cron, or any cron-capable host) to trigger the daily reminder run. */
 function isAuthorised(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;

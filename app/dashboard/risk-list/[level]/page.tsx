@@ -19,13 +19,13 @@ export default async function RiskListPage({
     notFound();
   }
 
-  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw', 'bhw']);
 
   let recordsQuery = supabase
     .from('pregnant_mothers')
     .select('id, serial_no, full_name, purok, age, contact_number, risk_level')
     .eq('risk_level', level);
-  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  if (role === 'bhw' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
   const { data: records } = await recordsQuery;
 
   const sorted = (records ?? []).slice().sort((a, b) => {

@@ -1,5 +1,4 @@
 -- Create missing database tables referenced in the codebase
-
 -- Risk indicators table for risk assessment
 create table if not exists public.risk_indicators (
   id uuid primary key default gen_random_uuid(),
@@ -11,7 +10,6 @@ create table if not exists public.risk_indicators (
   created_at timestamptz not null default now(),
   constraint risk_indicators_type_check check (indicator_type in ('checklist', 'age_below', 'first_pregnancy_age_above'))
 );
-
 -- Monthly tips templates table
 create table if not exists public.monthly_tips (
   id uuid primary key default gen_random_uuid(),
@@ -24,7 +22,6 @@ create table if not exists public.monthly_tips (
   constraint monthly_tips_risk_level_check check (risk_level in ('low', 'high')),
   constraint monthly_tips_unique_month_risk unique (month, risk_level)
 );
-
 -- Tip broadcasts table
 create table if not exists public.tip_broadcasts (
   id uuid primary key default gen_random_uuid(),
@@ -42,7 +39,6 @@ create table if not exists public.tip_broadcasts (
   constraint tip_broadcasts_risk_level_check check (risk_level in ('low', 'high')),
   constraint tip_broadcasts_status_check check (status in ('pending', 'approved', 'sent'))
 );
-
 -- Tip broadcast recipients junction table
 create table if not exists public.tip_broadcast_recipients (
   id uuid primary key default gen_random_uuid(),
@@ -52,7 +48,6 @@ create table if not exists public.tip_broadcast_recipients (
   sent_at timestamptz,
   constraint tip_broadcast_recipients_unique unique (broadcast_id, pregnant_mother_id)
 );
-
 -- Pregnant mother indicators junction table
 create table if not exists public.pregnant_mother_indicators (
   id uuid primary key default gen_random_uuid(),
@@ -62,7 +57,6 @@ create table if not exists public.pregnant_mother_indicators (
   assigned_by uuid references auth.users(id),
   constraint pregnant_mother_indicators_unique unique (pregnant_mother_id, indicator_id)
 );
-
 -- Prenatal schedule recipients junction table
 create table if not exists public.prenatal_schedule_recipients (
   id uuid primary key default gen_random_uuid(),
@@ -71,7 +65,6 @@ create table if not exists public.prenatal_schedule_recipients (
   created_at timestamptz not null default now(),
   constraint prenatal_schedule_recipients_unique unique (schedule_id, pregnant_mother_id)
 );
-
 -- Create indexes for performance
 create index if not exists risk_indicators_active_idx on public.risk_indicators(active);
 create index if not exists risk_indicators_type_idx on public.risk_indicators(indicator_type);
@@ -85,7 +78,6 @@ create index if not exists pregnant_mother_indicators_mother_idx on public.pregn
 create index if not exists pregnant_mother_indicators_indicator_idx on public.pregnant_mother_indicators(indicator_id);
 create index if not exists prenatal_schedule_recipients_schedule_idx on public.prenatal_schedule_recipients(schedule_id);
 create index if not exists prenatal_schedule_recipients_mother_idx on public.prenatal_schedule_recipients(pregnant_mother_id);
-
 -- Enable RLS on new tables
 alter table public.risk_indicators enable row level security;
 alter table public.monthly_tips enable row level security;
@@ -93,7 +85,6 @@ alter table public.tip_broadcasts enable row level security;
 alter table public.tip_broadcast_recipients enable row level security;
 alter table public.pregnant_mother_indicators enable row level security;
 alter table public.prenatal_schedule_recipients enable row level security;
-
 -- RLS policies for risk_indicators
 create policy "staff can read risk indicators"
   on public.risk_indicators for select to authenticated
@@ -103,7 +94,6 @@ create policy "admin and nurse can manage risk indicators"
   on public.risk_indicators for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse')))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse')));
-
 -- RLS policies for monthly_tips
 create policy "staff can read monthly tips"
   on public.monthly_tips for select to authenticated
@@ -113,7 +103,6 @@ create policy "nurse can manage monthly tips"
   on public.monthly_tips for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'));
-
 -- RLS policies for tip_broadcasts
 create policy "staff can read tip broadcasts"
   on public.tip_broadcasts for select to authenticated
@@ -123,7 +112,6 @@ create policy "nurse can manage tip broadcasts"
   on public.tip_broadcasts for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'));
-
 -- RLS policies for tip_broadcast_recipients
 create policy "staff can read tip broadcast recipients"
   on public.tip_broadcast_recipients for select to authenticated
@@ -133,7 +121,6 @@ create policy "nurse can manage tip broadcast recipients"
   on public.tip_broadcast_recipients for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'nurse'));
-
 -- RLS policies for pregnant_mother_indicators
 create policy "staff can read pregnant mother indicators"
   on public.pregnant_mother_indicators for select to authenticated
@@ -143,7 +130,6 @@ create policy "care staff can manage pregnant mother indicators"
   on public.pregnant_mother_indicators for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')));
-
 -- RLS policies for prenatal_schedule_recipients
 create policy "staff can read prenatal schedule recipients"
   on public.prenatal_schedule_recipients for select to authenticated
@@ -153,7 +139,6 @@ create policy "care staff can manage prenatal schedule recipients"
   on public.prenatal_schedule_recipients for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'nurse', 'bhw_head', 'bhw_purok')));
-
 -- Add updated_at trigger for monthly_tips
 create or replace function public.handle_updated_at()
 returns trigger
@@ -176,10 +161,9 @@ drop trigger if exists handle_tip_broadcasts_updated_at on public.tip_broadcasts
 create trigger handle_tip_broadcasts_updated_at
 before update on public.tip_broadcasts
 for each row execute function public.handle_updated_at();
-
 -- Insert sample monthly tips if they don't exist
 insert into public.monthly_tips (month, risk_level, title, content)
-values 
+values
   (1, 'low', 'Month 1: Early Pregnancy Care', 'Congratulations on your pregnancy! Start taking folic acid supplements and schedule your first prenatal checkup. Eat small, frequent meals to manage morning sickness.'),
   (1, 'high', 'Month 1: High-Risk Care', 'Your pregnancy requires special attention. Please attend all scheduled checkups and take prescribed medications regularly. Contact your healthcare provider immediately if you experience severe symptoms.'),
   (2, 'low', 'Month 2: Continued Nutrition', 'Continue taking prenatal vitamins. Include iron-rich foods like spinach and lean meats in your diet. Stay hydrated and get plenty of rest.'),

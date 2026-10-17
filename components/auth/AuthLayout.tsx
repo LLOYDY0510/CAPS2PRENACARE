@@ -17,19 +17,19 @@ export default function AuthLayout({
   void _brand;
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-[#eef3f7] font-sans text-slate-800 overflow-x-hidden">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-[#eef3f7] font-sans text-neutral-800 overflow-x-hidden">
       {/* Large Blurred Background Decorative Circles */}
       <div
         aria-hidden="true"
-        className="fixed -top-32 -left-32 w-96 h-96 rounded-full bg-teal-200/40 blur-3xl pointer-events-none z-0"
+        className="fixed -top-32 -left-32 w-96 h-96 rounded-full bg-green-200/40 blur-3xl pointer-events-none z-0"
       />
       <div
         aria-hidden="true"
-        className="fixed -bottom-40 -right-40 w-[32rem] h-[32rem] rounded-full bg-indigo-200/35 blur-3xl pointer-events-none z-0"
+        className="fixed -bottom-40 -right-40 w-[32rem] h-[32rem] rounded-full bg-green-200/35 blur-3xl pointer-events-none z-0"
       />
       <div
         aria-hidden="true"
-        className="fixed top-1/3 -right-20 w-80 h-80 rounded-full bg-amber-100/50 blur-3xl pointer-events-none z-0"
+        className="fixed top-1/3 -right-20 w-80 h-80 rounded-full bg-green-100/50 blur-3xl pointer-events-none z-0"
       />
 
       {/* Main Content Container */}
@@ -40,15 +40,15 @@ export default function AuthLayout({
             <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-md border border-white">
               <Logo variant="prenatrack" size={40} priority />
             </div>
-            <span className="text-slate-300 font-light text-2xl">/</span>
+            <span className="text-neutral-300 font-light text-2xl">/</span>
             <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-md border border-white">
               <Logo variant="barangay" size={40} rounded priority />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-neutral-900">
             Prenatrack
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-semibold mt-1 max-w-md">
+          <p className="text-xs sm:text-sm text-neutral-500 font-semibold mt-1 max-w-md">
             Barangay Maternal Health &amp; Care Tracking Portal
           </p>
         </header>

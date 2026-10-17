@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
-/**
- * Marks a single notification as read for the signed-in user.
- *
- * This replaces the previous call to the mark_notification_read() database
- * function, whose own authorisation accepted `recipient_role = <caller role>`.
- * That branch is too broad for a pregnant mother: any record-level broadcast
- * addressed to the 'pregnant_mother' role would be matchable. The update now
- * runs under the caller's session, so the maternal_notifications RLS policy
- * decides which rows may be touched.
- */
+/* Marks a single notification as read for the signed-in user. */
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();

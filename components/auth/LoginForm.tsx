@@ -28,17 +28,14 @@ export default function LoginForm() {
     setNotice('');
     setLoading(true);
 
-    persistRememberPreference(rememberMe);
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-
-    setLoading(false);
-
-    if (signInError) {
-      setError(signInError.message);
-      return;
-    }
-
+    try {
+      const response=await fetch('/api/auth/sign-in',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const result=await response.json();
+      if(!response.ok){setError(result.error??'Sign-in failed.');return;}
+      if(result.warning)setNotice(result.warning);
+      persistRememberPreference(rememberMe);
+    } catch {setError('The sign-in service could not be reached.');return;}
+    finally {setLoading(false);}
     router.push('/dashboard');
     router.refresh();
   }
@@ -70,7 +67,7 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
       {/* Tab Heading */}
-      <header className="border-b border-slate-100 pb-3">
+      <header className="border-b border-neutral-100 pb-3">
         <div className="flex items-center gap-6">
           <button
             type="button"
@@ -81,8 +78,8 @@ export default function LoginForm() {
             }}
             className={`relative pb-3 text-lg sm:text-xl font-extrabold transition-colors ${
               mode === 'signin'
-                ? 'text-slate-900'
-                : 'text-slate-400 hover:text-slate-700'
+                ? 'text-neutral-900'
+                : 'text-neutral-400 hover:text-neutral-700'
             }`}
           >
             Sign In
@@ -92,13 +89,13 @@ export default function LoginForm() {
           </button>
 
           {mode === 'forgot' && (
-            <span className="relative pb-3 text-lg sm:text-xl font-extrabold text-slate-900">
+            <span className="relative pb-3 text-lg sm:text-xl font-extrabold text-neutral-900">
               Reset Password
               <span className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--brand)] rounded-full" />
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-500 font-medium mt-2">
+        <p className="text-xs text-neutral-500 font-medium mt-2">
           {mode === 'signin'
             ? 'Sign in to access your maternal care dashboard.'
             : 'Enter your account email to receive a password reset link.'}
@@ -107,12 +104,12 @@ export default function LoginForm() {
 
       {/* Alerts */}
       {error && (
-        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold" role="alert">
+        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}
       {notice && (
-        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold" role="status">
+        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="status">
           {notice}
         </div>
       )}
@@ -129,7 +126,7 @@ export default function LoginForm() {
             Email Address
           </label>
           <div className="relative flex items-center">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-slate-400">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-neutral-400">
               <Mail className="w-4 h-4" />
             </div>
             <input
@@ -140,7 +137,7 @@ export default function LoginForm() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-              className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+              className="w-full h-11 pl-11 pr-4 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white border border-neutral-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-neutral-800 placeholder:text-neutral-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
               placeholder="name@example.com"
             />
           </div>
@@ -156,8 +153,8 @@ export default function LoginForm() {
               autoComplete="current-password"
               required
               placeholder="••••••••"
-              leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-              inputClassName="h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-full border-slate-200 focus:border-[var(--brand)] text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[var(--brand)]/20 transition-all"
+              leftIcon={<Lock className="w-4 h-4 text-neutral-400" />}
+              inputClassName="h-11 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white rounded-full border-neutral-200 focus:border-[var(--brand)] text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[var(--brand)]/20 transition-all"
             />
           </div>
         )}
@@ -165,13 +162,13 @@ export default function LoginForm() {
         {/* Remember me & Forgot Password Row */}
         {mode === 'signin' && (
           <div className="flex items-center justify-between gap-2 text-xs pt-1">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 hover:text-slate-900 transition-colors font-medium">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-neutral-600 hover:text-neutral-900 transition-colors font-medium">
               <input
                 type="checkbox"
                 name="remember-me"
                 checked={rememberMe}
                 onChange={(event) => setRememberMe(event.target.checked)}
-                className="w-4 h-4 rounded-md border-slate-300 text-[var(--brand)] focus:ring-[var(--brand)] accent-[var(--brand)] cursor-pointer"
+                className="w-4 h-4 rounded-md border-neutral-300 text-[var(--brand)] focus:ring-[var(--brand)] accent-[var(--brand)] cursor-pointer"
               />
               <span>Remember me</span>
             </label>
@@ -214,7 +211,7 @@ export default function LoginForm() {
               setError('');
               setNotice('');
             }}
-            className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 pt-2 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 pt-2 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Sign In</span>
@@ -224,7 +221,7 @@ export default function LoginForm() {
 
       {/* Create Account Link Below */}
       {mode === 'signin' && (
-        <div className="pt-3 text-center text-xs font-medium text-slate-500 border-t border-slate-100">
+        <div className="pt-3 text-center text-xs font-medium text-neutral-500 border-t border-neutral-100">
           Don&apos;t have an account?{' '}
           <Link
             href="/create-account"

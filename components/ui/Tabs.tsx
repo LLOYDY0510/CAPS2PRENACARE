@@ -27,7 +27,7 @@ export default function Tabs({
   if (variant === 'segmented') {
     return (
       <div
-        className={`inline-flex items-center p-1.5 bg-slate-100/90 rounded-full border border-slate-200/60 ${className}`}
+        className={`inline-flex items-center p-1.5 bg-neutral-100/90 rounded-full border border-neutral-200/60 ${className}`}
         role="tablist"
       >
         {tabs.map((tab) => {
@@ -41,7 +41,7 @@ export default function Tabs({
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
                 isActive
                   ? 'bg-white text-[var(--brand)] shadow-sm scale-102'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
               }`}
             >
               {tab.icon && <span className="shrink-0">{tab.icon}</span>}
@@ -49,7 +49,7 @@ export default function Tabs({
               {tab.count !== undefined && (
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] ${
-                    isActive ? 'bg-teal-50 text-[var(--brand)]' : 'bg-slate-200/70 text-slate-600'
+                    isActive ? 'bg-green-50 text-[var(--brand)]' : 'bg-neutral-200/70 text-neutral-600'
                   }`}
                 >
                   {tab.count}
@@ -74,8 +74,8 @@ export default function Tabs({
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 shrink-0 ${
               isActive
-                ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/20'
-                : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-[var(--brand)] text-white shadow-md shadow-green-700/20'
+                : 'bg-white border border-neutral-200/80 text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
             }`}
           >
             {tab.icon && <span className="shrink-0">{tab.icon}</span>}
@@ -83,7 +83,7 @@ export default function Tabs({
             {tab.count !== undefined && (
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                  isActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {tab.count}

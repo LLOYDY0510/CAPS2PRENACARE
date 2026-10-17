@@ -1,25 +1,14 @@
 'use client';
 
+import { localDate } from '@/utils/calendar';
+
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import { Download, FileSpreadsheet } from 'lucide-react';
 
-export type ReportRow = {
-  serial_no: string | number | null;
-  date_registered: string | null;
-  name: string;
-  address: string | null;
-  purok: string | null;
-  age: number | null;
-  contact_number: string | null;
-  lmp: string | null;
-  edd: string | null;
-  gravida_para: string | null;
-  blood_pressure: string | null;
-  height_cm: number | null;
-  weight_kg: number | null;
-  risk_level: string | null;
-};
+import type { ReportRow } from '@/types';
+export type { ReportRow } from '@/types';
+
 
 const COLUMNS: { key: keyof ReportRow; label: string }[] = [
   { key: 'serial_no', label: 'Serial No.' },
@@ -39,11 +28,12 @@ const COLUMNS: { key: keyof ReportRow; label: string }[] = [
 ];
 
 function cell(value: unknown): string {
-  return value === null || value === undefined || value === '' ? '—' : String(value);
+  const text = value === null || value === undefined || value === '' ? '—' : String(value);
+  return /^[=+@\t\r-]/.test(text) ? `\'${text}` : text;
 }
 
 function filename(ext: string): string {
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = localDate();
   return `prenatrack-records-${stamp}.${ext}`;
 }
 
@@ -83,16 +73,13 @@ export default function ReportExport({ records }: { records: ReportRow[] }) {
   async function exportXlsx() {
     setExporting('xlsx');
     try {
-      const XLSX = await import('xlsx');
-      const data = records.map((r) =>
-        Object.fromEntries(COLUMNS.map((c) => [c.label, cell(r[c.key])]))
-      );
-      const worksheet = XLSX.utils.json_to_sheet(data);
-      worksheet['!cols'] = COLUMNS.map(() => ({ wch: 18 }));
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Pregnant Records');
-      const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([arrayBuffer], {
+      const { default: ExcelJS } = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Pregnant Records');
+      worksheet.columns = COLUMNS.map((column) => ({ header: column.label, key: column.key, width: 18 }));
+      worksheet.addRows(records.map((record) => Object.fromEntries(COLUMNS.map((column) => [column.key, cell(record[column.key])]))));
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([new Uint8Array(buffer as ArrayBuffer)], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       downloadBlob(blob, filename('xlsx'));

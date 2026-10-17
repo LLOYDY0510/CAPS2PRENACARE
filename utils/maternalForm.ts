@@ -1,3 +1,5 @@
+import { addDays } from '@/utils/calendar';
+
 export const BLOOD_PRESSURE_OPTIONS = [
   '90/60',
   '100/60',
@@ -30,8 +32,5 @@ export function isValidBloodPressure(value: string): boolean {
 
 /** Naegele's rule: EDC = LMP + 280 days. */
 export function eddFromLmp(lmp: string): string | null {
-  const date = new Date(`${lmp}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setDate(date.getDate() + 280);
-  return date.toISOString().slice(0, 10);
+  return addDays(lmp, 280);
 }

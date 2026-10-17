@@ -1,36 +1,4 @@
--- =============================================================================
--- 014_prenatal_schedule_and_sms.sql
--- =============================================================================
--- Why this migration exists
--- -----------------------
--- The prenatal schedule and SMS features looked implemented but had never
--- actually sent a message. Measured against the live database:
---
---   1. Every contact number is stored in local format ("09389201440").
---      Semaphore only accepts international format ("+639389201440"), so every
---      request was rejected by the provider.
---   2. public.sms_logs had 0 rows even though 3 schedules carried
---      reminder_sent = true - the reminder job swallowed the failure because it
---      never checked the result of its own log insert, and it marked the
---      schedule as "sent" regardless of the outcome.
---   3. sms_logs stored one row per BATCH with no record of what the provider
---      actually returned per recipient, so partial failures were invisible.
---   4. Nothing stopped a second send: prenatal_schedule_reminders had no unique
---      key, so a page reload could re-send the same reminder.
---   5. Editing a schedule did not exist at all, so a changed date silently
---      reused the old reminder state.
---
--- This migration adds the storage the app needs to send real SMS, record what
--- the provider actually returned, and refuse to send the same thing twice.
---
--- It depends on 013_rls_hardening.sql (helpers: is_care_staff, is_admin,
--- can_access_mother, can_manage_mother, is_clinical_staff).
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
--- 1. prenatal_schedules: track edits
--- -----------------------------------------------------------------------------
+-- Add schedule metadata and provider audit receipts.
 alter table public.prenatal_schedules
   add column if not exists updated_at timestamptz default now(),
   add column if not exists reminder_attempted_at timestamptz,
@@ -57,13 +25,9 @@ create trigger prenatal_schedules_touch_updated_at
   before update on public.prenatal_schedules
   for each row
   execute function public.touch_prenatal_schedules_updated_at();
-
-
--- -----------------------------------------------------------------------------
 -- 2. Duplicate-proof the schedule -> mother links
---    Without this a double click, or a retry after a partial failure, can add
---    the same mother to a schedule twice and she then receives two reminders.
--- -----------------------------------------------------------------------------
+-- Without this a double click, or a retry after a partial failure, can add
+-- the same mother to a schedule twice and she then receives two reminders.
 delete from public.prenatal_schedule_recipients a
 using public.prenatal_schedule_recipients b
 where a.ctid < b.ctid
@@ -72,12 +36,8 @@ where a.ctid < b.ctid
 
 create unique index if not exists prenatal_schedule_recipients_unique_mother
   on public.prenatal_schedule_recipients(schedule_id, pregnant_mother_id);
-
-
--- -----------------------------------------------------------------------------
 -- 3. Duplicate-proof the reminder history
---    Same reasoning, and it is the table the automatic job reads back.
--- -----------------------------------------------------------------------------
+-- Same reasoning, and it is the table the automatic job reads back.
 delete from public.prenatal_schedule_reminders a
 using public.prenatal_schedule_reminders b
 where a.ctid < b.ctid
@@ -93,11 +53,7 @@ alter table public.prenatal_schedule_reminders
 
 create index if not exists prenatal_schedule_reminders_schedule_idx
   on public.prenatal_schedule_reminders(schedule_id);
-
-
--- -----------------------------------------------------------------------------
 -- 4. sms_logs: record the provider's real answer
--- -----------------------------------------------------------------------------
 alter table public.sms_logs
   add column if not exists semaphore_response jsonb,
   add column if not exists schedule_id uuid references public.prenatal_schedules(id) on delete set null,
@@ -112,16 +68,7 @@ comment on column public.sms_logs.send_kind is
 
 create index if not exists sms_logs_schedule_idx on public.sms_logs(schedule_id);
 create index if not exists sms_logs_created_at_idx on public.sms_logs(created_at desc);
-
-
--- -----------------------------------------------------------------------------
 -- 5. sms_recipient_receipts: one row per recipient, holding what Semaphore
---    actually said about that recipient.
---
---    This is the table that makes duplicate prevention airtight. dedupe_key is
---    unique, so a second send for the same (schedule, mother, kind, day) is
---    rejected by Postgres rather than by application logic that can race.
--- -----------------------------------------------------------------------------
 create table if not exists public.sms_recipient_receipts (
   id uuid primary key default gen_random_uuid(),
   sms_log_id uuid not null references public.sms_logs(id) on delete cascade,
@@ -148,7 +95,6 @@ create index if not exists sms_recipient_receipts_sent_at_idx
   on public.sms_recipient_receipts(sent_at desc);
 
 alter table public.sms_recipient_receipts enable row level security;
-
 -- Staff read the receipts so the SMS Log can show the real per-number result.
 -- A BHW (purok) sees receipts for mothers in her own purok, and never another.
 create or replace function public.sms_receipt_visible_to(uid uuid, mother_id uuid)
@@ -166,7 +112,6 @@ drop policy if exists "sms_recipient_receipts_read" on public.sms_recipient_rece
 create policy "sms_recipient_receipts_read"
   on public.sms_recipient_receipts for select to authenticated
   using (public.sms_receipt_visible_to(auth.uid(), pregnant_mother_id));
-
 -- Only the service role (the app's server-side sender) writes receipts.
 -- A browser session must never be able to forge a receipt.
 drop policy if exists "sms_recipient_receipts_insert" on public.sms_recipient_receipts;
@@ -174,12 +119,8 @@ drop policy if exists "sms_recipient_receipts_update" on public.sms_recipient_re
 drop policy if exists "sms_recipient_receipts_delete" on public.sms_recipient_receipts;
 
 revoke all on function public.sms_receipt_visible_to(uid uuid, mother_id uuid) from public;
-
-
--- -----------------------------------------------------------------------------
 -- 6. Keep the pregnancy calendar correct after a schedule is edited
---    (replaces nothing; 003/004 only added the columns)
--- -----------------------------------------------------------------------------
+-- (replaces nothing; 003/004 only added the columns)
 create or replace function public.invalidate_schedule_reminders(schedule_uuid uuid)
 returns void
 language plpgsql
@@ -187,8 +128,8 @@ security definer
 set search_path = public
 as $$
 begin
-  -- The reminder text embeds the visit date, so a changed date invalidates
-  -- every message already produced for this schedule.
+-- The reminder text embeds the visit date, so a changed date invalidates
+-- every message already produced for this schedule.
   update public.prenatal_schedules
      set reminder_sent = false,
          reminder_sent_at = null,
@@ -209,13 +150,9 @@ end;
 $$;
 
 revoke all on function public.invalidate_schedule_reminders(schedule_uuid uuid) from public;
-
-
--- -----------------------------------------------------------------------------
 -- 7. Automatic reminder due-date view
---    A schedule is "due" when its visit is tomorrow (or today and not yet
---    reminded), has not been reminded, and is still open.
--- -----------------------------------------------------------------------------
+-- A schedule is "due" when its visit is tomorrow (or today and not yet
+-- reminded), has not been reminded, and is still open.
 create or replace view public.prenatal_schedules_due
 with (security_invoker = true)
 as

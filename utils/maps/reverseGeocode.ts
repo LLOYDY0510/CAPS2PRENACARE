@@ -45,6 +45,7 @@ export async function reverseGeocode(
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
       {
+        signal: AbortSignal.timeout(10_000),
         headers: {
           'User-Agent': 'Prenatrack Health System (prenatrack@health.gov.ph)', // Required by Nominatim policy
         },

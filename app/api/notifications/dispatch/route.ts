@@ -1,6 +1,7 @@
+import { requireApiPermission } from '@/utils/auth/api';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { canManageSchedules } from '@/utils/auth/permissions';
+import { createAdminClient } from '@/utils/supabase/admin';
+import { canManageHealthTips, canManageSchedules } from '@/utils/auth/permissions';
 import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
 import { createHash } from 'crypto';
 
@@ -18,31 +19,29 @@ type DispatchBody = {
 };
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  const auth=await requireApiPermission();
+  if(auth.error)return auth.error;
+  const {supabase,user,profile}=auth;
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  
   // BHW purok users cannot create notifications
-  if (profile?.role === 'bhw_purok') {
+  if (profile?.role === 'bhw') {
     return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
   }
-  
+
   // Only admin, nurse, and bhw_head can create notifications through this API
-  if (!profile?.role || !['admin', 'nurse', 'bhw_head'].includes(profile.role)) {
+  if (!profile?.role || !['admin', 'nurse', 'bhw'].includes(profile.role)) {
     return NextResponse.json({ error: 'You are not authorized to create notifications.' }, { status: 403 });
   }
 
   const body = await request.json() as DispatchBody;
   const notificationKey = (recipientKey: string, title: string, message: string) =>
     createHash('sha256').update(`${user.id}:${recipientKey}:${title}:${message}`).digest('hex');
-  
+
   // BHW purok users cannot create appointment notifications (schedule-related)
   if (body.type === 'appointment' && !canManageSchedules(profile.role)) {
     return NextResponse.json({ error: 'You do not have permission to create appointment notifications.' }, { status: 403 });
   }
-  
+
   if ((body.type === 'risk_alert' || body.type === 'role_alert') && profile.role !== 'nurse' && body.type === 'risk_alert') {
     return NextResponse.json({ error: 'Only Nurses can send risk-based health advice.' }, { status: 403 });
   }
@@ -59,6 +58,31 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ success: true, created: notification ? 1 : 0 });
   }
+  if (body.type === 'health_tip' && body.broadcastId) {
+    if (!canManageHealthTips(profile.role)) return NextResponse.json({ error: 'Only authorized care reviewers can dispatch tips.' }, { status: 403 });
+    const admin = createAdminClient();
+    const { data: broadcast, error: readError } = await admin.from('tip_broadcasts')
+      .select('id, title, content, status').eq('id', body.broadcastId).maybeSingle();
+    if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
+    if (!broadcast || broadcast.status !== 'approved') return NextResponse.json({ error: 'Approve the broadcast before dispatching.' }, { status: 409 });
+    const { data: links, error: linkError } = await admin.from('tip_broadcast_recipients')
+      .select('pregnant_mother_id').eq('broadcast_id', broadcast.id);
+    if (linkError || !links?.length) return NextResponse.json({ error: linkError?.message ?? 'The broadcast has no recipients.' }, { status: 400 });
+    try {
+      for (const link of links) {
+        const notice = await createMaternalNotification(admin, { pregnantMotherId: link.pregnant_mother_id,
+          eventKey: `health-tip:${broadcast.id}:${link.pregnant_mother_id}`, category: 'health_tip',
+          title: broadcast.title, message: broadcast.content });
+        if (!notice) throw new Error('A recipient notice could not be created.');
+      }
+      const { error } = await admin.rpc('complete_tip_broadcast', { broadcast_uuid: broadcast.id });
+      if (error) throw new Error(error.message);
+      return NextResponse.json({ success: true, created: links.length });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Dispatch failed.' }, { status: 500 });
+    }
+  }
+
   const targets: { id: string; eventKey: string; category: 'health_tip' | 'appointment' | 'risk_alert' | 'care_message'; title: string; message: string }[] = [];
 
   if (body.type === 'appointment' && body.scheduleId) {
@@ -71,15 +95,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (body.type === 'health_tip' && body.broadcastId) {
-    const [{ data: broadcast }, { data: links }] = await Promise.all([
-      supabase.from('tip_broadcasts').select('title, content').eq('id', body.broadcastId).maybeSingle(),
-      supabase.from('tip_broadcast_recipients').select('pregnant_mother_id').eq('broadcast_id', body.broadcastId),
-    ]);
-    if (broadcast) {
-      for (const link of links ?? []) targets.push({ id: link.pregnant_mother_id, eventKey: `health-tip:${body.broadcastId}:${link.pregnant_mother_id}`, category: 'health_tip', title: broadcast.title, message: broadcast.content });
-    }
-  }
 
   if (body.type === 'risk_alert' && body.pregnantMotherId && body.message) {
     const title = body.title || 'Important maternal health alert';

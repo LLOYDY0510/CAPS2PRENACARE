@@ -18,31 +18,31 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+          <label htmlFor={inputId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
             {label}
           </label>
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <span className="absolute left-3.5 text-slate-400 pointer-events-none">{leftIcon}</span>
+            <span className="absolute left-3.5 text-neutral-400 pointer-events-none">{leftIcon}</span>
           )}
           <input
             id={inputId}
             ref={ref}
             className={`w-full h-11 ${leftIcon ? 'pl-10' : 'pl-4'} ${
               rightIcon ? 'pr-10' : 'pr-4'
-            } bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-800 placeholder:text-slate-400 text-xs sm:text-sm font-medium rounded-2xl border ${
-              error ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-100' : 'border-slate-200/80 focus:border-[var(--brand)] focus:ring-2 focus:ring-teal-100'
-            } shadow-xs transition-all outline-none disabled:opacity-60 disabled:bg-slate-100 ${className}`}
+            } bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-400 text-xs sm:text-sm font-medium rounded-2xl border ${
+              error ? 'border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-100' : 'border-neutral-200/80 focus:border-[var(--brand)] focus:ring-2 focus:ring-green-100'
+            } shadow-xs transition-all outline-none disabled:opacity-60 disabled:bg-neutral-100 ${className}`}
             {...props}
           />
           {rightIcon && (
-            <span className="absolute right-3.5 text-slate-400">{rightIcon}</span>
+            <span className="absolute right-3.5 text-neutral-400">{rightIcon}</span>
           )}
         </div>
-        {error && <p className="text-xs font-semibold text-red-600 mt-1">{error}</p>}
+        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
         {!error && helperText && (
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+          <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
             {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
             {helperText}
           </p>
@@ -68,15 +68,15 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+          <label htmlFor={selectId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
             {label}
           </label>
         )}
         <select
           id={selectId}
           ref={ref}
-          className={`w-full h-11 px-4 bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-800 text-xs sm:text-sm font-medium rounded-2xl border ${
-            error ? 'border-red-300 focus:border-red-500' : 'border-slate-200/80 focus:border-[var(--brand)]'
+          className={`w-full h-11 px-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 text-xs sm:text-sm font-medium rounded-2xl border ${
+            error ? 'border-green-300 focus:border-green-500' : 'border-neutral-200/80 focus:border-[var(--brand)]'
           } shadow-xs transition-all outline-none disabled:opacity-60 ${className}`}
           {...props}
         >
@@ -88,9 +88,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               ))
             : children}
         </select>
-        {error && <p className="text-xs font-semibold text-red-600 mt-1">{error}</p>}
+        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
         {!error && helperText && (
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+          <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
             {autoFilled && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand)]"></span>}
             {helperText}
           </p>
@@ -114,20 +114,20 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={areaId} className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+          <label htmlFor={areaId} className="block text-xs font-bold text-neutral-700 uppercase tracking-wide">
             {label}
           </label>
         )}
         <textarea
           id={areaId}
           ref={ref}
-          className={`w-full p-4 bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-800 placeholder:text-slate-400 text-xs sm:text-sm font-medium rounded-2xl border ${
-            error ? 'border-red-300 focus:border-red-500' : 'border-slate-200/80 focus:border-[var(--brand)]'
+          className={`w-full p-4 bg-neutral-50/80 hover:bg-neutral-50 focus:bg-white text-neutral-800 placeholder:text-neutral-400 text-xs sm:text-sm font-medium rounded-2xl border ${
+            error ? 'border-green-300 focus:border-green-500' : 'border-neutral-200/80 focus:border-[var(--brand)]'
           } shadow-xs transition-all outline-none disabled:opacity-60 min-h-[100px] ${className}`}
           {...props}
         />
-        {error && <p className="text-xs font-semibold text-red-600 mt-1">{error}</p>}
-        {!error && helperText && <p className="text-xs text-slate-500 mt-1">{helperText}</p>}
+        {error && <p className="text-xs font-semibold text-green-600 mt-1">{error}</p>}
+        {!error && helperText && <p className="text-xs text-neutral-500 mt-1">{helperText}</p>}
       </div>
     );
   }
@@ -151,7 +151,7 @@ export function Toggle({ checked, onChange, label, disabled = false }: TogglePro
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-          checked ? 'bg-[var(--brand)]' : 'bg-slate-200'
+          checked ? 'bg-[var(--brand)]' : 'bg-neutral-200'
         }`}
       >
         <span
@@ -160,7 +160,7 @@ export function Toggle({ checked, onChange, label, disabled = false }: TogglePro
           }`}
         />
       </button>
-      {label && <span className="text-xs sm:text-sm font-semibold text-slate-700">{label}</span>}
+      {label && <span className="text-xs sm:text-sm font-semibold text-neutral-700">{label}</span>}
     </label>
   );
 }

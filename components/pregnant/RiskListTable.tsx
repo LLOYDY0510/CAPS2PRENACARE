@@ -51,7 +51,7 @@ export default function RiskListTable({
   return (
     <div className="space-y-4">
       {/* Search Card */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white rounded-[24px] border border-neutral-100 shadow-lg shadow-neutral-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1 max-w-md">
           <SearchBar
             value={search}
@@ -62,17 +62,17 @@ export default function RiskListTable({
             placeholder="Search by name, serial no, or zone..."
           />
         </div>
-        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+        <span className="text-xs font-bold text-neutral-500 whitespace-nowrap">
           {filtered.length} of {records.length} records
         </span>
       </div>
 
       {/* Table Card */}
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden">
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+      <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-100">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4">Serial No.</th>
                 <th className="py-3.5 px-4">Name</th>
                 <th className="py-3.5 px-4">Zone / Purok</th>
@@ -82,10 +82,10 @@ export default function RiskListTable({
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+            <tbody className="divide-y divide-neutral-100 text-xs sm:text-sm">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-400 font-medium">
+                  <td colSpan={7} className="text-center py-10 text-neutral-400 font-medium">
                     {search
                       ? 'No records match your search.'
                       : `No ${isHigh ? 'high' : 'low'} risk records found.`}
@@ -93,12 +93,12 @@ export default function RiskListTable({
                 </tr>
               )}
               {paginated.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
-                  <td className="py-3.5 px-4 font-bold text-slate-800">{r.full_name ?? '—'}</td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : 'Unassigned'}</td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.age ?? '—'}</td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{r.contact_number ?? '—'}</td>
+                <tr key={r.id} className="hover:bg-neutral-50/80 transition-colors">
+                  <td className="py-3.5 px-4 font-mono text-xs font-semibold text-neutral-500">{r.serial_no ?? '—'}</td>
+                  <td className="py-3.5 px-4 font-bold text-neutral-800">{r.full_name ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.purok ? `Zone ${r.purok}` : 'Unassigned'}</td>
+                  <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.age ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.contact_number ?? '—'}</td>
                   <td className="py-3.5 px-4">
                     <RiskBadge riskLevel={r.risk_level} />
                   </td>
@@ -116,7 +116,7 @@ export default function RiskListTable({
         </div>
 
         {totalPages > 1 && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-neutral-100">
             <Pagination
               currentPage={page}
               totalPages={totalPages}

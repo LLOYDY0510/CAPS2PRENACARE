@@ -5,15 +5,8 @@ import { useRouter } from 'next/navigation';
 import { USER_ROLES } from '@/utils/auth/role-constants';
 import { Check } from 'lucide-react';
 
-type Profile = {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  role: string | null;
-  purok: string | null;
-  pregnant_mother_id: string | null;
-  created_at: string;
-};
+import type { Profile } from '@/types';
+
 
 type MotherOption = {
   id: string;
@@ -57,11 +50,11 @@ export default function UserRoleEditor({
     setError('');
     setNotice('');
 
-    if (role === 'pregnant_mother' && !motherId) {
+    if (role === 'patient' && !motherId) {
       setError('Please select which record to link.');
       return;
     }
-    if (role === 'bhw_purok' && !purok.trim()) {
+    if (role === 'bhw' && !purok.trim()) {
       setError('A BHW (Purok) must be assigned to a purok.');
       return;
     }
@@ -75,10 +68,10 @@ export default function UserRoleEditor({
         body: JSON.stringify({
           userId: profile.id,
           role,
-          purok: role === 'bhw_purok' ? purok.trim() || null : null,
-          pregnantMotherId: role === 'pregnant_mother' ? motherId || null : null,
+          purok: role === 'bhw' ? purok.trim() || null : null,
+          pregnantMotherId: role === 'patient' ? motherId || null : null,
           fullName:
-            role === 'pregnant_mother' && selectedMother
+            role === 'patient' && selectedMother
               ? selectedMother.full_name
               : profile.full_name ?? undefined,
         }),
@@ -102,7 +95,7 @@ export default function UserRoleEditor({
             recipientUserId: profile.id,
             title: 'Account access updated',
             message: `Your Prenatrack role is now ${role.replace(/_/g, ' ')}${
-              role === 'bhw_purok' && purok ? ` for Purok ${purok}` : ''
+              role === 'bhw' && purok ? ` for Purok ${purok}` : ''
             }.`,
           }),
         }),
@@ -127,14 +120,14 @@ export default function UserRoleEditor({
   }
 
   return (
-    <tr className="hover:bg-slate-50/50 transition-colors">
+    <tr className="hover:bg-neutral-50/50 transition-colors">
       <td className="px-6 py-4">
-        <div className="font-semibold text-slate-800">
+        <div className="font-semibold text-neutral-800">
           {profile.full_name || '—'}
         </div>
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-neutral-600">
           {profile.email || '—'}
         </div>
       </td>
@@ -161,7 +154,7 @@ export default function UserRoleEditor({
         </select>
       </td>
       <td className="px-6 py-4">
-        {role === 'bhw_purok' ? (
+        {role === 'bhw' ? (
           <>
             <label className="sr-only" htmlFor={`purok-${profile.id}`}>
               Purok for {profile.full_name || profile.email}
@@ -177,7 +170,7 @@ export default function UserRoleEditor({
               style={{ width: '84px' }}
             />
           </>
-        ) : role === 'pregnant_mother' ? (
+        ) : role === 'patient' ? (
           <>
             <label className="sr-only" htmlFor={`mother-${profile.id}`}>
               Linked record for {profile.full_name || profile.email}
@@ -198,23 +191,23 @@ export default function UserRoleEditor({
             </select>
           </>
         ) : (
-          <span className="text-slate-400">—</span>
+          <span className="text-neutral-400">—</span>
         )}
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-neutral-500">
           {new Date(profile.created_at).toLocaleDateString()}
         </div>
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex flex-col items-end gap-1.5">
           {error && (
-            <p className="text-xs text-red-600 font-medium" role="alert">
+            <p className="text-xs text-green-600 font-medium" role="alert">
               {error}
             </p>
           )}
           {notice && !error && (
-            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1" role="status">
+            <p className="text-xs text-green-600 font-medium flex items-center gap-1" role="status">
               <Check size={12} />
               {notice}
             </p>
@@ -223,7 +216,7 @@ export default function UserRoleEditor({
             type="button"
             onClick={() => void handleSave()}
             disabled={!isDirty || saving}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
