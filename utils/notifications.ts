@@ -1,3 +1,5 @@
+import 'server-only';
+import { createAdminClient } from '@/utils/supabase/admin';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type NotificationInput = {
@@ -31,14 +33,15 @@ export async function createMaternalNotification(
     .maybeSingle();
   if (!mother) return null;
 
-  const { data: profile } = await supabase
+  const delivery = createAdminClient();
+  const { data: profile } = await delivery
     .from('profiles')
     .select('email')
     .eq('pregnant_mother_id', input.pregnantMotherId)
     .maybeSingle();
   const email = profile?.email?.trim().toLowerCase() || null;
 
-  const { data: notification, error } = await supabase
+  const { data: notification, error } = await delivery
     .from('maternal_notifications')
     .insert({
       pregnant_mother_id: input.pregnantMotherId,
@@ -52,12 +55,17 @@ export async function createMaternalNotification(
     .select('id, email, email_status')
     .maybeSingle();
 
-  if (error?.code === '23505') return null;
+  if (error?.code === '23505') {
+    const { data: existing } = await delivery.from('maternal_notifications').select('id, email, email_status').eq('event_key', input.eventKey).maybeSingle();
+    return existing;
+  }
+  if (error) throw new Error(error.message);
   if (error || !notification || notification.email_status === 'skipped' || !notification.email) return notification;
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
@@ -70,13 +78,13 @@ export async function createMaternalNotification(
       }),
     });
     const provider = await response.text();
-    await supabase.from('maternal_notifications').update({
+    await delivery.from('maternal_notifications').update({
       email_status: response.ok ? 'sent' : 'failed',
       email_sent_at: response.ok ? new Date().toISOString() : null,
       email_error: response.ok ? null : provider,
     }).eq('id', notification.id);
   } catch (emailError) {
-    await supabase.from('maternal_notifications').update({
+    await delivery.from('maternal_notifications').update({
       email_status: 'failed',
       email_error: emailError instanceof Error ? emailError.message : String(emailError),
     }).eq('id', notification.id);

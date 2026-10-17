@@ -1,6 +1,6 @@
 import SmsLogTable, { type SmsLogRow } from '@/components/schedule/SmsLogTable';
-import { requireRoles } from '@/utils/auth/roles';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { requireRoles } from '@/utils/auth/roles';
 import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
 import PageHeader from '@/components/ui/PageHeader';
 import { Send } from 'lucide-react';
@@ -8,9 +8,7 @@ import { Send } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function SmsLogPage() {
-  await requireRoles(['admin', 'bhw_head', 'bhw_purok', 'nurse']);
-
-  const supabase = createAdminClient();
+  const { supabase } = await requireRoles(['admin', 'bhw', 'bhw', 'nurse']);
   const { hasReceipts } = await getSmsSchemaCapabilities();
 
   const { data: logs } = await supabase
@@ -73,7 +71,7 @@ export default async function SmsLogPage() {
 
   const senderIds = Array.from(new Set(logRows.map((log) => log.sent_by).filter((v): v is string => !!v)));
   const { data: senders } = senderIds.length
-    ? await supabase.from('profiles').select('id, full_name, email').in('id', senderIds)
+    ? await createAdminClient().from('profiles').select('id, full_name, email').in('id', senderIds)
     : { data: [] };
   const senderById = new Map((senders ?? []).map((s) => [s.id, s]));
 
@@ -160,7 +158,7 @@ export default async function SmsLogPage() {
     <div className="space-y-6 anim-fade-up">
       <PageHeader
         title="SMS Log &amp; Broadcast Dispatch"
-        subtitle="Every message sent through Semaphore with live provider delivery receipts"
+        subtitle="Message submissions and per-recipient provider status"
         icon={Send}
         badge="Messaging Log"
       />

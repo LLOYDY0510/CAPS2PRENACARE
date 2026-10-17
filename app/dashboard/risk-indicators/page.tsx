@@ -10,7 +10,7 @@ export default async function RiskIndicatorsPage() {
 
   const { data: indicators } = await supabase
     .from('risk_indicators')
-    .select('id, label, indicator_type, threshold_value, active')
+    .select('id, label, indicator_type, threshold_value, advice_message, active')
     .order('created_at', { ascending: true });
 
   return (

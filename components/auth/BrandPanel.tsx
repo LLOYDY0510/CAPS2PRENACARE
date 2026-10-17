@@ -1,13 +1,6 @@
 import Logo from '@/components/ui/Logo';
 
-/**
- * The branding half of an auth screen: both logos, the app name and tagline,
- * plus a large media area on desktop.
- *
- * The media area is a reserved, decorative region only — this component makes
- * no decision about the imagery that will eventually fill it, and it collapses
- * on small screens so the form is reached without scrolling past it.
- */
+/* The branding half of an auth screen: both logos, the app name and tagline, plus a large media area on desktop. */
 export default function BrandPanel({
   title = 'Prenatrack',
   tagline = 'Maternal health tracking for barangay health workers and midwives.',

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Keep build type checks in the compiler API.
+  experimental: { useTypeScriptCli: false },
 };
 
 export default nextConfig;

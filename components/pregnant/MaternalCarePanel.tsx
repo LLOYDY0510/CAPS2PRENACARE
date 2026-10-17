@@ -54,29 +54,29 @@ export default function MaternalCarePanel({
   }
 
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-8">
+    <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-8">
       {/* Maternal Health History */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+        <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2 border-b border-neutral-100 pb-3">
           <Activity size={18} className="text-[var(--brand)]" />
           <span>Maternal Health History</span>
         </h2>
 
         {history.length === 0 ? (
-          <p className="text-xs text-slate-400 font-medium py-2">No prior health history recorded.</p>
+          <p className="text-xs text-neutral-400 font-medium py-2">No prior health history recorded.</p>
         ) : (
           <div className="space-y-2.5">
             {history.map((item) => (
-              <div key={item.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <p className="font-bold text-xs sm:text-sm text-slate-800">{item.condition}</p>
-                {item.details && <p className="text-xs text-slate-600 mt-1 font-medium">{item.details}</p>}
+              <div key={item.id} className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100">
+                <p className="font-bold text-xs sm:text-sm text-neutral-800">{item.condition}</p>
+                {item.details && <p className="text-xs text-neutral-600 mt-1 font-medium">{item.details}</p>}
               </div>
             ))}
           </div>
         )}
 
         {canEdit && (
-          <div className="space-y-3 pt-2 bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-3 pt-2 bg-neutral-50/60 p-4 rounded-2xl border border-neutral-100">
             <Input
               value={condition}
               onChange={(e) => setCondition(e.target.value)}
@@ -97,20 +97,20 @@ export default function MaternalCarePanel({
 
       {/* High-Risk Referrals */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Share2 size={18} className="text-indigo-600" />
+        <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2 border-b border-neutral-100 pb-3">
+          <Share2 size={18} className="text-green-600" />
           <span>High-Risk Referrals</span>
         </h2>
 
         {referrals.length === 0 ? (
-          <p className="text-xs text-slate-400 font-medium py-2">No high-risk referrals recorded.</p>
+          <p className="text-xs text-neutral-400 font-medium py-2">No high-risk referrals recorded.</p>
         ) : (
           <div className="space-y-2.5">
             {referrals.map((item) => (
-              <div key={item.id} className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 flex flex-wrap items-center justify-between gap-3">
+              <div key={item.id} className="p-4 rounded-2xl bg-green-50/40 border border-green-100 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex-1 min-w-[220px]">
-                  <p className="font-bold text-xs sm:text-sm text-indigo-950">{item.referred_to}</p>
-                  <p className="text-xs text-slate-600 mt-0.5 font-medium">{item.reason}</p>
+                  <p className="font-bold text-xs sm:text-sm text-green-950">{item.referred_to}</p>
+                  <p className="text-xs text-neutral-600 mt-0.5 font-medium">{item.reason}</p>
                 </div>
                 <div className="w-40">
                   <Select
@@ -131,7 +131,7 @@ export default function MaternalCarePanel({
         )}
 
         {canEdit && (
-          <div className="space-y-3 pt-2 bg-indigo-50/30 p-4 rounded-2xl border border-indigo-100">
+          <div className="space-y-3 pt-2 bg-green-50/30 p-4 rounded-2xl border border-green-100">
             <Input
               value={referredTo}
               onChange={(e) => setReferredTo(e.target.value)}
@@ -151,7 +151,7 @@ export default function MaternalCarePanel({
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}

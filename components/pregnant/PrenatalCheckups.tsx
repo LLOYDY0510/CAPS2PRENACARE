@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { isValidBloodPressure } from '@/utils/maternalForm';
+import { localDate } from '@/utils/calendar';
 import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
 import Button from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -21,7 +23,7 @@ type Checkup = {
   scheduled_for: string | null;
 };
 
-const TRIMESTERS: ('1st' | '2nd' | '3rd')[] = ['1st', '2nd', '3rd'];
+import { TRIMESTERS } from '@/utils/prenatalProjection';
 
 export default function PrenatalCheckups({
   motherId,
@@ -37,7 +39,7 @@ export default function PrenatalCheckups({
   const [checkups, setCheckups]           = useState(initialCheckups);
   const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
   const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '' });
+  const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '', actual_checkup_date: localDate() });
   const [saving, setSaving]               = useState(false);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
   const [error, setError]                 = useState('');
@@ -67,7 +69,7 @@ export default function PrenatalCheckups({
       return;
     }
 
-    if (form.blood_pressure && !/^\d{2,3}\/\d{2,3}$/.test(form.blood_pressure.trim())) {
+    if (form.blood_pressure && !isValidBloodPressure(form.blood_pressure.trim())) {
       setError('Blood pressure must use the format 120/80.');
       return;
     }
@@ -84,6 +86,8 @@ export default function PrenatalCheckups({
           bloodPressure: form.blood_pressure,
           weightKg: weight,
           notes: form.notes,
+          actualCheckupDate: form.actual_checkup_date,
+          scheduledCheckupDate,
         }),
       });
       const result = (await response.json().catch(() => ({}))) as { data?: Checkup; error?: string };
@@ -95,7 +99,7 @@ export default function PrenatalCheckups({
 
       const saved = result.data;
       setCheckups((prev) => [...prev.filter((checkup) => checkup.id !== saved.id), saved]);
-      setForm({ blood_pressure: '', weight_kg: '', notes: '' });
+      setForm({ blood_pressure: '', weight_kg: '', notes: '', actual_checkup_date: localDate() });
       setShowForm(false);
       setNotice('Checkup saved.');
     } catch {
@@ -134,15 +138,15 @@ export default function PrenatalCheckups({
   }
 
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
+    <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
       {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
             <ClipboardCheck size={20} className="text-[var(--brand)]" />
             <span>Prenatal Checkup History</span>
           </h2>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Trimester progress and medical checkup records</p>
+          <p className="text-xs text-neutral-500 font-medium mt-0.5">Trimester progress and medical checkup records</p>
         </div>
 
         <Tabs
@@ -174,14 +178,14 @@ export default function PrenatalCheckups({
 
         {/* Checkup table */}
         {grouped[activeTrimester].length === 0 ? (
-          <p className="text-xs text-slate-400 font-medium text-center py-10">
+          <p className="text-xs text-neutral-400 font-medium text-center py-10">
             No checkups recorded for the {activeTrimester} trimester.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-100 mb-6">
+          <div className="overflow-x-auto rounded-2xl border border-neutral-100 mb-6">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
                   <th className="py-3.5 px-4">Scheduled Date</th>
                   <th className="py-3.5 px-4">Actual Visit Date</th>
                   <th className="py-3.5 px-4">Blood Pressure</th>
@@ -191,12 +195,12 @@ export default function PrenatalCheckups({
                   {canEdit && <th className="py-3.5 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+              <tbody className="divide-y divide-neutral-100 text-xs sm:text-sm">
                 {grouped[activeTrimester].map((c) => {
                   const status = getPrenatalVisitStatus({
                     scheduledFor:
-                      scheduledDates[c.trimester] ??
                       c.scheduled_checkup_date ??
+                      scheduledDates[c.trimester] ??
                       c.scheduled_for ??
                       c.checkup_date,
                     actualCheckupDate: c.actual_checkup_date,
@@ -204,22 +208,22 @@ export default function PrenatalCheckups({
                   });
                   const statusColor =
                     status === 'completed'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      ? 'bg-green-50 text-green-700 border-green-200'
                       : status === 'missed'
-                        ? 'bg-red-50 text-red-600 border-red-200'
-                        : 'bg-slate-100 text-slate-600 border-slate-200';
+                        ? 'bg-green-50 text-green-600 border-green-200'
+                        : 'bg-neutral-100 text-neutral-600 border-neutral-200';
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">
-                        {scheduledDates[c.trimester] ??
-                          c.scheduled_checkup_date ??
+                    <tr key={c.id} className="hover:bg-neutral-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-neutral-800">
+                        {c.scheduled_checkup_date ??
+                          scheduledDates[c.trimester] ??
                           c.scheduled_for ??
                           c.checkup_date}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.actual_checkup_date ?? '—'}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.blood_pressure ?? '—'}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium max-w-xs truncate">{c.notes ?? '—'}</td>
+                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.actual_checkup_date ?? '—'}</td>
+                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.blood_pressure ?? '—'}</td>
+                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
+                      <td className="py-3.5 px-4 text-neutral-600 font-medium max-w-xs truncate">{c.notes ?? '—'}</td>
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
                           {prenatalStatusLabel(status)}
@@ -259,18 +263,22 @@ export default function PrenatalCheckups({
           ) : (
             <form
               onSubmit={handleAdd}
-              className="bg-slate-50/90 rounded-2xl border border-slate-200/80 p-5 space-y-4"
+              className="bg-neutral-50/90 rounded-2xl border border-neutral-200/80 p-5 space-y-4"
             >
-              <h3 className="text-sm font-bold text-slate-900">
+            <Input label="Actual attendance date" type="date" required max={localDate()}
+              value={form.actual_checkup_date}
+              onChange={(event) => setForm((current) => ({ ...current, actual_checkup_date: event.target.value }))} />
+
+              <h3 className="text-sm font-bold text-neutral-900">
                 New {activeTrimester} Trimester Checkup Record
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
                     Scheduled Checkup Date
                   </label>
-                  <div className="h-11 px-4 flex items-center bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700">
+                  <div className="h-11 px-4 flex items-center bg-white rounded-2xl border border-neutral-200 text-xs sm:text-sm font-semibold text-neutral-700">
                     {scheduledDates[activeTrimester] ?? 'No schedule set'}
                   </div>
                 </div>

@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { shouldEndSessionOnLoad } from '@/utils/auth/session-persistence';
 
-/**
- * Enforces the "remember me" decision made on the sign-in form.
- *
- * Mounted inside the authenticated area only, so it never runs on the public
- * auth screens. See utils/auth/session-persistence.ts for why this is the only
- * correct way to honour the choice with `@supabase/ssr`.
- */
+/* Enforces the "remember me" decision made on the sign-in form. */
 export default function SessionPersistenceGuard() {
   const router = useRouter();
 

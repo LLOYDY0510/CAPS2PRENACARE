@@ -1,23 +1,4 @@
--- =============================================================================
--- 011_repair_missing_schema.sql
 -- Paste-and-run repair for the hosted Supabase project.
--- Every statement is idempotent, so it is safe to run more than once.
---
--- Verified missing on the live database (2026-09-26) while the app code already
--- reads/writes them:
---   1. prenatal_schedules.trimester                    (source: 004)
---   2. prenatal_checkups.scheduled_checkup_date        (source: 003)
---      prenatal_checkups.actual_checkup_date
---   3. pregnant_mothers.checkup_recorded               (source: 003)
---   4. prenatal_schedule_recipients.created_at         (source: 010)
---   5. unique keys the app's upserts depend on
---      (prenatal_follow_ups, prenatal_schedule_recipients, monthly_tips)
---   6. sms_logs -> profiles relationship used by /dashboard/sms-log
--- =============================================================================
-
--- -----------------------------------------------------------------------------
--- 1. Prenatal schedule trimester (from 004_prenatal_schedule_trimesters.sql)
--- -----------------------------------------------------------------------------
 alter table public.prenatal_schedules
   add column if not exists trimester text;
 
@@ -29,10 +10,7 @@ alter table public.prenatal_schedules
 
 create index if not exists prenatal_schedules_trimester_date_idx
   on public.prenatal_schedules(trimester, visit_date);
-
--- -----------------------------------------------------------------------------
 -- 2. Scheduled vs actual checkup dates (from 003_prenatal_trimester_dates.sql)
--- -----------------------------------------------------------------------------
 alter table public.prenatal_checkups
   add column if not exists scheduled_checkup_date date,
   add column if not exists actual_checkup_date date;
@@ -48,10 +26,7 @@ where scheduled_checkup_date is null
 
 create index if not exists prenatal_checkups_trimester_date_idx
   on public.prenatal_checkups(pregnant_mother_id, trimester, scheduled_checkup_date);
-
--- -----------------------------------------------------------------------------
 -- 3. Has-checkup flag on the mother record (from 003)
--- -----------------------------------------------------------------------------
 alter table public.pregnant_mothers
   add column if not exists checkup_recorded boolean not null default false;
 
@@ -99,19 +74,13 @@ set checkup_recorded = exists (
   where pc.pregnant_mother_id = pm.id
     and pc.actual_checkup_date is not null
 );
-
--- -----------------------------------------------------------------------------
 -- 4. Recipients junction table timestamp (from 010_missing_tables.sql)
--- -----------------------------------------------------------------------------
 alter table public.prenatal_schedule_recipients
   add column if not exists created_at timestamptz not null default now();
-
--- -----------------------------------------------------------------------------
 -- 5. Unique keys required by upserts and by the intended schema
---    checkPrenatalReminders.ts upserts on (schedule_id, pregnant_mother_id),
---    which fails with "could not find unique constraint" without this key.
---    Verified 0 duplicate rows before adding them.
--- -----------------------------------------------------------------------------
+-- checkPrenatalReminders.ts upserts on (schedule_id, pregnant_mother_id),
+-- which fails with "could not find unique constraint" without this key.
+-- Verified 0 duplicate rows before adding them.
 delete from public.prenatal_follow_ups a
   using public.prenatal_follow_ups b
   where a.schedule_id = b.schedule_id
@@ -138,13 +107,10 @@ delete from public.monthly_tips a
 
 create unique index if not exists monthly_tips_unique_month_risk
   on public.monthly_tips(month, risk_level);
-
--- -----------------------------------------------------------------------------
 -- 6. sms_logs -> profiles relationship
---    /dashboard/sms-log selects profiles(full_name, email) from sms_logs and
---    currently fails with PGRST200. The FK makes the embed resolvable.
---    Any auth user without a profile row is inserted first so the FK stays valid.
--- -----------------------------------------------------------------------------
+-- /dashboard/sms-log selects profiles(full_name, email) from sms_logs and
+-- currently fails with PGRST200. The FK makes the embed resolvable.
+-- Any auth user without a profile row is inserted first so the FK stays valid.
 insert into public.profiles (id, email, full_name, role)
 select u.id, u.email, coalesce(u.raw_user_meta_data ->> 'full_name', u.email), 'pending'
 from auth.users u
@@ -166,8 +132,5 @@ begin
   end if;
 end;
 $$;
-
--- -----------------------------------------------------------------------------
 -- 7. Reload the PostgREST schema cache so the new columns are served at once
--- -----------------------------------------------------------------------------
 notify pgrst, 'reload schema';

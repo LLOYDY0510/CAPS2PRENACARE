@@ -16,7 +16,7 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
     <div className="relative inline-flex items-center">
       <Search
         size={16}
-        className="absolute left-3 text-slate-400 pointer-events-none"
+        className="absolute left-3 text-neutral-400 pointer-events-none"
         aria-hidden
       />
 
@@ -35,7 +35,7 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
           type="button"
           onClick={() => { onChange(''); inputRef.current?.focus(); }}
           aria-label="Clear search"
-          className="absolute right-2.5 flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors"
+          className="absolute right-2.5 flex items-center justify-center w-6 h-6 rounded-full bg-neutral-200 text-neutral-500 hover:bg-neutral-300 transition-colors"
         >
           <X size={12} />
         </button>

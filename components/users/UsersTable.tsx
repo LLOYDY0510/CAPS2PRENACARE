@@ -1,171 +1,21 @@
 'use client';
-
-import { useState, useMemo } from 'react';
-import SearchBar from '@/components/ui/SearchBar';
-import UserRoleEditor from '@/components/users/UserRoleEditor';
-import EmptyState from '@/components/ui/EmptyState';
-import Pagination from '@/components/ui/Pagination';
-import { X, Users } from 'lucide-react';
-
-type Profile = {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  role: string | null;
-  purok: string | null;
-  pregnant_mother_id: string | null;
-  created_at: string;
-};
-
-type MotherOption = {
-  id: string;
-  full_name: string;
-  serial_no: string | null;
-};
-
-const PAGE_SIZE = 10;
-
-const ROLE_LABELS: Record<string, string> = {
-  pending:          'Pending',
-  bhw_head:         'BHW Head',
-  bhw_purok:        'BHW (Purok)',
-  nurse:            'Nurse',
-  admin:            'Admin',
-  pregnant_mother:  'Pregnant Mother',
-};
-
-export default function UsersTable({
-  profiles,
-  availableMothers,
-  allMothers,
-}: {
-  profiles: Profile[];
-  availableMothers: MotherOption[];
-  allMothers: MotherOption[];
-}) {
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Distinct roles in data
-  const roles = useMemo(() => {
-    const set = new Set(profiles.map((p) => p.role ?? 'pending'));
-    return Array.from(set).sort();
-  }, [profiles]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return profiles.filter((p) => {
-      if (roleFilter !== 'all' && (p.role ?? 'pending') !== roleFilter) return false;
-      if (q) {
-        const matchName  = (p.full_name ?? '').toLowerCase().includes(q);
-        const matchEmail = (p.email ?? '').toLowerCase().includes(q);
-        const matchPurok = (p.purok ?? '').toLowerCase().includes(q);
-        if (!matchName && !matchEmail && !matchPurok) return false;
-      }
-      return true;
-    });
-  }, [profiles, search, roleFilter]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const page = Math.min(currentPage, totalPages);
-
-  const paginated = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
-
-  const hasFilters = search || roleFilter !== 'all';
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-center">
-        <SearchBar
-          value={search}
-          onChange={(val) => { setSearch(val); setCurrentPage(1); }}
-          placeholder="Search by name or email…"
-        />
-
-        <select
-          value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-          className="form-select"
-          style={{ width: 'auto', minWidth: '160px' }}
-          aria-label="Filter by role"
-        >
-          <option value="all">All Roles</option>
-          {roles.map((r) => (
-            <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
-          ))}
-        </select>
-
-        {hasFilters && (
-          <button
-            onClick={() => { setSearch(''); setRoleFilter('all'); setCurrentPage(1); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-          >
-            <X size={14} />
-            Clear filters
-          </button>
-        )}
-
-        <span className="ml-auto text-xs text-slate-500 font-medium">
-          {filtered.length} of {profiles.length} accounts
-        </span>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden p-6 space-y-4">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200/60 bg-slate-50/50">
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Purok / Linked Record</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200/60">
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6}>
-                    <EmptyState
-                      icon={Users}
-                      title={hasFilters ? 'No accounts match filters' : 'No user accounts found'}
-                      description={hasFilters ? 'Try adjusting your search or filter criteria.' : 'When users register, they will appear here.'}
-                    />
-                  </td>
-                </tr>
-              )}
-              {paginated.map((p) => (
-                <UserRoleEditor
-                  key={p.id}
-                  profile={p}
-                  availableMothers={
-                    p.pregnant_mother_id
-                      ? [
-                          ...availableMothers,
-                          ...(allMothers.filter((m) => m.id === p.pregnant_mother_id)),
-                        ]
-                      : availableMothers
-                  }
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Component */}
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filtered.length}
-          itemsPerPage={PAGE_SIZE}
-        />
-      </div>
-    </div>
-  );
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Modal, { ConfirmDialog } from '@/components/ui/Modal';
+import type { Profile } from '@/types';
+type MotherOption={id:string;full_name:string;serial_no:string|null};
+const empty={id:'',full_name:'',email:'',password:'',role:'patient',account_status:'pending',purok:'',pregnant_mother_id:'',access_all_zones:false,can_manage_bhw:false};
+export default function UsersTable({profiles,allMothers}: {profiles:Profile[];availableMothers:MotherOption[];allMothers:MotherOption[]}) {
+  const router=useRouter();const [form,setForm]=useState<typeof empty|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [deleting,setDeleting]=useState<string|null>(null);const [page,setPage]=useState(1);
+  async function save(event:React.FormEvent){event.preventDefault();if(!form)return;setBusy(true);setError('');try{const response=await fetch(form.id?'/api/admin/users':'/api/admin/create-user',{method:form.id?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});const result=await response.json();if(!response.ok)throw new Error(result.error??'Save failed.');if(result.warning){setError(result.warning);router.refresh();return;}setForm(null);router.refresh();}catch(error){setError(error instanceof Error?error.message:'Save failed.');}finally{setBusy(false);}}
+  async function remove(){setBusy(true);try{const response=await fetch('/api/admin/users',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:deleting})});const result=await response.json();if(!response.ok)throw new Error(result.error);setDeleting(null);router.refresh();}catch(error){setError(error instanceof Error?error.message:'Delete failed.');}finally{setBusy(false);}}
+  return <section className="card p-6"><div className="flex justify-end mb-4"><button className="btn-primary" onClick={()=>{setError('');setForm({...empty});}}>Add User</button></div>{error&&<p role="alert" className="my-3">{error}</p>}<div className="overflow-auto"><table className="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Account Status</th><th>Zone/Purok</th><th>Created</th><th>Action</th></tr></thead><tbody>{profiles.slice((page-1)*25,page*25).map(user=><tr key={user.id}><td>{user.full_name}</td><td>{user.email}</td><td>{user.role}</td><td>{user.account_status}</td><td>{user.purok??'—'}</td><td>{user.created_at?.slice(0,10)}</td><td><div className="flex gap-3"><button onClick={()=>{setError('');setForm({...empty,...user,full_name:user.full_name??'',email:user.email??'',role:user.role??'patient',purok:user.purok??'',pregnant_mother_id:user.pregnant_mother_id??''});}}>Edit</button><button onClick={()=>setDeleting(user.id)}>Delete</button></div></td></tr>)}</tbody></table></div><div className="flex gap-3 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page}</span><button disabled={page*25>=profiles.length} onClick={()=>setPage(page+1)}>Next</button></div>
+  <Modal isOpen={form!==null} title={form?.id?'Edit User':'Add User'} onClose={()=>{if(!busy&&window.confirm('Discard unsaved changes?'))setForm(null);}}><form onSubmit={save} className="space-y-4">{form&&<>
+    {(['full_name','email',...(!form.id?['password']:[])] as const).map(key=><label className="block" key={key}>{key.replaceAll('_',' ')}<input required className="form-input w-full" type={key==='password'?'password':key==='email'?'email':'text'} value={String(form[key as keyof typeof empty])} onChange={e=>setForm({...form,[key]:e.target.value})}/></label>)}
+    <label className="block">Role<select className="form-select" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>{['patient','nurse','bhw','admin'].map(role=><option key={role}>{role}</option>)}</select></label>
+    <label className="block">Account Status<select className="form-select" value={form.account_status} onChange={e=>setForm({...form,account_status:e.target.value})}>{['pending','active','disabled'].map(status=><option key={status}>{status}</option>)}</select></label>
+    {form.role==='bhw'&&<><label className="block">Zone/Purok<input className="form-input" value={form.purok} onChange={e=>setForm({...form,purok:e.target.value})}/></label><label className="flex gap-3"><input type="checkbox" checked={form.access_all_zones} onChange={e=>setForm({...form,access_all_zones:e.target.checked})}/>All-zone access</label><label className="flex gap-3"><input type="checkbox" checked={form.can_manage_bhw} onChange={e=>setForm({...form,can_manage_bhw:e.target.checked})}/>Coordinate BHW assignments</label></>}
+    {form.role==='patient'&&<label className="block">Linked patient<select className="form-select" value={form.pregnant_mother_id} onChange={e=>setForm({...form,pregnant_mother_id:e.target.value})}><option value="">Not linked</option>{allMothers.map(mother=><option value={mother.id} key={mother.id}>{mother.full_name} · {mother.serial_no}</option>)}</select></label>}
+    <div className="flex gap-3"><button className="btn-primary" disabled={busy} type="submit">{busy?'Saving…':'Save User'}</button><button type="button" className="btn-secondary" onClick={()=>setForm(null)}>Cancel</button></div>
+  </>}</form></Modal><ConfirmDialog isOpen={deleting!==null} onClose={()=>setDeleting(null)} onConfirm={remove} title="Delete account?" description="The login will be removed. Clinical records and activity history remain. This cannot be undone." isLoading={busy}/></section>;
 }

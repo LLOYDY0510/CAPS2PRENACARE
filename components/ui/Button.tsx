@@ -31,15 +31,15 @@ export default function Button({
 
   const variantClasses: Record<ButtonVariant, string> = {
     primary:
-      'bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)] border border-transparent shadow-md shadow-teal-700/20 hover:shadow-lg hover:shadow-teal-700/30 active:scale-98',
+      'bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)] border border-transparent shadow-md shadow-green-700/20 hover:shadow-lg hover:shadow-green-700/30 active:scale-98',
     secondary:
-      'bg-teal-50 text-[var(--brand)] hover:bg-teal-100 border border-teal-200/60 shadow-xs hover:shadow-sm active:scale-98',
+      'bg-green-50 text-[var(--brand)] hover:bg-green-100 border border-green-200/60 shadow-xs hover:shadow-sm active:scale-98',
     outline:
-      'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-xs hover:border-slate-300 active:scale-98',
+      'bg-white text-neutral-700 hover:bg-neutral-50 border border-neutral-200 shadow-xs hover:border-neutral-300 active:scale-98',
     ghost:
-      'bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border border-transparent',
+      'bg-transparent text-neutral-600 hover:bg-neutral-100/80 hover:text-neutral-900 border border-transparent',
     danger:
-      'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 shadow-xs active:scale-98',
+      'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200/60 shadow-xs active:scale-98',
   };
 
   const sizeClasses: Record<ButtonSize, string> = {

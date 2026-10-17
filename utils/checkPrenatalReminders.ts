@@ -41,13 +41,7 @@ async function recordReminderAttempt(
   if (error) console.error('could not record reminder attempt', error.message);
 }
 
-/**
- * Writes the per-mother reminder history for a schedule.
- *
- * The unique key used by the upsert arrives with migration 014. Before then the
- * rows are deleted and re-inserted instead, which needs no index and produces
- * the same end state.
- */
+/* Writes the per-mother reminder history for a schedule. */
 export async function recordReminderHistory(
   supabase: ReturnType<typeof createAdminClient>,
   scheduleId: string,
@@ -60,9 +54,9 @@ export async function recordReminderHistory(
     .filter((id): id is string => !!id);
   if (motherIds.length === 0) return;
 
-  const { hasReceipts } = await getSmsSchemaCapabilities();
+  const { hasReminderSendKind } = await getSmsSchemaCapabilities();
 
-  if (hasReceipts) {
+  if (hasReminderSendKind) {
     const { error } = await supabase
       .from('prenatal_schedule_reminders')
       .upsert(
@@ -92,14 +86,7 @@ export async function recordReminderHistory(
 /** A failing send is not retried more often than this. */
 const RETRY_COOLDOWN_MS = 60 * 60 * 1000;
 
-/**
- * In-process guard.
- *
- * Two browser tabs, or the layout plus the cron endpoint, can otherwise run the
- * job at the same moment and both reach the provider. The unique dedupe key on
- * sms_recipient_receipts is the durable guard; this removes the pointless work
- * and log noise in the meantime.
- */
+/* In-process guard. */
 let running: Promise<unknown> | null = null;
 const lastAttempt = new Map<string, number>();
 
@@ -116,15 +103,7 @@ function markAttempted(scheduleId: string) {
   lastAttempt.set(scheduleId, Date.now());
 }
 
-/**
- * Sends the automatic "one day before" prenatal reminder.
- *
- * Runs for visits dated today or tomorrow - today is included so a schedule
- * created for the current day is not silently skipped, which is exactly what
- * happened before. Re-running is harmless: sms_recipient_receipts holds a
- * unique dedupe_key per (schedule, mother), so a second run reports the
- * mothers as already sent instead of texting them again.
- */
+/* Sends the automatic "one day before" prenatal reminder. */
 export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunReport> {
   const supabase = createAdminClient();
   const report: ReminderRunReport = {
@@ -157,7 +136,7 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
       'automatic reminders: could not read schedules —',
       describeServiceKeyError(error),
     );
-    return report;
+    throw new Error(describeServiceKeyError(error));
   }
 
   const scheduleRows = (schedules ?? []) as unknown as Array<{
@@ -226,6 +205,7 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
       scheduleId: schedule.id,
       sentBy: null,
       dedupeDay: today,
+      dedupeRevision: schedule.visit_date,
     });
 
     markAttempted(schedule.id);
@@ -260,7 +240,7 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
         category: 'appointment',
         recipientRole: 'nurse',
         title: 'Prenatal reminders sent',
-        message: `${result.sent.length} reminder SMS were sent for the ${schedule.visit_date} visit (~${estimateCredits(message, result.sent.length)} credits).`,
+        message: `${result.sent.length} mothers were notified with ${result.submittedNumbers} SMS for the ${schedule.visit_date} visit (~${estimateCredits(message, result.submittedNumbers)} credits).`,
       });
     } else if (result.failed.length > 0) {
       // Surface the failure to staff so it can be retried by hand.
@@ -286,16 +266,18 @@ export async function createMissedVisitFollowUps(): Promise<number> {
   const supabase = createAdminClient();
   const today = manilaToday();
 
-  const { data: schedules } = await supabase
+  const { data: schedules, error: scheduleError } = await supabase
     .from('prenatal_schedules')
-    .select('id, visit_date')
+    .select('id, visit_date, reminder_attempted_at')
     .lt('visit_date', today)
     .eq('status', 'scheduled')
     .eq('missed_follow_up_sent', false);
+  if (scheduleError) throw new Error(scheduleError.message);
 
   let followUpCount = 0;
 
   for (const schedule of schedules ?? []) {
+    if (isInCooldown(schedule)) continue;
     const { data: links } = await supabase
       .from('prenatal_schedule_recipients')
       .select('pregnant_mother_id')
@@ -366,7 +348,13 @@ export async function createMissedVisitFollowUps(): Promise<number> {
       scheduleId: schedule.id,
       sentBy: null,
       dedupeDay: today,
+      dedupeRevision: schedule.visit_date,
     });
+
+    markAttempted(schedule.id);
+    await recordReminderAttempt(supabase, schedule.id);
+    const complete = result.failed.length === 0 && result.sent.length + result.skipped.length >= missedMotherIds.length &&
+      !result.skipped.some((item) => item.detail?.includes('reconciliation'));
 
     if (result.sent.length) {
       await supabase
@@ -386,7 +374,7 @@ export async function createMissedVisitFollowUps(): Promise<number> {
 
     await supabase
       .from('prenatal_schedules')
-      .update({ status: 'missed', missed_follow_up_sent: true })
+      .update({ status: complete ? 'missed' : 'scheduled', missed_follow_up_sent: complete })
       .eq('id', schedule.id);
   }
 

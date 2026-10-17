@@ -28,7 +28,7 @@ export default function Skeleton({
 
   return (
     <div
-      className={`animate-pulse bg-slate-200/70 ${variantClasses[variant]} ${className}`}
+      className={`animate-pulse bg-neutral-200/70 ${variantClasses[variant]} ${className}`}
       style={style}
     />
   );
@@ -36,7 +36,7 @@ export default function Skeleton({
 
 export function SkeletonCard() {
   return (
-    <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm space-y-4">
+    <div className="bg-white rounded-[24px] p-6 border border-neutral-100 shadow-sm space-y-4">
       <div className="flex items-center gap-3">
         <Skeleton variant="circular" className="w-10 h-10 shrink-0" />
         <div className="space-y-2 flex-1">

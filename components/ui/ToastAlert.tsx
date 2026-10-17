@@ -19,31 +19,31 @@ export function Alert({ type = 'info', title, children, onClose, className = '' 
     { bg: string; border: string; text: string; iconBg: string; icon: React.ReactNode }
   > = {
     info: {
-      bg: 'bg-blue-50/80',
-      border: 'border-blue-200/80',
-      text: 'text-blue-900',
-      iconBg: 'bg-blue-100 text-blue-700',
+      bg: 'bg-green-50/80',
+      border: 'border-green-200/80',
+      text: 'text-green-900',
+      iconBg: 'bg-green-100 text-green-700',
       icon: <Info size={18} />,
     },
     success: {
-      bg: 'bg-emerald-50/80',
-      border: 'border-emerald-200/80',
-      text: 'text-emerald-900',
-      iconBg: 'bg-emerald-100 text-emerald-700',
+      bg: 'bg-green-50/80',
+      border: 'border-green-200/80',
+      text: 'text-green-900',
+      iconBg: 'bg-green-100 text-green-700',
       icon: <CheckCircle2 size={18} />,
     },
     warning: {
-      bg: 'bg-amber-50/80',
-      border: 'border-amber-200/80',
-      text: 'text-amber-900',
-      iconBg: 'bg-amber-100 text-amber-700',
+      bg: 'bg-green-50/80',
+      border: 'border-green-200/80',
+      text: 'text-green-900',
+      iconBg: 'bg-green-100 text-green-700',
       icon: <AlertTriangle size={18} />,
     },
     error: {
-      bg: 'bg-red-50/80',
-      border: 'border-red-200/80',
-      text: 'text-red-900',
-      iconBg: 'bg-red-100 text-red-700',
+      bg: 'bg-green-50/80',
+      border: 'border-green-200/80',
+      text: 'text-green-900',
+      iconBg: 'bg-green-100 text-green-700',
       icon: <AlertCircle size={18} />,
     },
   };
@@ -64,7 +64,7 @@ export function Alert({ type = 'info', title, children, onClose, className = '' 
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded-lg hover:bg-black/5 text-slate-400 hover:text-slate-600 transition-colors"
+          className="p-1 rounded-lg hover:bg-black/5 text-neutral-400 hover:text-neutral-600 transition-colors"
         >
           <X size={16} />
         </button>

@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isUserRole, isStaffRole } from '@/utils/auth/roles';
 
-/**
- * Marks one notification, or every unread notification, as read.
- * The update is issued with the caller's own session so the
- * maternal_notifications RLS policy is the enforcement boundary; the filters
- * below only narrow the target set.
- */
+/* Marks one notification, or every unread notification, as read. */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -15,11 +10,11 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, purok, pregnant_mother_id')
+    .select('role, purok, pregnant_mother_id, account_status, access_all_zones')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile || !isUserRole(profile.role)) {
+  if (!profile || profile.account_status !== 'active' || !isUserRole(profile.role)) {
     return NextResponse.json({ error: 'Your account has no valid role.' }, { status: 403 });
   }
 
@@ -39,16 +34,16 @@ export async function POST(request: NextRequest) {
   if (isStaffRole(profile.role)) {
     filters.push('recipient_role.is.null');
     filters.push(`recipient_role.eq.${profile.role}`);
-    if (profile.role === 'bhw_purok' && profile.purok) {
+    if (profile.role === 'bhw' && !profile.access_all_zones && profile.purok) {
       filters.push(`recipient_purok.eq.${profile.purok}`);
     }
   }
-  if (profile.role === 'pregnant_mother' && profile.pregnant_mother_id) {
+  if (profile.role === 'patient' && profile.pregnant_mother_id) {
     // A mother may only ever mark the notifications on her own record; she is
     // never matched by recipient_role, which could reach other patients.
     filters.length = 0;
     filters.push(`pregnant_mother_id.eq.${profile.pregnant_mother_id}`);
-  } else if (profile.role === 'pregnant_mother') {
+  } else if (profile.role === 'patient') {
     return NextResponse.json({ error: 'Your account is not linked to a record.' }, { status: 403 });
   }
 

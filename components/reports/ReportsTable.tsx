@@ -1,5 +1,7 @@
 'use client';
 
+import { localDate } from '@/utils/calendar';
+
 import { useState, useMemo, useRef } from 'react';
 import SearchBar from '@/components/ui/SearchBar';
 import { Select } from '@/components/ui/Input';
@@ -7,8 +9,7 @@ import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import ReportExport, { type ReportRow } from '@/components/reports/ReportExport';
 import RiskBadge from '@/components/ui/RiskBadge';
-import StatCard from '@/components/ui/StatCard';
-import { Printer, RotateCcw, Users, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Printer, RotateCcw } from 'lucide-react';
 
 export type ReportRowWithId = ReportRow & { _id: string };
 
@@ -58,7 +59,7 @@ const REPORT_TYPES: { value: ReportType; label: string; description: string }[] 
 ];
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDate();
 }
 function daysFromToday(dateStr: string): number {
   const d = new Date(dateStr);
@@ -129,12 +130,6 @@ export default function ReportsTable({
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  const stats = useMemo(() => ({
-    total:    byType.length,
-    highRisk: byType.filter((r) => r.risk_level === 'high').length,
-    lowRisk:  byType.filter((r) => r.risk_level === 'low').length,
-    noCheckup: byType.filter((r) => (meta[r._id]?.checkupCount ?? 0) === 0).length,
-  }), [byType, meta]);
 
   const activeReportDef = REPORT_TYPES.find((t) => t.value === reportType)!;
   const hasSecondary    = search || zoneFilter !== 'all';
@@ -150,14 +145,14 @@ export default function ReportsTable({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="card p-6 space-y-6">
       {/* SCREEN CONTROLS */}
       <div className="no-print space-y-6">
         {/* Export & Print Bar */}
-        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900">{activeReportDef.label}</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{activeReportDef.description}</p>
+            <h2 className="text-base font-bold text-neutral-900">{activeReportDef.label}</h2>
+            <p className="text-xs text-neutral-500 font-medium mt-0.5">{activeReportDef.description}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handlePrint} leftIcon={<Printer size={16} />}>
@@ -168,8 +163,8 @@ export default function ReportsTable({
         </div>
 
         {/* Report Type Pill Segmented Tabs */}
-        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-4 space-y-3">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 space-y-3">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
             Select Report Type
           </p>
           <div className="flex flex-wrap gap-2">
@@ -181,8 +176,8 @@ export default function ReportsTable({
                   onClick={() => { setReportType(t.value); setSearch(''); setZoneFilter('all'); setCurrentPage(1); }}
                   className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
                     active
-                      ? 'bg-[var(--brand)] text-white shadow-md shadow-teal-700/20'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                      ? 'bg-[var(--brand)] text-white shadow-md shadow-green-700/20'
+                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-neutral-900'
                   }`}
                 >
                   {t.label}
@@ -193,15 +188,10 @@ export default function ReportsTable({
         </div>
 
         {/* Summary Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard title="Showing Records" value={byType.length} trend="Active report scope" icon={Users} variant="brand" />
-          <StatCard title="High Risk" value={stats.highRisk} trend="High risk cases" icon={AlertTriangle} variant="danger" />
-          <StatCard title="Low Risk" value={stats.lowRisk} trend="Low risk cases" icon={ShieldCheck} variant="success" />
-          <StatCard title="No Checkups" value={stats.noCheckup} trend="Zero recorded visits" icon={HelpCircle} variant="warning" />
-        </div>
+
 
         {/* Search & Zone Filters */}
-        <div className="bg-white rounded-[24px] border border-slate-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
             <div className="flex-1 min-w-[220px]">
               <SearchBar
@@ -228,25 +218,25 @@ export default function ReportsTable({
               </Button>
             )}
           </div>
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+          <span className="text-xs font-bold text-neutral-500 whitespace-nowrap">
             {filtered.length} of {byType.length} records shown
           </span>
         </div>
       </div>
 
       {/* PRINT HEADER */}
-      <div className="print-only hidden mb-6 pb-4 border-b-2 border-slate-800">
+      <div className="print-only hidden mb-6 pb-4 border-b-2 border-neutral-800">
         <h1 className="text-xl font-bold">Prenatrack — {activeReportDef.label}</h1>
-        <p className="text-xs text-slate-600 mt-1">{activeReportDef.description}</p>
-        <p className="text-xs text-slate-500 mt-2 font-mono">Generated: {printDate()} · {filtered.length} records</p>
+        <p className="text-xs text-neutral-600 mt-1">{activeReportDef.description}</p>
+        <p className="text-xs text-neutral-500 mt-2 font-mono">Generated: {printDate()} · {filtered.length} records</p>
       </div>
 
       {/* REPORT TABLE */}
-      <div ref={printRef} className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden" id="report-table">
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+      <div ref={printRef} className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 overflow-hidden" id="report-table">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-100">
           <table className="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
                 <th className="py-3.5 px-3">#</th>
                 <th className="py-3.5 px-3">Serial No.</th>
                 <th className="py-3.5 px-3">Name</th>
@@ -260,10 +250,10 @@ export default function ReportsTable({
                 <th className="py-3.5 px-3">Risk Level</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="text-center py-10 text-slate-400 font-medium">
+                  <td colSpan={11} className="text-center py-10 text-neutral-400 font-medium">
                     No records match the report criteria.
                   </td>
                 </tr>
@@ -271,17 +261,17 @@ export default function ReportsTable({
               {paginated.map((r, idx) => {
                 const rowNumber = (page - 1) * PAGE_SIZE + idx + 1;
                 return (
-                  <tr key={r._id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-3 text-slate-400 font-semibold">{rowNumber}</td>
-                    <td className="py-3.5 px-3 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
-                    <td className="py-3.5 px-3 font-bold text-slate-800">{r.name || '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.age ?? '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.contact_number ?? '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.edd ?? '—'}</td>
-                    <td className="py-3.5 px-3 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
-                    <td className="py-3.5 px-3 font-bold text-slate-800">{meta[r._id]?.checkupCount ?? 0}</td>
+                  <tr key={r._id} className="hover:bg-neutral-50/80 transition-colors">
+                    <td className="py-3.5 px-3 text-neutral-400 font-semibold">{rowNumber}</td>
+                    <td className="py-3.5 px-3 font-mono text-xs font-semibold text-neutral-500">{r.serial_no ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-neutral-800">{r.name || '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.purok ? `Zone ${r.purok}` : '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.age ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.contact_number ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.lmp ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.edd ?? '—'}</td>
+                    <td className="py-3.5 px-3 text-neutral-600 font-medium">{r.gravida_para ?? '—'}</td>
+                    <td className="py-3.5 px-3 font-bold text-neutral-800">{meta[r._id]?.checkupCount ?? 0}</td>
                     <td className="py-3.5 px-3">
                       <RiskBadge riskLevel={r.risk_level} />
                     </td>

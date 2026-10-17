@@ -1,6 +1,6 @@
+import { assertScheduleScope } from '@/utils/auth/scope';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { canManageSchedules, canSendSMS } from '@/utils/auth/permissions';
+import { requireApiPermission } from '@/utils/auth/api';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { sendSmsAndLog } from '@/utils/sms/sendSms';
 import { estimateCredits, prenatalReminderMessage, prenatalReminderMessageToday } from '@/utils/sms/templates';
@@ -10,45 +10,18 @@ import { recordReminderHistory } from '@/utils/checkPrenatalReminders';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Sends the reminder for a schedule immediately, to real phone numbers, through
- * the live Semaphore account.
- *
- * Duplicate protection is database-enforced: a mother who already received
- * this schedule's manual reminder today is reported as skipped, not re-sent.
- */
+/* Sends the reminder for a schedule immediately, to real phone numbers, through SMS Gateway Public Cloud. */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, purok')
-      .eq('id', user.id)
-      .maybeSingle();
-    const role = profile?.role ?? 'pending';
-
-    if (!canSendSMS(role)) {
-      return NextResponse.json({ error: 'You are not authorized to send SMS.' }, { status: 403 });
-    }
-    // A BHW (purok) may text the mothers she is responsible for, but only a
-    // schedule manager can press the schedule's own reminder button.
-    if (!canManageSchedules(role)) {
-      return NextResponse.json(
-        { error: 'Only the BHW Manager, nurse, or admin can send schedule reminders.' },
-        { status: 403 },
-      );
-    }
-
+    const auth = await requireApiPermission('canManageSchedules');
+    if (auth.error) return auth.error;
+    const { user } = auth;
     const body = await req.json();
     const scheduleId = typeof body?.scheduleId === 'string' ? body.scheduleId : null;
     if (!scheduleId) return NextResponse.json({ error: 'scheduleId is required.' }, { status: 400 });
 
-    const admin = createAdminClient();
+    await assertScheduleScope(auth.profile, scheduleId);
+    const admin = createAdminClient(auth.user.id);
     const { data: schedule, error: scheduleError } = await admin
       .from('prenatal_schedules')
       .select('id, visit_date, status')
@@ -114,6 +87,7 @@ export async function POST(req: NextRequest) {
       scheduleId,
       sentBy: user.id,
       dedupeDay: today,
+      dedupeRevision: schedule.visit_date,
     });
 
     // A manual send is an explicit human action, so record it against the
@@ -129,7 +103,8 @@ export async function POST(req: NextRequest) {
       sent: result.sent,
       skipped: result.skipped,
       failed: result.failed,
-      estimatedCredits: estimateCredits(text, withNumbers.length),
+      submittedNumbers: result.submittedNumbers,
+      estimatedCredits: estimateCredits(text, new Set(withNumbers.map((target) => toE164(target.contactNumber)).filter(Boolean)).size),
       recipientsWithValidNumbers: withNumbers.filter((m) => toE164(m.contactNumber)).length,
     });
   } catch (error) {

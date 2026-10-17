@@ -1,3 +1,4 @@
+import { scheduleProjection, emptyTrimesterDates } from '@/utils/prenatalProjection';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
@@ -5,11 +6,9 @@ import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import InfoRow from '@/components/ui/InfoRow';
 import PageHeader from '@/components/ui/PageHeader';
 import RiskBadge from '@/components/ui/RiskBadge';
-import Button from '@/components/ui/Button';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
-import { User, ClipboardList, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { User } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +35,7 @@ export default async function ViewPregnantMotherPage({
     .single();
 
   const role = profile?.role ?? 'pending';
-  const canEdit = EDIT_ROLES.includes(role as UserRole);
+  const canEdit = showCheckups && (role === 'nurse' || EDIT_ROLES.includes(role as UserRole));
 
   const { data: record } = await supabase
     .from('pregnant_mothers')
@@ -62,19 +61,13 @@ export default async function ViewPregnantMotherPage({
   const { data: scheduleRows } = showCheckups
     ? await supabase
         .from('prenatal_schedules')
-        .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+        .select('trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
         .eq('prenatal_schedule_recipients.pregnant_mother_id', id)
         .not('trimester', 'is', null)
         .order('created_at', { ascending: false })
     : { data: [] };
 
-  const scheduledDates: Record<'1st' | '2nd' | '3rd', string | null> = { '1st': null, '2nd': null, '3rd': null };
-  (scheduleRows ?? []).forEach((schedule) => {
-    const trimester = schedule.trimester as '1st' | '2nd' | '3rd';
-    if ((trimester === '1st' || trimester === '2nd' || trimester === '3rd') && !scheduledDates[trimester]) {
-      scheduledDates[trimester] = schedule.visit_date;
-    }
-  });
+  const scheduledDates = scheduleProjection(scheduleRows ?? []).scheduledByMother[id] ?? emptyTrimesterDates();
 
   const [{ data: history }, { data: referrals }] = showCheckups
     ? await Promise.all([
@@ -85,26 +78,6 @@ export default async function ViewPregnantMotherPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 anim-fade-up">
-      <div className="flex items-center justify-between gap-4">
-        <Link href="/dashboard/pregnant">
-          <Button variant="outline" size="sm" leftIcon={<ArrowLeft size={16} />}>
-            Back to Records
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Link href={`/dashboard/pregnant/${id}?view=details`}>
-            <Button variant={!showCheckups ? 'primary' : 'outline'} size="sm">
-              Mother Details
-            </Button>
-          </Link>
-          <Link href={`/dashboard/pregnant/${id}?view=checkups`}>
-            <Button variant={showCheckups ? 'primary' : 'outline'} size="sm" leftIcon={<ClipboardList size={16} />}>
-              Prenatal Checkups
-            </Button>
-          </Link>
-        </div>
-      </div>
-
       <PageHeader
         title={`${fullName}`}
         subtitle={`Record Serial: ${record.serial_no ?? '—'}`}
@@ -123,11 +96,11 @@ export default async function ViewPregnantMotherPage({
           />
         </div>
       ) : (
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
+          <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Maternal Profile &amp; Vitals</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Demographics and recorded clinical indicators</p>
+              <h2 className="text-lg font-bold text-neutral-900">Maternal Profile &amp; Vitals</h2>
+              <p className="text-xs text-neutral-500 font-medium mt-0.5">Demographics and recorded clinical indicators</p>
             </div>
             <RiskBadge riskLevel={record.risk_level} />
           </div>
@@ -144,7 +117,7 @@ export default async function ViewPregnantMotherPage({
             <InfoRow label="Blood Pressure" value={record.blood_pressure} />
             <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
             <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
-            <InfoRow label="Risk Assessment" value={record.risk_level === 'high' ? 'High Risk' : 'Low Risk'} />
+            <InfoRow label="Risk Assessment" value={record.risk_level === 'high' ? 'High Risk' : record.risk_level === 'low' ? 'Low Risk' : 'Unassessed'} />
           </div>
         </div>
       )}

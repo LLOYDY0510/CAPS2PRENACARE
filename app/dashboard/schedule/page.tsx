@@ -11,13 +11,15 @@ import { CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PrenatalSchedulePage() {
-  const { role, profile } = await requireRoles(['admin', 'bhw_head', 'bhw_purok', 'nurse']);
+export default async function PrenatalSchedulePage({searchParams}: {searchParams:Promise<{page?:string}>}) {
+  const page=Math.max(1,Number((await searchParams).page)||1);
+  const { role, profile, supabase } = await requireRoles(['bhw', 'nurse']);
+  const {data: events,error:logError}=await supabase.from('schedule_log_latest').select('*').order('occurred_at',{ascending:false}).range((page-1)*25,page*25-1);
 
   const canEditSchedule = canManageSchedules(role);
 
   const [schedulesResult, mothersResult] = await Promise.all([
-    tryListSchedules(),
+    tryListSchedules(25,(page-1)*25),
     tryListMothersForScheduling(),
   ]);
 
@@ -49,20 +51,23 @@ export default async function PrenatalSchedulePage() {
       />
 
       {loadError && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           <p className="font-bold">The prenatal schedules could not be loaded.</p>
           <p className="text-xs mt-0.5">{loadError}</p>
         </div>
       )}
 
+      {logError&&<p role="alert">Schedule logs could not be loaded.</p>}
       <ScheduleSetter
+        events={events??[]}
         schedules={schedules}
         mothers={mothers}
         canEdit={canEditSchedule}
         role={role}
-        userPurok={profile?.purok}
+        userPurok={profile?.access_all_zones ? null : profile?.purok}
         smsStatus={smsStatus}
       />
+      <nav aria-label="Schedule pages" className="flex gap-4">{page>1&&<a href={`?page=${page-1}`}>Previous</a>}{(events?.length===25||schedules.length===25)&&<a href={`?page=${page+1}`}>Next</a>}</nav>
     </div>
   );
 }

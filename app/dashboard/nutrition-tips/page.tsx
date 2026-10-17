@@ -1,12 +1,12 @@
 import MonthlyTipsManager from '@/components/tips/MonthlyTipsManager';
-import { requireRoles } from '@/utils/auth/roles';
+import { requireHealthTipsManagement } from '@/utils/auth/middleware';
 import PageHeader from '@/components/ui/PageHeader';
 import { Salad } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NutritionTipsPage() {
-  const { supabase } = await requireRoles(['nurse']);
+  const { supabase } = await requireHealthTipsManagement();
 
   const { data: records } = await supabase
     .from('pregnant_mothers')
@@ -35,7 +35,7 @@ export default async function NutritionTipsPage() {
   return (
     <div className="space-y-6 anim-fade-up">
       <PageHeader
-        title="Nutrition &amp; Monthly Tips"
+        title="Health & Nutrition Tips"
         subtitle="Manage gestational month guidance, review clinical broadcasts, and send notifications"
         icon={Salad}
         badge="Maternal Care"

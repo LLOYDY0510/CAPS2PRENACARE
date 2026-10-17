@@ -1,21 +1,12 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Server-only privileged client.
- *
- * Accepts SUPABASE_SECRET_KEY (current name) or SUPABASE_SERVICE_ROLE_KEY
- * (older name) so a single env-name difference cannot silently break
- * scheduling, SMS and admin APIs. The `'server-only'` import above fails the
- * build if any client component ever pulls this module in, so the secret key
- * can never ship to the browser.
- */
-export function createAdminClient() {
+/* Server-only privileged client. */
+export function createAdminClient(actorId?: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secretKey =
     process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !secretKey) {
     throw new Error(
@@ -24,6 +15,7 @@ export function createAdminClient() {
   }
 
   return createClient(supabaseUrl, secretKey, {
+    ...(actorId ? { global: { headers: { 'x-prenatrack-actor': actorId } } } : {}),
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -31,13 +23,7 @@ export function createAdminClient() {
   });
 }
 
-/**
- * Turns a rejected service-key error into the one clear thing to check.
- *
- * PostgREST answers a wrong, expired or rotated secret key with exactly
- * "Invalid API key", which otherwise arrives at each call site as a bare,
- * unactionable message.
- */
+/* Turns a rejected service-key error into the one clear thing to check. */
 export function describeServiceKeyError(error: unknown): string {
   let raw = '';
   if (error instanceof Error) {

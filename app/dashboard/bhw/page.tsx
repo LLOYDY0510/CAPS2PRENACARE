@@ -1,70 +1,14 @@
-import BhwTable from '@/components/users/BhwTable';
-import { requireBhwManagement } from '@/utils/auth/middleware';
+import { collectRows } from '@/utils/supabase/collectRows';
+import { requireRoles } from '@/utils/auth/roles';
 import { createAdminClient } from '@/utils/supabase/admin';
 import PageHeader from '@/components/ui/PageHeader';
-import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
-import { AlertTriangle } from 'lucide-react';
-
-export const dynamic = 'force-dynamic';
-
-export default async function ManageBhwPage() {
-  await requireBhwManagement();
-  // Read with the service role: profile administration spans every account,
-  // which public.profiles RLS deliberately hides from a signed-in user.
-  const adminSupabase = createAdminClient();
-
-  const { data: bhwUsers, error: usersError } = await adminSupabase
-    .from('profiles')
-    .select('id, email, full_name, role, purok')
-    .in('role', ['bhw_purok', 'pending'])
-    .order('role', { ascending: true });
-
-  const { data: pregnantRecords, error: mothersError } = await adminSupabase
-    .from('pregnant_mothers')
-    .select('purok');
-
-  if (usersError || mothersError) {
-    return (
-      <div>
-        <PageHeader
-          title="Manage BHW (Purok)"
-          subtitle={`${bhwUsers?.length ?? 0} account${(bhwUsers?.length ?? 0) === 1 ? '' : 's'}`}
-        />
-        <div className="alert-error" role="alert">
-          Failed to load BHW accounts: {usersError?.message ?? mothersError?.message}
-        </div>
-      </div>
-    );
-  }
-
-  const countsByPurok: Record<string, number> = {};
-  pregnantRecords?.forEach((r) => {
-    if (r.purok) {
-      countsByPurok[r.purok] = (countsByPurok[r.purok] || 0) + 1;
-    }
-  });
-
-  const unassigned = (bhwUsers ?? []).filter((u) => u.role === 'bhw_purok' && !u.purok).length;
-
-  return (
-    <div>
-      <PageHeader
-        title="Manage BHW (Purok)"
-        subtitle={`${bhwUsers?.length ?? 0} account${(bhwUsers?.length ?? 0) === 1 ? '' : 's'} · ${unassigned} BHW without a purok`}
-      />
-
-      {unassigned > 0 && (
-        <div className="mb-4">
-          <HighlightedBannerCard
-            icon={AlertTriangle}
-            title={`${unassigned} BHW account${unassigned === 1 ? ' has' : 's have'} no purok assigned`}
-            description="They cannot see any mother records until a purok is set."
-            badgeText="Warning"
-          />
-        </div>
-      )}
-
-      <BhwTable initialUsers={bhwUsers ?? []} countsByPurok={countsByPurok} />
-    </div>
-  );
+import BhwTable from '@/components/users/BhwTable';
+export const dynamic='force-dynamic';
+export default async function ManageBhwPage(){
+  const {role,profile,supabase}=await requireRoles(['admin','bhw']);
+  const db=createAdminClient();let query=db.from('profiles').select('id,email,full_name,role,purok,account_status').eq('role','bhw').order('full_name').order('id');
+  if(role!=='admin'&&!profile?.access_all_zones)query=query.eq('purok',profile?.purok??'');
+  const [{data,error},{data:mothers,error:motherError}]=await Promise.all([collectRows((start,end)=>query.range(start,end)),collectRows((start,end)=>supabase.from('pregnant_mothers').select('purok').order('id').range(start,end))]);
+  const counts:Record<string,number>={};mothers?.forEach(row=>{if(row.purok)counts[row.purok]=(counts[row.purok]??0)+1;});
+  return <><PageHeader title="BHW for Zones"/>{error||motherError?<p role="alert">The directory could not be loaded.</p>:<BhwTable initialUsers={data??[]} countsByPurok={counts} canManage={role==='admin'||profile?.can_manage_bhw===true}/>}</>;
 }

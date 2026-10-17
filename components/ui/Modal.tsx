@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import Button from './Button';
 
@@ -21,57 +21,43 @@ export default function Modal({
   children,
   maxWidth = 'md',
 }: ModalProps) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const close = useRef(onClose);
+  const titleId = useId();
+  const descriptionId = useId();
+  useEffect(() => { close.current = onClose; }, [onClose]);
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    if (!isOpen || !dialog.current) return;
+    const node = dialog.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    node.showModal();
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') { e.preventDefault(); close.current(); }
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]'));
+      const first = focusable[0]; const last = focusable.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
+    node.addEventListener('keydown', handleKeyDown);
+    return () => {
+      node.removeEventListener('keydown', handleKeyDown);
+      node.close(); document.body.style.overflow = overflow; previous?.focus();
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
+  }, [isOpen]);
   if (!isOpen) return null;
-
-  const widthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-2xl',
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Dialog Card */}
-      <div
-        className={`relative z-10 w-full ${widthClasses[maxWidth]} bg-white rounded-[28px] shadow-2xl border border-slate-100 p-6 sm:p-8 space-y-5 transform transition-all anim-scale-in`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {title && <h3 className="text-lg font-bold text-slate-900">{title}</h3>}
-            {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div>{children}</div>
-      </div>
-    </div>
-  );
+  const widthClasses = { sm: 'max-w-sm', md: 'max-w-xl', lg: 'max-w-4xl', xl: 'max-w-6xl' };
+  return <dialog ref={dialog} className={`app-dialog ${widthClasses[maxWidth]}`} aria-labelledby={titleId}
+    aria-describedby={description ? descriptionId : undefined} onCancel={(event) => { event.preventDefault(); onClose(); }}>
+    <header className="flex justify-between items-start gap-4 border-b pb-4 mb-5">
+      <div><h2 id={titleId} className="text-xl font-bold">{title ?? 'Details'}</h2>
+        {description && <p id={descriptionId} className="text-sm mt-2">{description}</p>}</div>
+      <button type="button" onClick={onClose} aria-label="Close dialog" className="p-3"><X size={20}/></button>
+    </header>
+    {children}
+  </dialog>;
 }
 
 export interface ConfirmDialogProps {
@@ -98,18 +84,18 @@ export function ConfirmDialog({
   isLoading = false,
 }: ConfirmDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
       <div className="flex flex-col items-center text-center space-y-4">
         <div
           className={`w-14 h-14 rounded-full flex items-center justify-center ${
-            variant === 'danger' ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-[var(--brand)]'
+            variant === 'danger' ? 'bg-green-50 text-green-600' : 'bg-green-50 text-[var(--brand)]'
           }`}
         >
           <AlertTriangle size={28} />
         </div>
         <div className="space-y-1">
-          <h4 className="text-base font-bold text-slate-900">{title}</h4>
-          <p className="text-xs text-slate-500">{description}</p>
+          <h4 className="text-base font-bold text-neutral-900">{title}</h4>
+          <p className="text-xs text-neutral-500">{description}</p>
         </div>
         <div className="flex items-center gap-3 w-full pt-2">
           <Button variant="outline" className="flex-1" onClick={onClose} disabled={isLoading}>

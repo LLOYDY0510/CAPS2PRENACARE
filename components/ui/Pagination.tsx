@@ -41,16 +41,16 @@ export default function Pagination({
   const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-neutral-100 ${className}`}>
       {totalItems !== undefined && itemsPerPage !== undefined ? (
-        <p className="text-xs font-semibold text-slate-500">
-          Showing <span className="text-slate-800 font-bold">{totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-          <span className="text-slate-800 font-bold">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
-          <span className="text-slate-800 font-bold">{totalItems}</span> results
+        <p className="text-xs font-semibold text-neutral-500">
+          Showing <span className="text-neutral-800 font-bold">{totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+          <span className="text-neutral-800 font-bold">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+          <span className="text-neutral-800 font-bold">{totalItems}</span> results
         </p>
       ) : (
-        <p className="text-xs font-semibold text-slate-500">
-          Page <span className="text-slate-800 font-bold">{currentPage}</span> of <span className="text-slate-800 font-bold">{totalPages}</span>
+        <p className="text-xs font-semibold text-neutral-500">
+          Page <span className="text-neutral-800 font-bold">{currentPage}</span> of <span className="text-neutral-800 font-bold">{totalPages}</span>
         </p>
       )}
 
@@ -69,7 +69,7 @@ export default function Pagination({
         {pageNumbers.map((page, idx) => {
           if (page === 'ellipsis') {
             return (
-              <span key={`ellipsis-${idx}`} className="px-2 py-1 text-xs text-slate-400 font-bold">
+              <span key={`ellipsis-${idx}`} className="px-2 py-1 text-xs text-neutral-400 font-bold">
                 …
               </span>
             );
@@ -84,8 +84,8 @@ export default function Pagination({
               aria-current={isActive ? 'page' : undefined}
               className={`min-w-[32px] h-8 px-2 rounded-full text-xs font-bold transition-all ${
                 isActive
-                  ? 'bg-[var(--brand)] text-white shadow-sm shadow-teal-700/20 scale-105'
-                  : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                  ? 'bg-[var(--brand)] text-white shadow-sm shadow-green-700/20 scale-105'
+                  : 'bg-neutral-100/80 text-neutral-600 hover:bg-neutral-200/80 hover:text-neutral-900'
               }`}
             >
               {page}

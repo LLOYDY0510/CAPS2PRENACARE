@@ -1,6 +1,8 @@
+import { collectRows } from '@/utils/supabase/collectRows';
+import { scheduleProjection } from '@/utils/prenatalProjection';
 import ReportsTable from '@/components/reports/ReportsTable';
 import { type ReportRow } from '@/components/reports/ReportExport';
-import { requireRoles } from '@/utils/auth/roles';
+import { requirePermission } from '@/utils/auth/middleware';
 import { getPrenatalVisitStatus, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
 import PageHeader from '@/components/ui/PageHeader';
 import { BarChart3 } from 'lucide-react';
@@ -8,7 +10,7 @@ import { BarChart3 } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
-  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw_head', 'bhw_purok']);
+  const { supabase, profile, role } = await requirePermission('canViewReports');
 
   let recordsQuery = supabase
     .from('pregnant_mothers')
@@ -16,43 +18,29 @@ export default async function ReportsPage() {
       'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, contact_number, lmp, edd, gravida_para, blood_pressure, height_cm, weight_kg, risk_level'
     )
     .order('serial_no', { ascending: true });
-  if (role === 'bhw_purok' && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
-  const { data: records, error } = await recordsQuery;
+  if (role === 'bhw' && !profile?.access_all_zones && profile?.purok) recordsQuery = recordsQuery.eq('purok', profile.purok);
+  const { data: records, error: recordsError } = await collectRows((start,end)=>recordsQuery.order('id').range(start,end));
 
-  const { data: checkupRows } = await supabase
+  const { data: checkupRows, error: checkupError } = await collectRows((start,end)=>supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status');
+    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end));
 
   const checkupCounts: Record<string, number> = {};
   const missedCounts: Record<string, number> = {};
   const upcomingCounts: Record<string, number> = {};
 
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: scheduleRows } = await supabase
+  const { data: scheduleRows, error: scheduleError } = await collectRows((start,end)=>supabase
     .from('prenatal_schedules')
-    .select('trimester, visit_date, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .select('trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
     .not('trimester', 'is', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }).order('id').range(start,end));
+  const error = recordsError ?? checkupError ?? scheduleError;
 
-  const nextVisit: Record<string, string> = {};
-  const scheduledByMother: Record<string, Record<'1st' | '2nd' | '3rd', string | null>> = {};
-  scheduleRows?.forEach((s) => {
-    const recipients = Array.isArray(s.prenatal_schedule_recipients) ? s.prenatal_schedule_recipients : [];
-    recipients.forEach((recipient) => {
-      const trimester = s.trimester as '1st' | '2nd' | '3rd';
-      if (trimester === '1st' || trimester === '2nd' || trimester === '3rd') {
-        if (!scheduledByMother[recipient.pregnant_mother_id]) scheduledByMother[recipient.pregnant_mother_id] = { '1st': null, '2nd': null, '3rd': null };
-        if (!scheduledByMother[recipient.pregnant_mother_id][trimester]) scheduledByMother[recipient.pregnant_mother_id][trimester] = s.visit_date;
-      }
-      if (s.visit_date >= today && !nextVisit[recipient.pregnant_mother_id]) {
-        nextVisit[recipient.pregnant_mother_id] = s.visit_date;
-      }
-    });
-  });
+  const { nextVisit, scheduledByMother } = scheduleProjection(scheduleRows ?? []);
 
   checkupRows?.forEach((c) => {
     const trimester = c.trimester as '1st' | '2nd' | '3rd';
-    const scheduledDate = scheduledByMother[c.pregnant_mother_id]?.[trimester] ?? c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date;
+    const scheduledDate = c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date ?? scheduledByMother[c.pregnant_mother_id]?.[trimester];
     const status = getPrenatalVisitStatus({ scheduledFor: scheduledDate, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status });
     if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
     if (status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
@@ -86,7 +74,7 @@ export default async function ReportsPage() {
       nextVisit: nextVisit[r.id] ?? null,
       missedVisits: missedCounts[r.id] ?? 0,
       upcomingVisits: upcomingCounts[r.id] ?? 0,
-      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: scheduledByMother[r.id]?.[latestCheckup.trimester as '1st' | '2nd' | '3rd'] ?? latestCheckup.scheduled_checkup_date ?? latestCheckup.scheduled_for ?? latestCheckup.checkup_date, actualCheckupDate: latestCheckup.actual_checkup_date, recordedStatus: latestCheckup.status }) : null,
+      latestStatus: latestCheckup ? getPrenatalVisitStatus({ scheduledFor: latestCheckup.scheduled_checkup_date ?? latestCheckup.scheduled_for ?? latestCheckup.checkup_date, actualCheckupDate: latestCheckup.actual_checkup_date, recordedStatus: latestCheckup.status }) : null,
     };
   });
 
@@ -105,7 +93,7 @@ export default async function ReportsPage() {
       />
 
       {error && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold" role="alert">
+        <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           Failed to load records: {error.message}
         </div>
       )}

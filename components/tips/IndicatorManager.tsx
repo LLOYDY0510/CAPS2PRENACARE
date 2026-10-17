@@ -1,4 +1,6 @@
 'use client';
+import Modal from '@/components/ui/Modal';
+import {getRiskTipForIndicator} from '@/utils/riskTips';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,6 +15,7 @@ type Indicator = {
   indicator_type: string;
   threshold_value: number | null;
   active: boolean;
+  advice_message?: string | null;
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -89,7 +92,8 @@ export default function IndicatorManager({
 
   async function saveLabel(indicator: Indicator) {
     if (!editLabel.trim()) return;
-    await supabase.from('risk_indicators').update({ label: editLabel.trim() }).eq('id', indicator.id);
+    const {error: saveError} = await supabase.from('risk_indicators').update({ advice_message: editLabel.trim() }).eq('id', indicator.id);
+    if (saveError) { setError(saveError.message); return; }
     setEditingId(null);
     router.refresh();
   }
@@ -102,14 +106,14 @@ export default function IndicatorManager({
   }
 
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+    <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
+      <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
             <Activity size={20} className="text-[var(--brand)]" />
             <span>Configured Risk Indicators</span>
           </h2>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage risk rules and clinical checklists</p>
+          <p className="text-xs text-neutral-500 font-medium mt-0.5">Manage risk rules and clinical checklists</p>
         </div>
         <Button
           variant={showForm ? 'outline' : 'primary'}
@@ -122,9 +126,9 @@ export default function IndicatorManager({
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className="bg-slate-50/90 rounded-2xl border border-slate-200/80 p-5 space-y-4">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">New Risk Indicator Protocol</h3>
-          {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+        <form onSubmit={handleAdd} className="bg-neutral-50/90 rounded-2xl border border-neutral-200/80 p-5 space-y-4">
+          <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">New Risk Indicator Protocol</h3>
+          {error && <p className="text-xs font-semibold text-green-600">{error}</p>}
 
           <Input
             label="Label / Description"
@@ -166,26 +170,19 @@ export default function IndicatorManager({
 
       <div className="space-y-3">
         {initialIndicators.length === 0 && (
-          <p className="text-xs text-slate-400 font-medium py-8 text-center">No indicators configured yet.</p>
+          <p className="text-xs text-neutral-400 font-medium py-8 text-center">No indicators configured yet.</p>
         )}
         {initialIndicators.map((ind) => (
           <div
             key={ind.id}
             className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border transition-all ${
-              !ind.active ? 'opacity-50 bg-slate-50 border-slate-200/60' : 'bg-white border-slate-100 hover:border-slate-200 shadow-xs'
+              !ind.active ? 'opacity-50 bg-neutral-50 border-neutral-200/60' : 'bg-white border-neutral-100 hover:border-neutral-200 shadow-xs'
             }`}
           >
             <div className="flex-1 min-w-0">
-              {editingId === ind.id ? (
-                <div className="flex items-center gap-2">
-                  <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
-                  <Button size="sm" onClick={() => saveLabel(ind)}>Save</Button>
-                  <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
-                </div>
-              ) : (
-                <p className="text-xs sm:text-sm font-bold text-slate-800">{ind.label}</p>
-              )}
-              <p className="text-[11px] text-slate-500 font-medium mt-1">
+
+                <p className="text-xs sm:text-sm font-bold text-neutral-800">{ind.label}</p>
+              <p className="text-[11px] text-neutral-500 font-medium mt-1">
                 {TYPE_LABELS[ind.indicator_type] ?? ind.indicator_type}
                 {ind.threshold_value != null ? ` · Threshold: ${ind.threshold_value} yrs` : ''}
               </p>
@@ -194,7 +191,7 @@ export default function IndicatorManager({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => { setEditingId(ind.id); setEditLabel(ind.label); }}
+                onClick={() => { setEditingId(ind.id); setEditLabel(ind.advice_message ?? getRiskTipForIndicator(ind.label, ind.indicator_type, ind.threshold_value).tipAdvice); }}
                 leftIcon={<Edit size={14} />}
               >
                 Edit
@@ -219,6 +216,10 @@ export default function IndicatorManager({
           </div>
         ))}
       </div>
+      <Modal isOpen={editingId!==null} onClose={()=>setEditingId(null)} title="Edit advice message">
+        <label className="block">Message<textarea className="form-textarea w-full mt-2" rows={6} maxLength={5000} value={editLabel} onChange={e=>setEditLabel(e.target.value)}/></label>
+        <div className="flex gap-3 mt-4"><Button onClick={()=>{const indicator=initialIndicators.find(row=>row.id===editingId);if(indicator) void saveLabel(indicator);}}>Save Message</Button><Button variant="outline" onClick={()=>setEditingId(null)}>Cancel</Button></div>
+      </Modal>
     </div>
   );
 }

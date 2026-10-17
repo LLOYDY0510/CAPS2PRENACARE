@@ -180,7 +180,7 @@ export default function SmsLogTable({
   return (
     <div className="space-y-6">
       {/* Controls Card */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-lg shadow-slate-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white rounded-[24px] border border-neutral-100 shadow-lg shadow-neutral-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           <div className="flex-1 min-w-[220px]">
             <SearchBar value={search} onChange={(val) => { setSearch(val); setCurrentPage(1); }} placeholder="Search message, sender, or number..." />
@@ -216,20 +216,20 @@ export default function SmsLogTable({
           )}
         </div>
 
-        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+        <span className="text-xs font-bold text-neutral-500 whitespace-nowrap">
           {filtered.length} of {logs.length} entries
         </span>
       </div>
 
       {/* Follow-up Pending Banner */}
       {followUps.length > 0 && (
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Follow-up Action Needed</h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Missed checkups and high-risk cases needing contact</p>
+              <h2 className="text-base font-bold text-neutral-900">Follow-up Action Needed</h2>
+              <p className="text-xs text-neutral-500 font-medium mt-0.5">Missed checkups and high-risk cases needing contact</p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200/60">
               {followUps.length} Pending
             </span>
           </div>
@@ -238,18 +238,18 @@ export default function SmsLogTable({
             {followUps.map((item) => {
               const note = feedback[item.id];
               return (
-                <div key={item.id} className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100/80 space-y-3">
+                <div key={item.id} className="p-4 rounded-2xl bg-green-50/40 border border-green-100/80 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex-1 min-w-[220px]">
-                      <p className="font-bold text-xs sm:text-sm text-slate-900">{item.motherName}</p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      <p className="font-bold text-xs sm:text-sm text-neutral-900">{item.motherName}</p>
+                      <p className="text-xs text-neutral-500 font-medium mt-0.5">
                         {item.reason} · {item.contactNumber ?? 'No contact number'}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 flex-1 max-w-md">
                       <input
-                        className="h-10 px-3.5 bg-white text-xs sm:text-sm font-medium rounded-2xl border border-amber-200 focus:border-[var(--brand)] outline-none w-full shadow-xs"
+                        className="h-10 px-3.5 bg-white text-xs sm:text-sm font-medium rounded-2xl border border-green-200 focus:border-[var(--brand)] outline-none w-full shadow-xs"
                         value={quickMessage[item.id] ?? QUICK_DEFAULTS[item.messageType]}
                         onChange={(e) =>
                           setQuickMessage((current) => ({ ...current, [item.id]: e.target.value }))
@@ -268,7 +268,7 @@ export default function SmsLogTable({
                     </div>
                   </div>
                   {note && (
-                    <p className={`text-xs font-semibold ${note.tone === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
+                    <p className={`text-xs font-semibold ${note.tone === 'ok' ? 'text-green-700' : 'text-green-600'}`}>
                       {note.text}
                     </p>
                   )}
@@ -280,11 +280,11 @@ export default function SmsLogTable({
       )}
 
       {/* Main Logs Table Card */}
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 overflow-hidden">
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+      <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-100">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+              <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
                 <th className="py-3.5 px-4">Date &amp; Time</th>
                 <th className="py-3.5 px-4">Trigger</th>
                 <th className="py-3.5 px-4">Sent By</th>
@@ -294,10 +294,10 @@ export default function SmsLogTable({
                 <th className="py-3.5 px-4">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-400 font-medium">
+                  <td colSpan={7} className="text-center py-10 text-neutral-400 font-medium">
                     {hasFilters ? 'No entries match the current filters.' : 'No SMS sent yet.'}
                   </td>
                 </tr>
@@ -307,41 +307,41 @@ export default function SmsLogTable({
                 const failedCount = log.receipts.filter((r) => r.providerStatus === 'failed').length;
                 return (
                   <Fragment key={log.id}>
-                    <tr className="hover:bg-slate-50/80 transition-colors align-top">
-                      <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-500 text-xs">
+                    <tr className="hover:bg-neutral-50/80 transition-colors align-top">
+                      <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-neutral-500 text-xs">
                         {new Date(log.created_at).toLocaleString('en-PH', {
                           dateStyle: 'medium',
                           timeStyle: 'short',
                         })}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 border border-neutral-200/80">
                           {log.send_kind === 'auto' ? 'Automatic' : 'Manual'}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{log.sender ?? 'System'}</td>
+                      <td className="py-3.5 px-4 whitespace-nowrap font-medium text-neutral-700">{log.sender ?? 'System'}</td>
                       <td className="py-3.5 px-4">
-                        <p className="font-bold text-slate-800">{log.recipients}</p>
-                        <p className="text-[11px] text-slate-400 font-medium">{log.recipient_count} recipient(s)</p>
+                        <p className="font-bold text-neutral-800">{log.recipients}</p>
+                        <p className="text-[11px] text-neutral-400 font-medium">{log.recipient_count} recipient(s)</p>
                       </td>
                       <td className="py-3.5 px-4 max-w-xs">
-                        <p className="line-clamp-2 text-slate-700 font-medium">{log.message}</p>
+                        <p className="line-clamp-2 text-neutral-700 font-medium">{log.message}</p>
                         {log.error_message && (
-                          <p className="text-xs text-red-600 font-semibold mt-1">{log.error_message}</p>
+                          <p className="text-xs text-green-600 font-semibold mt-1">{log.error_message}</p>
                         )}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-[var(--brand)] border border-teal-200/60">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-[var(--brand)] border border-green-200/60">
                           {TYPE_LABELS[log.message_type]}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {log.status === 'success' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
                             {failedCount > 0 ? `${log.receipts.length - failedCount}/${log.receipts.length} sent` : 'Sent'}
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-600 border border-green-200">
                             Failed
                           </span>
                         )}
@@ -360,28 +360,28 @@ export default function SmsLogTable({
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr key={`${log.id}-receipts`} className="bg-slate-50/90">
+                      <tr key={`${log.id}-receipts`} className="bg-neutral-50/90">
                         <td colSpan={7} className="p-4">
-                          <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-slate-100">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Delivery Receipts</p>
+                          <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-neutral-100">
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">Delivery Receipts</p>
                             {log.receipts.map((receipt, index) => (
                               <div key={`${log.id}-${index}`} className="text-xs flex flex-wrap gap-2 items-center font-medium">
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                     receipt.providerStatus === 'sent'
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                      : 'bg-red-50 text-red-600 border border-red-200'
+                                      ? 'bg-green-50 text-green-700 border border-green-200'
+                                      : 'bg-green-50 text-green-600 border border-green-200'
                                   }`}
                                 >
                                   {receipt.providerStatus}
                                 </span>
-                                <span className="font-bold text-slate-800">{receipt.motherName ?? 'Unlinked number'}</span>
-                                <span className="font-mono text-slate-500">{formatE164(toE164(receipt.contactNumber))}</span>
+                                <span className="font-bold text-neutral-800">{receipt.motherName ?? 'Unlinked number'}</span>
+                                <span className="font-mono text-neutral-500">{formatE164(toE164(receipt.contactNumber))}</span>
                                 {receipt.providerMessageId && (
-                                  <span className="text-slate-400">· ref {receipt.providerMessageId}</span>
+                                  <span className="text-neutral-400">· ref {receipt.providerMessageId}</span>
                                 )}
                                 {receipt.errorMessage && (
-                                  <span className="text-red-600 font-semibold">{receipt.errorMessage}</span>
+                                  <span className="text-green-600 font-semibold">{receipt.errorMessage}</span>
                                 )}
                               </div>
                             ))}

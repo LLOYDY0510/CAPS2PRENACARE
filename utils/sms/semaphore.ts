@@ -1,13 +1,5 @@
-/**
- * The single place in the app that talks to Semaphore.
- *
- * Semaphore v4 quirks this module absorbs so no caller has to remember them:
- *   - the API key must be a query parameter (`?apikey=`), not a header;
- *   - a request can succeed with HTTP 200 and still report a per-recipient
- *     failure, so the array body is the source of truth, not the status code;
- *   - the account balance is a separate endpoint and is the only way to prove
- *     real credits were consumed.
- */
+import { sendGatewayBatch, gatewayStatus } from './androidGateway';
+/* The single place in the app that talks to Semaphore. */
 
 const BASE = 'https://api.semaphore.co/api/v4';
 
@@ -96,8 +88,8 @@ function normaliseRecipients(payload: unknown): SemaphoreRecipientResult[] {
       (typeof record.number === 'string' && record.number) ||
       '';
     const messageId =
-      (typeof record.message_id === 'string' && record.message_id) ||
-      (typeof record.messageId === 'string' && record.messageId) ||
+      ((typeof record.message_id === 'string' || typeof record.message_id === 'number') && String(record.message_id)) ||
+      ((typeof record.messageId === 'string' || typeof record.messageId === 'number') && String(record.messageId)) ||
       null;
     const status = typeof record.status === 'string' ? record.status : 'unknown';
     const error = typeof record.error === 'string' && record.error ? record.error : null;
@@ -105,14 +97,8 @@ function normaliseRecipients(payload: unknown): SemaphoreRecipientResult[] {
   });
 }
 
-/**
- * Sends one SMS to many numbers in a single provider request.
- *
- * Never throws for a provider-side failure - a rejected batch is a result the
- * caller must be able to log, not an exception. It only throws when the
- * request could not be made at all (network fault or bad configuration).
- */
-export async function sendSmsBatch(input: {
+/* Sends one SMS to many numbers in a single provider request. */
+export async function legacySemaphoreSendSmsBatch(input: {
   numbers: string[];
   message: string;
   /** Registered sender ID. Omitted unless configured, because Semaphore
@@ -141,6 +127,7 @@ export async function sendSmsBatch(input: {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -219,16 +206,10 @@ export type SemaphoreAccount = {
   creditBalance: number | null;
 };
 
-/**
- * Reads the live credit balance so the UI can prove credits are real.
- *
- * This endpoint rate-limits aggressively (HTTP 429 "Too Many Attempts"), so a
- * balance read is best-effort: it returns nulls instead of throwing, because
- * the balance is informational and must never fail a send.
- */
-export async function getSemaphoreAccount(): Promise<SemaphoreAccount> {
+/* Reads the live credit balance so the UI can prove credits are real. */
+export async function legacyGetSemaphoreAccount(): Promise<SemaphoreAccount> {
   const key = apiKey();
-  const response = await fetch(`${BASE}/account?apikey=${encodeURIComponent(key)}`);
+  const response = await fetch(`${BASE}/account?apikey=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(5_000), cache: 'no-store' });
   const rawText = await response.text();
   if (!response.ok) {
     if (response.status === 429) {
@@ -252,3 +233,7 @@ export async function getSemaphoreAccount(): Promise<SemaphoreAccount> {
     creditBalance: typeof record.credit_balance === 'number' ? record.credit_balance : null,
   };
 }
+
+// Compatibility entry points use the active Android cloud transport.
+export async function sendSmsBatch(input: {numbers:string[];message:string;senderName?:string|null}):Promise<SemaphoreSendResult> { return sendGatewayBatch(input); }
+export async function getSemaphoreAccount():Promise<SemaphoreAccount> { return gatewayStatus(); }

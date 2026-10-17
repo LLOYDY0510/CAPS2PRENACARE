@@ -1,10 +1,4 @@
-/**
- * Philippine mobile number normalisation for SMS providers.
- *
- * Numbers are stored locally ("09389201440") because that is what the barangay
- * staff type, but Semaphore only accepts international format. Sending the
- * stored value straight through is why no reminder was ever delivered.
- */
+/* Philippine mobile number normalisation for SMS providers. */
 
 const PH_MOBILE = /^9\d{9}$/;
 
@@ -37,14 +31,7 @@ export function isValidMobileNumber(input: string | null | undefined): boolean {
   return toE164(input) !== null;
 }
 
-/**
- * Formats a number for the Semaphore API as 639XXXXXXXXXX (no leading +).
- *
- * Semaphore's documented examples use 09.../639... without a plus sign, so
- * this strips the + that toE164() adds. toE164() stays the canonical form
- * for UI display (formatE164) and DB matching; use this only at the provider
- * boundary.
- */
+/* Formats a number for the Semaphore API as 639XXXXXXXXXX (no leading +). */
 export function toSemaphoreFormat(input: string | null | undefined): string | null {
   const e164 = toE164(input);
   if (!e164) return null;

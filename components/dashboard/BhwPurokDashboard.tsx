@@ -1,3 +1,6 @@
+import BhwOverview from './BhwOverview';
+import { riskSummary } from '@/utils/dashboard/summary';
+import { localDate } from '@/utils/calendar';
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { one } from '@/utils/embedded';
@@ -7,7 +10,7 @@ import StatCard from '@/components/ui/StatCard';
 import HighlightedBannerCard from '@/components/ui/HighlightedBannerCard';
 import { Users, AlertTriangle, ShieldCheck, HelpCircle, ClipboardCheck, AlertCircle, Calendar, ArrowRight, ChevronRight } from 'lucide-react';
 
-export default async function BhwPurokDashboard() {
+export async function LegacyBhwPurokDashboard() {
   const supabase = await createClient();
 
   const {
@@ -53,10 +56,7 @@ export default async function BhwPurokDashboard() {
     );
   }
 
-  const total = records?.length ?? 0;
-  const highRisk = records?.filter((r) => r.risk_level === 'high').length ?? 0;
-  const lowRisk = records?.filter((r) => r.risk_level === 'low').length ?? 0;
-  const unassessed = records?.filter((r) => !r.risk_level).length ?? 0;
+  const { total, highRisk, lowRisk, unassessed } = riskSummary(records ?? []);
   const withCheckups = records?.filter((r) => r.checkup_recorded).length ?? 0;
 
   const { data: upcomingCheckups, error: upcomingError } = await supabase
@@ -73,7 +73,7 @@ export default async function BhwPurokDashboard() {
         )
       )
     `)
-    .gte('visit_date', new Date().toISOString().slice(0, 10))
+    .gte('visit_date', localDate())
     .eq('status', 'scheduled')
     .order('visit_date', { ascending: true })
     .limit(5);
@@ -130,8 +130,8 @@ export default async function BhwPurokDashboard() {
       />
 
       {!hasPurok && (
-        <div className="p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-700 text-xs font-semibold flex items-center gap-3 shadow-xs" role="alert">
-          <AlertCircle size={18} className="shrink-0 text-red-600" />
+        <div className="p-4 rounded-2xl bg-green-50 border border-green-200/80 text-green-700 text-xs font-semibold flex items-center gap-3 shadow-xs" role="alert">
+          <AlertCircle size={18} className="shrink-0 text-green-600" />
           <span>Your account has no purok assignment yet, so no mother records are visible. Ask your BHW Head or administrator to assign your purok.</span>
         </div>
       )}
@@ -197,31 +197,31 @@ export default async function BhwPurokDashboard() {
       {/* Alerts and Notifications Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Missed Checkups Alert */}
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <div className="flex items-center gap-2">
-              <AlertCircle size={20} className="text-red-500" />
-              <h2 className="text-base font-bold text-slate-900">Missed Checkups</h2>
+              <AlertCircle size={20} className="text-green-500" />
+              <h2 className="text-base font-bold text-neutral-900">Missed Checkups</h2>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200/60">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-600 border border-green-200/60">
               {missedCheckupsInPurok.length} follow-ups
             </span>
           </div>
 
           {missedError ? (
-            <p className="text-xs text-red-500">Failed to load missed checkups: {missedError.message}</p>
+            <p className="text-xs text-green-500">Failed to load missed checkups: {missedError.message}</p>
           ) : missedCheckupsInPurok.length === 0 ? (
-            <p className="text-xs text-slate-400 font-medium text-center py-6">No missed checkups recorded for your purok</p>
+            <p className="text-xs text-neutral-400 font-medium text-center py-6">No missed checkups recorded for your purok</p>
           ) : (
             <div className="space-y-2.5">
               {missedCheckupsInPurok.map(({ checkup, mother }) => (
                 <div
                   key={checkup.id}
-                  className="flex items-center justify-between p-3.5 bg-red-50/60 rounded-2xl border border-red-100 hover:bg-red-50 transition-colors"
+                  className="flex items-center justify-between p-3.5 bg-green-50/60 rounded-2xl border border-green-100 hover:bg-green-50 transition-colors"
                 >
                   <div>
-                    <p className="font-bold text-xs text-slate-900">{mother?.full_name ?? 'Unknown mother'}</p>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    <p className="font-bold text-xs text-neutral-900">{mother?.full_name ?? 'Unknown mother'}</p>
+                    <p className="text-[11px] text-neutral-500 font-medium mt-0.5">
                       Missed Visit: {checkup.scheduled_checkup_date ?? checkup.checkup_date ?? '—'}
                     </p>
                   </div>
@@ -233,11 +233,11 @@ export default async function BhwPurokDashboard() {
         </div>
 
         {/* Upcoming Checkups */}
-        <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <div className="flex items-center gap-2">
               <Calendar size={20} className="text-[var(--brand)]" />
-              <h2 className="text-base font-bold text-slate-900">Upcoming Checkups</h2>
+              <h2 className="text-base font-bold text-neutral-900">Upcoming Checkups</h2>
             </div>
             <Link href="/dashboard/schedule" className="text-xs font-bold text-[var(--brand)] hover:underline">
               View schedule →
@@ -245,36 +245,36 @@ export default async function BhwPurokDashboard() {
           </div>
 
           {upcomingError ? (
-            <p className="text-xs text-red-500">Failed to load upcoming checkups: {upcomingError.message}</p>
+            <p className="text-xs text-green-500">Failed to load upcoming checkups: {upcomingError.message}</p>
           ) : upcomingCheckupsWithMother.length > 0 ? (
             <div className="space-y-2.5">
               {upcomingCheckupsWithMother.map(({ schedule, mother }) => (
                 <div
                   key={`${schedule.id}-${mother?.full_name ?? 'unknown'}`}
-                  className="flex items-center justify-between p-3.5 bg-teal-50/50 rounded-2xl border border-teal-100 hover:bg-teal-50 transition-colors"
+                  className="flex items-center justify-between p-3.5 bg-green-50/50 rounded-2xl border border-green-100 hover:bg-green-50 transition-colors"
                 >
                   <div>
-                    <p className="font-bold text-xs text-slate-900">{mother?.full_name ?? 'Unassigned schedule'}</p>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Scheduled Date: {schedule.visit_date}</p>
+                    <p className="font-bold text-xs text-neutral-900">{mother?.full_name ?? 'Unassigned schedule'}</p>
+                    <p className="text-[11px] text-neutral-500 font-medium mt-0.5">Scheduled Date: {schedule.visit_date}</p>
                   </div>
                   <RiskBadge riskLevel={mother?.risk_level} />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400 font-medium text-center py-6">No upcoming checkups scheduled</p>
+            <p className="text-xs text-neutral-400 font-medium text-center py-6">No upcoming checkups scheduled</p>
           )}
         </div>
       </div>
 
       {/* Recent Registrations Table */}
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 sm:p-7 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-neutral-900">
               {hasPurok ? `Registrations in Purok ${purok}` : 'Recent Registrations'}
             </h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Maternal records assigned to your field zone</p>
+            <p className="text-xs text-neutral-500 font-medium mt-0.5">Maternal records assigned to your field zone</p>
           </div>
           <Link
             href="/dashboard/pregnant"
@@ -285,10 +285,10 @@ export default async function BhwPurokDashboard() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-100">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4">Serial No.</th>
                 <th className="py-3.5 px-4">Name</th>
                 <th className="py-3.5 px-4">Age</th>
@@ -299,19 +299,19 @@ export default async function BhwPurokDashboard() {
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+            <tbody className="divide-y divide-neutral-100 text-xs sm:text-sm">
               {records && records.length > 0 ? (
                 records.slice(0, 5).map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-500">{r.serial_no ?? '—'}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-800">{r.full_name ?? '—'}</td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.age ?? '—'}</td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.lmp ?? '—'}</td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">{r.gravida_para ?? '—'}</td>
+                  <tr key={r.id} className="hover:bg-neutral-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-mono text-xs font-semibold text-neutral-500">{r.serial_no ?? '—'}</td>
+                    <td className="py-3.5 px-4 font-bold text-neutral-800">{r.full_name ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.age ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.lmp ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-neutral-600 font-medium">{r.gravida_para ?? '—'}</td>
                     <td className="py-3.5 px-4">
                       <RiskBadge riskLevel={r.risk_level} />
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-xs">{r.date_registered ?? '—'}</td>
+                    <td className="py-3.5 px-4 text-neutral-500 text-xs">{r.date_registered ?? '—'}</td>
                     <td className="py-3.5 px-4 text-right">
                       <Link
                         href={`/dashboard/pregnant/${r.id}`}
@@ -325,7 +325,7 @@ export default async function BhwPurokDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-400 font-medium">
+                  <td colSpan={8} className="text-center py-10 text-neutral-400 font-medium">
                     {hasPurok
                       ? `No mothers registered in Purok ${purok}`
                       : 'No mothers visible until a purok is assigned to your account.'}
@@ -339,3 +339,5 @@ export default async function BhwPurokDashboard() {
     </div>
   );
 }
+
+export default async function BhwPurokDashboard() { return <BhwOverview/>; }

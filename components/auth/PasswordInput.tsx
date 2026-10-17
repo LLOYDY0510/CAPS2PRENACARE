@@ -3,13 +3,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 
-/**
- * A password field with a show/hide toggle.
- *
- * Reused by the login, create-account and reset-password forms. The toggle is a
- * real button with an accessible label and `aria-pressed`, and the input keeps
- * its `autocomplete` hint so password managers keep working.
- */
+/* A password field with a show/hide toggle. */
 export default function PasswordInput({
   label = 'Password',
   value,

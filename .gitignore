@@ -30,8 +30,30 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# Environment files
 .env*
+
+# Local documentation and plans
+*.md
+*.mdx
+/docs/
+/plans/
+
+# Coding agents and local tooling
+.agents/
+.codex/
+.claude/
+.kilo/
+.cursor/
+.aider*
+.copilot/
+
+# Local credentials and editor settings
+.aws/
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # vercel
 .vercel
@@ -39,3 +61,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Editor document locks
+.~lock.*#
+
+# Local verification files
+/tests/
+/scripts/verify*.sh
+/scripts/verify*.mjs
+/.github/workflows/

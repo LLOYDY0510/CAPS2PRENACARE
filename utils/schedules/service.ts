@@ -1,4 +1,8 @@
+import { collectRows } from '@/utils/supabase/collectRows';
 import 'server-only';
+import { TRIMESTERS } from '@/utils/prenatalProjection';
+import { createClient } from '@/utils/supabase/server';
+import { validDate } from '@/utils/calendar';
 import { createAdminClient, describeServiceKeyError } from '@/utils/supabase/admin';
 import { createRoleNotification } from '@/utils/notifications';
 import { manilaDatePlusFor, manilaToday } from '@/utils/sms/clock';
@@ -35,13 +39,11 @@ export type ScheduleInput = {
   timeLabel?: string | null;
 };
 
-export const TRIMESTERS = ['1st', '2nd', '3rd'] as const;
+export { TRIMESTERS };
 export type Trimester = (typeof TRIMESTERS)[number];
 
 function isValidDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(parsed.getTime());
+  return validDate(value);
 }
 
 /** Manila local date, which is the calendar the barangay schedules against. */
@@ -55,29 +57,18 @@ export type SchedulingMother = {
   risk_level: string | null;
 };
 
-/**
- * Every mother a schedule can be assigned to.
- *
- * Uses the service-role client deliberately: a BHW (purok) must see her own
- * purok even though her RLS scope is narrower, and the schedule editor filters
- * client-side by the signed-in user's purok.
- */
+/* Every mother a schedule can be assigned to. */
 export async function listMothersForScheduling(): Promise<SchedulingMother[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
+  const supabase = await createClient();
+  const { data, error } = await collectRows((start,end)=>supabase
     .from('pregnant_mothers')
     .select('id, full_name, purok, contact_number, risk_level')
-    .order('full_name', { ascending: true });
+    .order('full_name', { ascending: true }).order('id').range(start,end));
   if (error) throw new Error(error.message);
   return (data ?? []) as SchedulingMother[];
 }
 
-/**
- * Non-throwing mother lookup for pages. Logs one clear message and hands the
- * caller a ServiceResult so the page can render an error state instead of
- * crashing. The throwing `listMothersForScheduling()` stays for internal
- * callers that already handle the throw.
- */
+/* Non-throwing mother lookup for pages. */
 export async function tryListMothersForScheduling(): Promise<
   ServiceResult<SchedulingMother[]>
 > {
@@ -130,10 +121,10 @@ export async function getSmsStatusSummary(): Promise<SmsStatusSummary> {
   return { account, accountError, dueSchedules: count ?? 0 };
 }
 
-export async function listSchedules(limit = 25): Promise<ScheduleWithRecipients[]> {
-  const supabase = createAdminClient();
+export async function listSchedules(limit = 25, scheduleId?: string, offset = 0): Promise<ScheduleWithRecipients[]> {
+  const supabase = await createClient();
   const { hasScheduleNotes, hasUpdatedAt } = await getSmsSchemaCapabilities();
-  const { data: schedules, error } = await supabase
+  let query = supabase
     .from('prenatal_schedules')
     .select(
       `id, visit_date, trimester, status, reminder_sent, reminder_sent_at, set_by, created_at${
@@ -141,7 +132,9 @@ export async function listSchedules(limit = 25): Promise<ScheduleWithRecipients[
       }${hasScheduleNotes ? ', notes' : ''}`,
     )
     .order('visit_date', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
+  if (scheduleId) query = query.eq('id', scheduleId);
+  const { data: schedules, error } = await query;
 
   if (error) throw new Error(error.message);
   if (!schedules?.length) return [];
@@ -149,19 +142,21 @@ export async function listSchedules(limit = 25): Promise<ScheduleWithRecipients[
   // cannot be resolved statically.
   const scheduleRows = schedules as unknown as Array<Omit<ScheduleWithRecipients, 'recipients'>>;
 
-  const { data: links } = await supabase
+  const { data: links, error: linksError } = await supabase
     .from('prenatal_schedule_recipients')
     .select('schedule_id, pregnant_mother_id')
     .in('schedule_id', scheduleRows.map((s) => s.id));
+  if (linksError) throw new Error(linksError.message);
 
   const motherIds = Array.from(new Set((links ?? []).map((l) => l.pregnant_mother_id as string)));
-  const { data: mothers } = motherIds.length
+  const { data: mothers, error: mothersError } = motherIds.length
     ? await supabase
         .from('pregnant_mothers')
         .select('id, full_name, contact_number, purok')
         .in('id', motherIds)
-    : { data: [] };
+    : { data: [], error: null };
 
+  if (mothersError) throw new Error(mothersError.message);
   const motherById = new Map((mothers ?? []).map((m) => [m.id, m]));
 
   return scheduleRows.map((schedule) => ({
@@ -180,17 +175,12 @@ export async function listSchedules(limit = 25): Promise<ScheduleWithRecipients[
   }));
 }
 
-/**
- * Non-throwing schedule list for pages and routes that must stay up when the
- * database is unreachable. Logs one clear, actionable message (once per call)
- * and hands the caller a ServiceResult. The throwing `listSchedules()` stays
- * for internal callers that already handle the throw.
- */
+/* Non-throwing schedule list for pages and routes that must stay up when the database is unreachable. */
 export async function tryListSchedules(
-  limit = 25,
+  limit = 25, offset = 0,
 ): Promise<ServiceResult<ScheduleWithRecipients[]>> {
   try {
-    return { ok: true, data: await listSchedules(limit) };
+    return { ok: true, data: await listSchedules(limit, undefined, offset) };
   } catch (error) {
     const message = describeServiceKeyError(error);
     console.error('prenatal schedules: could not be read.', message);
@@ -206,38 +196,15 @@ export async function createSchedule(input: ScheduleInput): Promise<ServiceResul
   const motherIds = Array.from(new Set(input.motherIds));
   if (motherIds.length === 0) return { ok: false, error: 'Select at least one pregnant mother.' };
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient(input.setBy ?? undefined);
 
-  const { hasScheduleNotes } = await getSmsSchemaCapabilities();
-
-  const { data: schedule, error: insertError } = await supabase
-    .from('prenatal_schedules')
-    .insert({
-      visit_date: input.visitDate,
-      trimester: input.trimester,
-      set_by: input.setBy,
-      ...(hasScheduleNotes ? { notes: input.notes?.trim() || null } : {}),
-    })
-    .select('id')
-    .single();
-
-  if (insertError || !schedule) {
-    return { ok: false, error: insertError?.message ?? 'Could not create the schedule.' };
-  }
-
-  const { error: linkError } = await supabase.from('prenatal_schedule_recipients').insert(
-    motherIds.map((pregnant_mother_id) => ({ schedule_id: schedule.id, pregnant_mother_id })),
-  );
-
-  if (linkError) {
-    // Do not leave an empty schedule behind - the user would see a visit date
-    // with nobody assigned and no way to tell it is broken.
-    await supabase.from('prenatal_schedules').delete().eq('id', schedule.id);
-    return {
-      ok: false,
-      error: `Could not assign the mothers, so the schedule was rolled back: ${linkError.message}`,
-    };
-  }
+  const { data: scheduleId, error: insertError } = await supabase.rpc('save_prenatal_schedule', {
+    schedule_uuid: null, visit_day: input.visitDate, trimester_value: input.trimester,
+    recipient_ids: motherIds, notes_value: input.notes?.trim() || null,
+    actor_uuid: input.setBy, status_value: 'scheduled',
+  });
+  if (insertError || !scheduleId) return { ok: false, error: insertError?.message ?? 'Could not create schedule.' };
+  const schedule = { id: String(scheduleId) };
 
   await createRoleNotification(supabase, {
     eventKey: `schedule-created:${schedule.id}`,
@@ -251,24 +218,17 @@ export async function createSchedule(input: ScheduleInput): Promise<ServiceResul
 }
 
 export async function getSchedule(scheduleId: string): Promise<ScheduleWithRecipients | null> {
-  const all = await listSchedules(200);
-  return all.find((s) => s.id === scheduleId) ?? null;
+  const rows = await listSchedules(1, scheduleId);
+  return rows[0] ?? null;
 }
 
-/**
- * Edits a schedule and invalidates anything already produced for it.
- *
- * The reminder text contains the visit date, so a changed date makes every
- * existing reminder and notification wrong. Rather than leave them to be resent
- * to the wrong day, they are deleted and reminder_sent is reset so the new date
- * gets a fresh, correctly worded reminder.
- */
+/* Edits a schedule and invalidates anything already produced for it. */
 export async function updateSchedule(
   scheduleId: string,
   input: Partial<ScheduleInput> & { status?: string },
 ): Promise<ServiceResult<ScheduleWithRecipients>> {
-  const supabase = createAdminClient();
-  const { hasScheduleNotes, hasAttemptedAt } = await getSmsSchemaCapabilities();
+  const supabase = createAdminClient(input.setBy ?? undefined);
+  const { hasScheduleNotes } = await getSmsSchemaCapabilities();
 
   const { data: existingRow, error: readError } = await supabase
     .from('prenatal_schedules')
@@ -290,79 +250,22 @@ export async function updateSchedule(
     return { ok: false, error: 'A schedule must keep at least one pregnant mother.' };
   }
 
-  const dateChanged = input.visitDate !== undefined && input.visitDate !== existing.visit_date;
-  const patch: Record<string, unknown> = {};
-  if (input.visitDate !== undefined) patch.visit_date = input.visitDate;
-  if (input.trimester !== undefined) patch.trimester = input.trimester;
-  if (hasScheduleNotes && input.notes !== undefined) patch.notes = input.notes?.trim() || null;
-  if (input.status !== undefined) patch.status = input.status;
-  // Editing an open schedule re-opens it so the automatic job can run again.
-  if (dateChanged) {
-    patch.status = input.status ?? 'scheduled';
-    patch.reminder_sent = false;
-    patch.reminder_sent_at = null;
-    // Clear the backoff so the edited date gets a fresh automatic attempt.
-    if (hasAttemptedAt) patch.reminder_attempted_at = null;
-  }
-
-  const { error: updateError } = await supabase
-    .from('prenatal_schedules')
-    .update(patch)
-    .eq('id', scheduleId);
-
+  const recipients = input.motherIds ?? (await getSchedule(scheduleId))?.recipients.map((r) => r.pregnant_mother_id) ?? [];
+  const { error: updateError } = await supabase.rpc('save_prenatal_schedule', {
+    schedule_uuid: scheduleId, visit_day: input.visitDate ?? existing.visit_date,
+    trimester_value: input.trimester ?? existing.trimester, recipient_ids: recipients,
+    notes_value: input.notes === undefined ? (existingRow as unknown as { notes?: string }).notes ?? null : input.notes?.trim() || null,
+    actor_uuid: input.setBy ?? null,
+    status_value: input.status ?? (input.visitDate && input.visitDate !== existing.visit_date ? 'scheduled' : existing.status),
+  });
   if (updateError) return { ok: false, error: updateError.message };
-
-  let recipientsChanged = false;
-  if (input.motherIds !== undefined) {
-    const motherIds = Array.from(new Set(input.motherIds));
-    const { data: current } = await supabase
-      .from('prenatal_schedule_recipients')
-      .select('pregnant_mother_id')
-      .eq('schedule_id', scheduleId);
-    const currentIds = new Set((current ?? []).map((r) => r.pregnant_mother_id as string));
-    const nextIds = new Set(motherIds);
-    recipientsChanged =
-      currentIds.size !== nextIds.size || [...nextIds].some((id) => !currentIds.has(id));
-
-    if (recipientsChanged) {
-      const toAdd = motherIds.filter((id) => !currentIds.has(id));
-      const toRemove = [...currentIds].filter((id) => !nextIds.has(id));
-
-      if (toRemove.length) {
-        await supabase
-          .from('prenatal_schedule_recipients')
-          .delete()
-          .eq('schedule_id', scheduleId)
-          .in('pregnant_mother_id', toRemove);
-      }
-      if (toAdd.length) {
-        // A plain insert, not an upsert: the rows removed above are exactly the
-        // ones that could conflict, so this needs no unique index to be correct
-        // and works before migration 014 has been applied.
-        const { error: addError } = await supabase
-          .from('prenatal_schedule_recipients')
-          .insert(toAdd.map((pregnant_mother_id) => ({ schedule_id: scheduleId, pregnant_mother_id })));
-        if (addError) return { ok: false, error: `Could not add the new mothers: ${addError.message}` };
-      }
-    }
-  }
-
-  if (dateChanged || recipientsChanged) {
-    await invalidateScheduleArtifacts(supabase, scheduleId, {
-      dropAutoReceipts: true,
-      keepManualHistory: true,
-    });
-  }
 
   await createRoleNotification(supabase, {
     eventKey: `schedule-updated:${scheduleId}:${Date.now()}`,
     category: 'appointment',
     recipientRole: 'nurse',
     title: 'Prenatal schedule updated',
-    message:
-      dateChanged || recipientsChanged
-        ? `The schedule for ${patch.visit_date ?? existing.visit_date} was changed. Previous reminders were cleared so the correct one can be sent.`
-        : `The schedule for ${existing.visit_date} was updated.`,
+    message: `The schedule for ${input.visitDate ?? existing.visit_date} was updated.`,
   });
 
   return { ok: true, data: (await getSchedule(scheduleId))! };
@@ -384,41 +287,15 @@ export async function invalidateScheduleArtifacts(
   scheduleId: string,
   options: InvalidateOptions = {},
 ) {
-  const { dropAutoReceipts = true, keepManualHistory = true } = options;
+  void options;
+  const { error } = await supabase.rpc('invalidate_schedule_reminders', { schedule_uuid: scheduleId });
+  if (error) throw new Error(error.message);
 
-  await supabase.from('prenatal_schedule_reminders').delete().eq('schedule_id', scheduleId);
-
-  const { hasReceipts } = await getSmsSchemaCapabilities();
-  if (hasReceipts) {
-    await supabase
-      .from('sms_recipient_receipts')
-      .delete()
-      .eq('schedule_id', scheduleId)
-      .eq('send_kind', dropAutoReceipts ? 'auto' : '__never__');
-  }
-
-  // Two event-key shapes exist: the historical
-  // "prenatal-reminder:<schedule>:<mother>" and the current
-  // "<message_type>:<log_id>:<mother>". Both are matched with or() - chaining
-  // two like() calls on one column would AND them and match nothing.
-  await supabase
-    .from('maternal_notifications')
-    .delete()
-    .or(`event_key.like.prenatal-reminder:${scheduleId}:%,event_key.like.prenatal_reminder:${scheduleId}:%`);
-
-  if (!keepManualHistory && hasReceipts) {
-    await supabase
-      .from('sms_recipient_receipts')
-      .delete()
-      .eq('schedule_id', scheduleId)
-      .eq('send_kind', 'manual');
-  }
 }
 
-export async function deleteSchedule(scheduleId: string): Promise<ServiceResult<null>> {
-  const supabase = createAdminClient();
-  await invalidateScheduleArtifacts(supabase, scheduleId, { keepManualHistory: false });
-  const { error } = await supabase.from('prenatal_schedules').delete().eq('id', scheduleId);
+export async function deleteSchedule(scheduleId: string, actorId?: string): Promise<ServiceResult<null>> {
+  const supabase = createAdminClient(actorId);
+  const { error } = await supabase.rpc('delete_prenatal_schedule', { schedule_uuid: scheduleId });
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: null };
 }

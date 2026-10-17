@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { clearRememberPreference } from '@/utils/auth/session-persistence';
 import { createClient } from '@/utils/supabase/client';
 
 export default function LogoutPage() {
@@ -11,6 +12,7 @@ export default function LogoutPage() {
   useEffect(() => {
     async function performLogout() {
       await supabase.auth.signOut();
+      clearRememberPreference();
       router.push('/login');
       router.refresh();
     }

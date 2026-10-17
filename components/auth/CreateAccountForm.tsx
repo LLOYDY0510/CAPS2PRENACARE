@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { persistRememberPreference } from '@/utils/auth/session-persistence';
 import { createClient } from '@/utils/supabase/client';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { Mail, ShieldCheck, Phone, FileText } from 'lucide-react';
@@ -67,13 +68,14 @@ export default function CreateAccountForm() {
         });
         if (signInError) {
           setNotice(
-            'Your account was created. Please confirm your email address, then log in and finish linking your record.',
+            'Your account was created. Please confirm your email address, then ask your BHW or administrator to link your prenatal record.',
           );
           setStatus('idle');
           return;
         }
       }
 
+      persistRememberPreference(true);
       const response = await fetch('/api/account/link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,18 +102,18 @@ export default function CreateAccountForm() {
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
-      <header className="border-b border-slate-100 pb-3">
-        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Create Account</h2>
-        <p className="text-xs text-slate-500 font-medium mt-1">Link your prenatal record to register your mother portal account.</p>
+      <header className="border-b border-neutral-100 pb-3">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight">Create Account</h2>
+        <p className="text-xs text-neutral-500 font-medium mt-1">Link your prenatal record to register your mother portal account.</p>
       </header>
 
       {error && (
-        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold" role="alert">
+        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="alert">
           {error}
         </div>
       )}
       {notice && (
-        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold" role="status">
+        <div className="p-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 text-xs font-semibold" role="status">
           {notice}
         </div>
       )}
@@ -122,7 +124,7 @@ export default function CreateAccountForm() {
             Email Address
           </label>
           <div className="relative flex items-center">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
             <input
               id="create-email"
               name="email"
@@ -130,7 +132,7 @@ export default function CreateAccountForm() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+              className="w-full h-11 pl-11 pr-4 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white border border-neutral-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-neutral-800 placeholder:text-neutral-400 transition-all outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
               placeholder="name@example.com"
               required
             />
@@ -146,7 +148,7 @@ export default function CreateAccountForm() {
             onChange={setPassword}
             autoComplete="new-password"
             required
-            inputClassName="h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-full border-slate-200 text-xs sm:text-sm"
+            inputClassName="h-11 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white rounded-full border-neutral-200 text-xs sm:text-sm"
           />
           <PasswordInput
             label="Confirm Password"
@@ -156,12 +158,12 @@ export default function CreateAccountForm() {
             onChange={setConfirmPassword}
             autoComplete="new-password"
             required
-            inputClassName="h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white rounded-full border-slate-200 text-xs sm:text-sm"
+            inputClassName="h-11 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white rounded-full border-neutral-200 text-xs sm:text-sm"
           />
         </div>
 
-        <div className="border-t border-slate-100 pt-4 space-y-3.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-teal-50/70 p-3 rounded-2xl border border-teal-100">
+        <div className="border-t border-neutral-100 pt-4 space-y-3.5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 bg-green-50/70 p-3 rounded-2xl border border-green-100">
             <ShieldCheck className="w-4 h-4 text-[var(--brand)] shrink-0" />
             <span>Enter registration details to link your maternal record.</span>
           </div>
@@ -171,7 +173,7 @@ export default function CreateAccountForm() {
               Serial Number
             </label>
             <div className="relative flex items-center">
-              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 id="create-serial-no"
                 name="serialNo"
@@ -179,7 +181,7 @@ export default function CreateAccountForm() {
                 value={serialNo}
                 onChange={(event) => setSerialNo(event.target.value)}
                 placeholder="e.g. SPM-2026-0001"
-                className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none"
+                className="w-full h-11 pl-11 pr-4 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white border border-neutral-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-neutral-800 placeholder:text-neutral-400 transition-all outline-none"
                 required
               />
             </div>
@@ -190,7 +192,7 @@ export default function CreateAccountForm() {
               Contact Number
             </label>
             <div className="relative flex items-center">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 id="create-contact-number"
                 name="contactNumber"
@@ -198,7 +200,7 @@ export default function CreateAccountForm() {
                 value={contactNumber}
                 onChange={(event) => setContactNumber(event.target.value)}
                 placeholder="Contact number used during registration"
-                className="w-full h-11 pl-11 pr-4 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all outline-none"
+                className="w-full h-11 pl-11 pr-4 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white border border-neutral-200 focus:border-[var(--brand)] rounded-full text-xs sm:text-sm font-medium text-neutral-800 placeholder:text-neutral-400 transition-all outline-none"
                 required
               />
             </div>
@@ -214,7 +216,7 @@ export default function CreateAccountForm() {
         </button>
       </form>
 
-      <p className="text-center text-xs font-medium text-slate-500 pt-2 border-t border-slate-100">
+      <p className="text-center text-xs font-medium text-neutral-500 pt-2 border-t border-neutral-100">
         Already have an account?{' '}
         <Link href="/login" className="font-bold text-[var(--brand)] hover:underline">
           Sign In

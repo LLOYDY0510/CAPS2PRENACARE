@@ -1,32 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { requireApiPermission } from '@/utils/auth/api';
+import { localDate, validDate } from '@/utils/calendar';
+import { isValidBloodPressure } from '@/utils/maternalForm';
 import { createAdminClient } from '@/utils/supabase/admin';
 
-const STAFF_ROLES = ['admin', 'nurse', 'bhw_head', 'bhw_purok'] as const;
-
 async function getAuthorizedStaff() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, purok')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.role || !STAFF_ROLES.includes(profile.role as (typeof STAFF_ROLES)[number])) {
-    return { error: NextResponse.json({ error: 'You are not authorized to manage prenatal checkups.' }, { status: 403 }) };
-  }
-
-  return { supabase, user, profile };
+  return requireApiPermission('canManageReferrals');
 }
 
 async function canAccessMother(
   motherId: string,
-  profile: { role: string; purok: string | null },
+  profile: { role: string | null; purok: string | null; access_all_zones?: boolean },
 ) {
-  if (profile.role !== 'bhw_purok') return true;
+  if (profile.role !== 'bhw' || profile.access_all_zones) return true;
+  if (!profile.purok) return false;
 
   const adminClient = createAdminClient();
   const { data: mother } = await adminClient
@@ -41,7 +28,7 @@ async function canAccessMother(
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthorizedStaff();
-    if ('error' in auth) return auth.error;
+    if (auth.error) return auth.error;
 
     const body = await request.json() as {
       pregnantMotherId?: unknown;
@@ -49,6 +36,8 @@ export async function POST(request: NextRequest) {
       bloodPressure?: unknown;
       weightKg?: unknown;
       notes?: unknown;
+      actualCheckupDate?: unknown;
+      scheduledCheckupDate?: unknown;
     };
 
     if (
@@ -62,6 +51,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You cannot manage records outside your assigned purok.' }, { status: 403 });
     }
 
+    if (!validDate(body.actualCheckupDate) || body.actualCheckupDate > localDate() || !validDate(body.scheduledCheckupDate)) {
+      return NextResponse.json({ error: 'Provide valid scheduled and actual attendance dates. Attendance cannot be in the future.' }, { status: 400 });
+    }
+    if (body.bloodPressure && (typeof body.bloodPressure !== 'string' || !isValidBloodPressure(body.bloodPressure.trim()))) {
+      return NextResponse.json({ error: 'Invalid blood pressure.' }, { status: 400 });
+    }
+
     const weight = body.weightKg == null || body.weightKg === '' ? null : Number(body.weightKg);
     if (weight != null && (!Number.isFinite(weight) || weight <= 0 || weight > 300)) {
       return NextResponse.json({ error: 'Weight must be between 0 and 300 kg.' }, { status: 400 });
@@ -72,6 +68,8 @@ export async function POST(request: NextRequest) {
       .from('prenatal_schedules')
       .select('visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
       .eq('trimester', body.trimester)
+      .eq('visit_date', body.scheduledCheckupDate)
+      .neq('status', 'cancelled')
       .eq('prenatal_schedule_recipients.pregnant_mother_id', body.pregnantMotherId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -82,12 +80,13 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduledCheckupDate = schedule.visit_date;
-    const actualCheckupDate = scheduledCheckupDate;
+    const actualCheckupDate = body.actualCheckupDate;
     const { data: existing } = await adminClient
       .from('prenatal_checkups')
       .select('id')
       .eq('pregnant_mother_id', body.pregnantMotherId)
       .eq('trimester', body.trimester)
+      .eq('scheduled_checkup_date', scheduledCheckupDate)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -120,7 +119,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const auth = await getAuthorizedStaff();
-    if ('error' in auth) return auth.error;
+    if (auth.error) return auth.error;
 
     const body = await request.json() as { id?: unknown; pregnantMotherId?: unknown };
     if (typeof body.id !== 'string' || typeof body.pregnantMotherId !== 'string') {

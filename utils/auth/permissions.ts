@@ -3,81 +3,51 @@ import type { UserRole } from '@/types';
 // Define access permissions for each role
 export const ROLE_PERMISSIONS = {
   admin: {
-    canViewAllRecords: true,
+    canViewAllRecords: false,
     canManageUsers: true,
     canManageRoles: true,
-    canViewRiskMap: true,
-    canEditRiskMap: true,
-    canViewAllPuroks: true,
-    canManageAllPuroks: true,
-    canSendSMS: true,
-    canManageHealthTips: true,
-    canManageRiskIndicators: true,
-    canViewReports: true,
-    canManageReferrals: true,
-    canManageSchedules: true,
-  },
-  nurse: {
-    canViewAllRecords: true,
-    canManageUsers: false,
-    canManageRoles: false,
-    canViewRiskMap: true,
-    canEditRiskMap: true,
-    canViewAllPuroks: true,
-    canManageAllPuroks: true,
-    canSendSMS: true,
-    canManageHealthTips: true,
-    canManageRiskIndicators: true,
-    canViewReports: true,
-    canManageReferrals: true,
-    canManageSchedules: true,
-  },
-  bhw_head: {
-    canViewAllRecords: true,
-    canManageUsers: false,
-    canManageRoles: false,
-    canViewRiskMap: true,
-    canEditRiskMap: true,
-    canViewAllPuroks: true,
-    canManageAllPuroks: true,
-    canSendSMS: true,
-    canManageHealthTips: false,
-    canManageRiskIndicators: false,
-    canViewReports: true,
-    canManageReferrals: true,
-    canManageSchedules: true,
-  },
-  bhw_purok: {
-    canViewAllRecords: false, // Only their purok
-    canManageUsers: false,
-    canManageRoles: false,
-    canViewRiskMap: true,
-    canEditRiskMap: false, // View only
-    canViewAllPuroks: false, // Only their purok
-    canManageAllPuroks: false, // Only their purok
-    canSendSMS: true,
-    canManageHealthTips: false,
-    canManageRiskIndicators: false,
-    canViewReports: true,
-    canManageReferrals: true,
-    canManageSchedules: false, // Cannot create/edit schedules
-  },
-  pregnant_mother: {
-    canViewAllRecords: false,
-    canManageUsers: false,
-    canManageRoles: false,
     canViewRiskMap: false,
     canEditRiskMap: false,
     canViewAllPuroks: false,
     canManageAllPuroks: false,
-    canSendSMS: false,
+    canSendSMS: true,
     canManageHealthTips: false,
     canManageRiskIndicators: false,
     canViewReports: false,
     canManageReferrals: false,
     canManageSchedules: false,
   },
-  pending: {
+  nurse: {
+    canViewAllRecords: true,
+    canManageUsers: false,
+    canManageRoles: false,
+    canViewRiskMap: false,
+    canEditRiskMap: false,
+    canViewAllPuroks: true,
+    canManageAllPuroks: false,
+    canSendSMS: true,
+    canManageHealthTips: true,
+    canManageRiskIndicators: true,
+    canViewReports: false,
+    canManageReferrals: true,
+    canManageSchedules: true,
+  },
+  bhw: {
+    canViewAllRecords: false,
+    canManageUsers: false,
+    canManageRoles: false,
+    canViewRiskMap: true,
+    canEditRiskMap: false,
+    canViewAllPuroks: false,
+    canManageAllPuroks: false,
+    canSendSMS: true,
+    canManageHealthTips: false,
+    canManageRiskIndicators: false,
+    canViewReports: true,
+    canManageReferrals: true,
+    canManageSchedules: true,
+  },
+  patient: {
     canViewAllRecords: false,
     canManageUsers: false,
     canManageRoles: false,
@@ -102,32 +72,26 @@ export function hasPermission(role: UserRole | string | null | undefined, permis
 }
 
 // Helper function to check if a user can access a specific purok
-export function canAccessPurok(userRole: UserRole | string | null | undefined, userPurok: string | null, targetPurok: string | null): boolean {
+export function canAccessPurok(userRole: UserRole | string | null | undefined, userPurok: string | null, targetPurok: string | null, allZones = false): boolean {
   if (!userRole) return false;
-  
-  // Admins, nurses, and bhw_head can access all puroks
-  if (['admin', 'nurse', 'bhw_head'].includes(userRole as UserRole)) {
-    return true;
-  }
-  
-  // bhw_purok can only access their assigned purok
-  if (userRole === 'bhw_purok') {
-    return userPurok === targetPurok;
-  }
-  
+
+  if (['admin', 'nurse'].includes(userRole)) return true;
+  if (userRole === 'bhw' && allZones) return true;
+  if (userRole === 'bhw') return !!userPurok && userPurok === targetPurok;
+
   return false;
 }
 
 // Helper function to check if a user can manage users
 export function canManageUsers(role: UserRole | string | null | undefined): boolean {
   // Only admin can manage users
-  return role === 'admin';
+  return hasPermission(role, 'canManageUsers');
 }
 
 // Helper function to check if a user can manage roles
 export function canManageRoles(role: UserRole | string | null | undefined): boolean {
   // Only admin can manage roles
-  return role === 'admin';
+  return hasPermission(role, 'canManageRoles');
 }
 
 // Helper function to check if a user can edit the risk map
