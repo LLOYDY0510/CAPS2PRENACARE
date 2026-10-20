@@ -4,7 +4,7 @@ import { one } from '@/utils/embedded';
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiPermission('canManageReferrals');
+    const auth = await requireApiPermission('canManageFollowUps');
     if (auth.error) return auth.error;
     const { supabase, profile } = auth;
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireApiPermission('canManageReferrals');
+    const auth = await requireApiPermission('canManageFollowUps');
     if (auth.error) return auth.error;
     const { supabase, profile } = auth;
 
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const auth = await requireApiPermission('canManageReferrals');
+    const auth = await requireApiPermission('canManageFollowUps');
     if (auth.error) return auth.error;
     const { supabase, profile } = auth;
 

@@ -16,9 +16,10 @@ export async function POST(request:NextRequest){
     for(const key of ['first_name','last_name'])if(typeof form[key]!=='string'||!form[key].trim()||form[key].length>150)return NextResponse.json({error:'First and last name are required (maximum 150 characters). '},{status:400});
     for(const key of ['middle_name','address','contact_number','blood_pressure'])if(form[key]!=null&&(typeof form[key]!=='string'||form[key].length>1000))return NextResponse.json({error:'Invalid patient information.'},{status:400});
     if(!validDate(form.date_registered)||form.date_registered>localDate()||(['lmp','edd'].some(key=>form[key]&&!validDate(form[key]))))return NextResponse.json({error:'Provide valid registration and pregnancy dates.'},{status:400});
-    for(const [key,min,max] of [['age',10,55],['gravida',0,30],['para',0,30],['height_cm',50,250],['weight_kg',1,300],['latitude',-90,90],['longitude',-180,180]] as const){
+    for(const [key,min,max] of [['age',10,55],['gravida',0,30],['para',0,30],['waist_cm',0,Number.MAX_VALUE],['height_cm',50,250],['weight_kg',1,300],['latitude',-90,90],['longitude',-180,180]] as const){
       if(form[key]!=null&&form[key]!==''){const value=Number(form[key]);if(!Number.isFinite(value)||value<min||value>max||(['age','gravida','para'].includes(key)&&!Number.isInteger(value)))return NextResponse.json({error:`Invalid ${key.replaceAll('_',' ')}.`},{status:400});}
     }
+    if(form.waist_cm!=null&&form.waist_cm!==''&&Number(form.waist_cm)<=0)return NextResponse.json({error:'Waist Line must be greater than zero.'},{status:400});
     if(form.blood_pressure&&!isValidBloodPressure(form.blood_pressure))return NextResponse.json({error:'Blood pressure must use the format 120/80.'},{status:400});
     const {data,error}=await auth.supabase.rpc('register_mother',{request_uuid:body.requestId,mother_data:{...form,purok:zone},indicator_ids:body.indicatorIds});
     if(error)return NextResponse.json({error:error.code==='42501'?'Registration is not permitted for your assigned zone.':error.message},{status:error.code==='42501'?403:400});

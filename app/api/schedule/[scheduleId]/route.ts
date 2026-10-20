@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ sched
     const patch: Parameters<typeof updateSchedule>[1] = {};
     if (body.visitDate !== undefined) patch.visitDate = String(body.visitDate);
     if (body.trimester !== undefined) patch.trimester = body.trimester as Trimester;
+    if(body.visitNumber!==undefined)patch.visitNumber=body.visitNumber;
     if (body.notes !== undefined) patch.notes = typeof body.notes === 'string' ? body.notes : null;
     if (body.status !== undefined) patch.status = String(body.status);
     if (body.motherIds !== undefined) {

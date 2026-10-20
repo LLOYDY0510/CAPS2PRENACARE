@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 /* Sends the reminder for a schedule immediately, to real phone numbers, through SMS Gateway Public Cloud. */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiPermission('canManageSchedules');
+    const auth = await requireApiPermission('canSendSMS');
     if (auth.error) return auth.error;
     const { user } = auth;
     const body = await req.json();

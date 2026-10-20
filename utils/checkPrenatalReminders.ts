@@ -293,7 +293,7 @@ export async function createMissedVisitFollowUps(): Promise<number> {
 
     const { data: completedCheckups } = await supabase
       .from('prenatal_checkups')
-      .select('pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status')
+      .select('schedule_id, pregnant_mother_id, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status')
       .in('pregnant_mother_id', motherIds)
       .eq('status', 'completed');
 
@@ -301,8 +301,7 @@ export async function createMissedVisitFollowUps(): Promise<number> {
       (completedCheckups ?? [])
         .filter(
           (checkup) =>
-            (checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date) ===
-            schedule.visit_date,
+            checkup.schedule_id?checkup.schedule_id===schedule.id:(checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date) === schedule.visit_date,
         )
         .filter(
           (checkup) =>

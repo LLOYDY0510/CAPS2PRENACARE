@@ -1,6 +1,7 @@
 'use client';
 import { useConfirmation } from '@/components/ui/useConfirmation';
 import Modal, { ConfirmDialog } from '@/components/ui/Modal';
+import { visitLabel } from '@/utils/prenatalProjection';
 import { localDate } from '@/utils/calendar';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +18,7 @@ export type ScheduleRow = {
   id: string;
   visit_date: string;
   trimester: string | null;
+  visit_number?: number | null;
   status: string;
   reminder_sent: boolean;
   reminder_sent_at: string | null;
@@ -60,7 +62,7 @@ export default function ScheduleSetter({
   role: string;
   userPurok?: string | null;
   smsStatus: SmsStatus;
-  events?: {id:string;schedule_id:string;patient_name:string;visit_date:string;notes:string|null;status:string;occurred_at:string}[];
+  events?: {visit_number?:number|null;trimester?:string|null;id:string;schedule_id:string;patient_name:string;visit_date:string;notes:string|null;status:string;occurred_at:string}[];
 }) {
   const router = useRouter();
 
@@ -78,6 +80,7 @@ export default function ScheduleSetter({
   const [dryRun, setDryRun] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if(role==='admin')return;
     let cancelled = false;
     fetch('/api/sms/health')
       .then((r) => (r.ok ? r.json() : null))
@@ -89,7 +92,7 @@ export default function ScheduleSetter({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [role]);
 
   const scopedMothers =
     role === 'bhw' && userPurok
@@ -110,6 +113,7 @@ export default function ScheduleSetter({
         body: JSON.stringify({
           visitDate: value.visitDate,
           trimester: value.trimester,
+          visitNumber:value.visitNumber,
           notes: value.notes,
           motherIds: value.motherIds,
         }),
@@ -120,7 +124,7 @@ export default function ScheduleSetter({
         return false;
       }
       setMode('idle');
-      setNotice('Schedule created. Send the reminder now, or let the daily job send it tomorrow.');
+      setNotice('Schedule created.');
       router.refresh();
       return true;
     } catch {
@@ -143,6 +147,7 @@ export default function ScheduleSetter({
           scheduleId,
           visitDate: value.visitDate,
           trimester: value.trimester,
+          visitNumber:value.visitNumber,
           notes: value.notes,
           motherIds: value.motherIds,
         }),
@@ -162,6 +167,13 @@ export default function ScheduleSetter({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleCancel(scheduleId:string){
+    if(busy||!await confirm({title:'Cancel schedule?',description:'Attendance and schedule history will be retained. No reminder will be sent for a cancelled schedule.',confirmText:'Cancel Schedule'}))return;
+    setBusy(true);setError('');
+    try{const response=await fetch(`/api/schedule/${encodeURIComponent(scheduleId)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'cancelled'})});const result=await response.json();if(!response.ok)throw new Error(result.error??'Cancellation failed.');setNotice('Schedule cancelled.');router.refresh();}
+    catch(failure){setError(failure instanceof Error?failure.message:'Cancellation failed.');}finally{setBusy(false);}
   }
 
   async function handleDelete(scheduleId: string) {
@@ -235,13 +247,13 @@ export default function ScheduleSetter({
   const target=typeof mode==='object'?schedules.find(row=>row.id===mode.edit):null;
   return <div className="space-y-6">
     {error&&<p className="error-message alert-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-    <div className="flex flex-wrap justify-between items-center gap-4"><p className="flex flex-wrap items-center gap-2 text-sm text-neutral-600"><Cloud size={18} aria-hidden="true"/>SMS Gateway Public Cloud · {dryRun===true&&<DryRunBadge/>}{smsStatus.account.status??'Not configured'}</p>{canEdit&&<Button leftIcon={<Plus size={18}/>} onClick={()=>{setDirty(false);setMode('create');}}>Add Schedule</Button>}</div>
+    <div className="flex flex-wrap justify-between items-center gap-4">{role!=='admin'&&<p className="flex flex-wrap items-center gap-2 text-sm text-neutral-600"><Cloud size={18} aria-hidden="true"/>SMS Gateway Public Cloud · {dryRun===true&&<DryRunBadge/>}{smsStatus.account.status??'Not configured'}</p>}{canEdit&&<Button leftIcon={<Plus size={18}/>} onClick={()=>{setDirty(false);setMode('create');}}>Add Schedule</Button>}</div>
     <Modal isOpen={mode!=='idle'} title={mode==='create'?'Add Schedule':'Edit Schedule'} maxWidth="xl" onClose={()=>void closeForm()}>
       {error&&<p role="alert" className="error-message">{error}</p>}
-      <ScheduleEditor onDirtyChange={setDirty} key={target?.id??'new'} mothers={scopedMothers} initial={target?{visitDate:target.visit_date,trimester:(target.trimester??'1st') as Trimester,notes:target.notes??'',motherIds:target.recipients.map(row=>row.pregnant_mother_id)}:{visitDate:'',trimester:'1st',notes:'',motherIds:[]}} submitLabel="Save Schedule" busy={busy} onSubmit={value=>target?handleUpdate(target.id,value):handleCreate(value)} onCancel={()=>void closeForm()}/>
+      <ScheduleEditor onDirtyChange={setDirty} key={target?.id??'new'} mothers={scopedMothers} initial={target?{visitNumber:target.visit_number??undefined,visitDate:target.visit_date,trimester:(target.trimester??'1st') as Trimester,notes:target.notes??'',motherIds:target.recipients.map(row=>row.pregnant_mother_id)}:{visitDate:'',trimester:'1st',notes:'',motherIds:[]}} submitLabel="Save Schedule" busy={busy} onSubmit={value=>target?handleUpdate(target.id,value):handleCreate(value)} onCancel={()=>void closeForm()}/>
     </Modal>
-    <section className="card p-6"><SectionHeading title="Upcoming Schedules" description="Planned prenatal visits and patient assignments" icon={CalendarDays}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Date of Visit</th><th>Notes</th><th>Timestamp</th></tr></thead><tbody>{upcoming.flatMap(schedule=>schedule.recipients.map(recipient=><tr key={schedule.id+recipient.pregnant_mother_id}><td>{recipient.full_name??'Unknown'}{canEdit&&<details className="mt-2"><summary>Actions</summary><div className="flex flex-wrap gap-2 py-3"><button className="btn-secondary" disabled={busy} onClick={()=>{setDirty(false);setMode({edit:schedule.id});}}><Edit size={15} aria-hidden="true"/>Edit</button><button className="btn-secondary" disabled={sendingId!==null} onClick={()=>handleSend(schedule)}><Send size={15} aria-hidden="true"/>Send reminder</button><button className="btn-secondary" onClick={()=>setConfirmDeleteId(schedule.id)}><Trash2 size={15} aria-hidden="true"/>Delete</button></div>{outcomes[schedule.id]?.map((outcome,index)=><p key={index}>{outcome.phone}: {outcome.status}</p>)}</details>}</td><td>{schedule.visit_date}</td><td>{schedule.notes??'—'}</td><td>{schedule.created_at?new Date(schedule.created_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'—'}</td></tr>))}{!upcoming.length&&<tr><td colSpan={4}>No upcoming schedules.</td></tr>}</tbody></table></div></section>
-    <section className="card p-6"><SectionHeading title="Schedule Logs" description="A retained record of scheduling activity" icon={History}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Date of Visit</th><th>Notes</th><th>Status</th><th>Timestamp</th></tr></thead><tbody>{events.map(event=><tr key={event.id}><td>{event.patient_name}<a className="block text-green-800 text-sm mt-2" href={`/dashboard/schedule/history/${event.schedule_id}`}>View history</a></td><td>{event.visit_date}</td><td>{event.notes??'—'}</td><td>{event.status}</td><td>{new Date(event.occurred_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'})}</td></tr>)}{!events.length&&<tr><td colSpan={5}>No schedule events yet.</td></tr>}</tbody></table></div></section>
+    <section className="card p-6"><SectionHeading title="Upcoming Schedules" description="Planned prenatal visits and patient assignments" icon={CalendarDays}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Trimester / Visit</th><th>Date of Visit</th><th>Notes</th><th>Timestamp</th></tr></thead><tbody>{upcoming.flatMap(schedule=>schedule.recipients.map(recipient=><tr key={schedule.id+recipient.pregnant_mother_id}><td>{recipient.full_name??'Unknown'}{canEdit&&<details className="mt-2"><summary>Actions</summary><div className="flex flex-wrap gap-2 py-3"><button className="btn-secondary" disabled={busy} onClick={()=>{setDirty(false);setMode({edit:schedule.id});}}><Edit size={15} aria-hidden="true"/>Edit</button>{role!=='admin'&&<button className="btn-secondary" disabled={sendingId!==null} onClick={()=>handleSend(schedule)}><Send size={15} aria-hidden="true"/>Send reminder</button>}<button className="btn-secondary" disabled={busy} onClick={()=>void handleCancel(schedule.id)}>Cancel Schedule</button><button className="btn-secondary" disabled={busy} onClick={()=>setConfirmDeleteId(schedule.id)}><Trash2 size={15} aria-hidden="true"/>Delete</button></div>{outcomes[schedule.id]?.map((outcome,index)=><p key={index}>{outcome.phone}: {outcome.status}</p>)}</details>}</td><td>{schedule.trimester} · {visitLabel(schedule.visit_number)}</td><td>{schedule.visit_date}</td><td>{schedule.notes??'—'}</td><td>{schedule.created_at?new Date(schedule.created_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'—'}</td></tr>))}{!upcoming.length&&<tr><td colSpan={5}>No upcoming schedules.</td></tr>}</tbody></table></div></section>
+    <section className="card p-6"><SectionHeading title="Schedule Logs" description="A retained record of scheduling activity" icon={History}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Trimester / Visit</th><th>Date of Visit</th><th>Notes</th><th>Status</th><th>Timestamp</th></tr></thead><tbody>{events.map(event=><tr key={event.id}><td>{event.patient_name}<a className="block text-green-800 text-sm mt-2" href={`/dashboard/schedule/history/${event.schedule_id}`}>View history</a></td><td>{event.trimester??'—'} · {visitLabel(event.visit_number)}</td><td>{event.visit_date}</td><td>{event.notes??'—'}</td><td>{event.status}</td><td>{new Date(event.occurred_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'})}</td></tr>)}{!events.length&&<tr><td colSpan={6}>No schedule events yet.</td></tr>}</tbody></table></div></section>
     {confirmation}
     <ConfirmDialog isOpen={confirmDeleteId!==null} onClose={()=>setConfirmDeleteId(null)} onConfirm={()=>{if(confirmDeleteId)void handleDelete(confirmDeleteId);}} title="Delete schedule?" description="The schedule and its active assignments will be removed. Schedule logs and sent receipts will remain." isLoading={busy}/>
   </div>;

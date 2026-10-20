@@ -1,5 +1,5 @@
 import { collectRows } from '@/utils/supabase/collectRows';
-import { scheduleProjection } from '@/utils/prenatalProjection';
+import { scheduleProjection,trimesterVisitSummary } from '@/utils/prenatalProjection';
 import CheckupsTable from '@/components/pregnant/CheckupsTable';
 import { requireRoles } from '@/utils/auth/roles';
 import { getPrenatalVisitStatus, type PrenatalVisitStatus } from '@/utils/prenatalStatus';
@@ -9,7 +9,7 @@ import { ClipboardCheck } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function PrenatalCheckupsPage() {
-  const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw']);
+  const { supabase, profile, role } = await requireRoles(['bhw']);
 
   let recordsQuery = supabase
     .from('pregnant_mothers')
@@ -21,10 +21,10 @@ export default async function PrenatalCheckupsPage() {
   const [checkupsResult, scheduleResult] = await Promise.all([
     collectRows((start,end)=>supabase
       .from('prenatal_checkups')
-      .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end)),
+      .select('schedule_id, visit_number, pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end)),
     collectRows((start,end)=>supabase
       .from('prenatal_schedules')
-      .select('trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .select('id, visit_number, trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
       .not('trimester', 'is', null)
       .order('created_at', { ascending: false }).order('id').range(start,end)),
   ]);
@@ -46,7 +46,7 @@ export default async function PrenatalCheckupsPage() {
 
   const countsByMother: Record<string, number> = {};
   const statusByMother: Record<string, Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>> = {};
-  const { scheduledByMother } = scheduleProjection(scheduleRows ?? []);
+  const { scheduledByMother,visitsByMother } = scheduleProjection(scheduleRows ?? []);
   checkups?.forEach((checkup) => {
     const trimester = checkup.trimester as '1st' | '2nd' | '3rd';
     const scheduledDate = checkup.scheduled_checkup_date ?? checkup.scheduled_for ?? checkup.checkup_date ?? scheduledByMother[checkup.pregnant_mother_id]?.[trimester];
@@ -70,6 +70,7 @@ export default async function PrenatalCheckupsPage() {
     ...r,
     checkupCount: countsByMother[r.id] ?? 0,
     trimesterStatuses: statusByMother[r.id] ?? { '1st': null, '2nd': null, '3rd': null },
+    visitSummaries:Object.fromEntries(['1st','2nd','3rd'].map(tri=>[tri,trimesterVisitSummary(visitsByMother[r.id]??[],(checkups??[]).filter(c=>c.pregnant_mother_id===r.id),tri)])),
   }));
 
   return (

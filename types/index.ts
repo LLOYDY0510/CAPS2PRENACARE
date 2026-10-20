@@ -33,6 +33,7 @@ export type PregnantMother = {
   gravida_para: string | null;
   edd: string | null;
   blood_pressure: string | null;
+  waist_cm?: number | null;
   height_cm: number | null;
   weight_kg: number | null;
   latitude: number | null;
@@ -45,6 +46,8 @@ export type Trimester = '1st' | '2nd' | '3rd';
 
 export type PrenatalCheckup = {
   id: string;
+  schedule_id?: string | null;
+  visit_number?: number | null;
   pregnant_mother_id: string;
   trimester: Trimester;
   checkup_date: string;
@@ -128,6 +131,8 @@ export type TipBroadcastRecipient = {
 
 export type PrenatalSchedule = {
   id: string;
+  trimester?: Trimester | null;
+  visit_number?: number | null;
   visit_date: string;
   reminder_sent: boolean;
   reminder_sent_at?: string | null;
@@ -186,6 +191,7 @@ export type ReportRow = {
   edd: string | null;
   gravida_para: string | null;
   blood_pressure: string | null;
+  waist_cm?: number | null;
   height_cm: number | null;
   weight_kg: number | null;
   risk_level: string | null;

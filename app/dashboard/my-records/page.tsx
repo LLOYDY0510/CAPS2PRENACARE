@@ -3,7 +3,7 @@ import { ShieldCheck, ClipboardList } from 'lucide-react';
 import InfoRow from '@/components/ui/InfoRow';
 import { AccountNotLinked, RecordNotFound } from '@/components/ui/PatientNotices';
 import RiskBadge from '@/components/ui/RiskBadge';
-import { visitStatusFor } from '@/utils/prenatalProjection';
+import { visitStatusFor,visitLabel } from '@/utils/prenatalProjection';
 import { prenatalStatusLabel } from '@/utils/prenatalStatus';
 import { getPatientContext } from '@/utils/patient';
 import PageHeader from '@/components/ui/PageHeader';
@@ -19,13 +19,13 @@ export default async function MyRecordsPage() {
 
   const { data: record } = await supabase
     .from('pregnant_mothers')
-    .select('serial_no, first_name, middle_name, last_name, blood_pressure, height_cm, weight_kg, risk_level')
+    .select('serial_no, first_name, middle_name, last_name, blood_pressure, waist_cm, height_cm, weight_kg, risk_level')
     .eq('id', pregnantMotherId)
     .single();
 
   const { data: checkups } = await supabase
     .from('prenatal_checkups')
-    .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
+    .select('id, schedule_id, visit_number, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
     .eq('pregnant_mother_id', pregnantMotherId)
     .order('checkup_date', { ascending: false });
 
@@ -50,6 +50,7 @@ export default async function MyRecordsPage() {
         <SectionHeading title="Medical Records" icon={ClipboardList}/>
         <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5 mb-6">
           <InfoRow label="Blood Pressure" value={record.blood_pressure} />
+          <InfoRow label="Waist Line" value={record.waist_cm != null ? `${record.waist_cm} cm` : null} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
           <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
         </div>
@@ -68,7 +69,7 @@ export default async function MyRecordsPage() {
             {checkups.map((c) => (
               <div key={c.id} className="border border-neutral-200/60 rounded-2xl px-4 py-3 hover:bg-neutral-50/50 transition-colors">
                 <p className="text-sm font-semibold text-neutral-800">
-                  {c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date} — {c.trimester} Trimester
+                  {c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date} — {c.trimester} Trimester · {visitLabel(c.visit_number)}
                 </p>
                 <p className="text-xs text-neutral-500 mt-1">
                   Status: {prenatalStatusLabel(visitStatusFor(c))}

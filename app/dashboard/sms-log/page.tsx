@@ -8,7 +8,7 @@ import { Send } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function SmsLogPage() {
-  const { supabase } = await requireRoles(['admin', 'bhw', 'bhw', 'nurse']);
+  const { supabase } = await requireRoles(['bhw']);
   const { hasReceipts } = await getSmsSchemaCapabilities();
 
   const { data: logs } = await supabase

@@ -10,12 +10,14 @@ export const ROLE_PERMISSIONS = {
     canEditRiskMap: false,
     canViewAllPuroks: false,
     canManageAllPuroks: false,
-    canSendSMS: true,
+    canSendSMS: false,
     canManageHealthTips: false,
     canManageRiskIndicators: false,
     canViewReports: false,
     canManageReferrals: false,
-    canManageSchedules: false,
+    canManageSchedules: true,
+    canManageCheckups: false,
+    canManageFollowUps: false,
   },
   nurse: {
     canViewAllRecords: true,
@@ -31,6 +33,8 @@ export const ROLE_PERMISSIONS = {
     canViewReports: false,
     canManageReferrals: true,
     canManageSchedules: true,
+    canManageCheckups: false,
+    canManageFollowUps: true,
   },
   bhw: {
     canViewAllRecords: false,
@@ -44,8 +48,10 @@ export const ROLE_PERMISSIONS = {
     canManageHealthTips: false,
     canManageRiskIndicators: false,
     canViewReports: true,
-    canManageReferrals: true,
-    canManageSchedules: true,
+    canManageReferrals: false,
+    canManageSchedules: false,
+    canManageCheckups: true,
+    canManageFollowUps: true,
   },
   patient: {
     canViewAllRecords: false,
@@ -61,6 +67,8 @@ export const ROLE_PERMISSIONS = {
     canViewReports: false,
     canManageReferrals: false,
     canManageSchedules: false,
+    canManageCheckups: false,
+    canManageFollowUps: false,
   },
 } as const;
 

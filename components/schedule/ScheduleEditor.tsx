@@ -2,7 +2,7 @@
 
 import { localDate } from '@/utils/calendar';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import SearchBar from '@/components/ui/SearchBar';
@@ -20,6 +20,7 @@ export type Trimester = '1st' | '2nd' | '3rd';
 export type ScheduleEditorValue = {
   visitDate: string;
   trimester: Trimester;
+  visitNumber?: number;
   notes: string;
   motherIds: string[];
 };
@@ -41,6 +42,8 @@ export default function ScheduleEditor({
   onCancel: () => void;
   busy: boolean;
 }) {
+  const pending=useRef(false);
+  const [visitNumber,setVisitNumber]=useState(initial.visitNumber??0);
   const [visitDate, setVisitDate] = useState(initial.visitDate);
   const [trimester, setTrimester] = useState<Trimester>(initial.trimester);
   const [notes, setNotes] = useState(initial.notes);
@@ -49,7 +52,7 @@ export default function ScheduleEditor({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(()=>{onDirtyChange?.(visitDate!==initial.visitDate||trimester!==initial.trimester||notes!==initial.notes||selected.size!==initial.motherIds.length||initial.motherIds.some(id=>!selected.has(id)));},[visitDate,trimester,notes,selected,initial,onDirtyChange]);
+  useEffect(()=>{onDirtyChange?.(visitNumber!==(initial.visitNumber??0)||visitDate!==initial.visitDate||trimester!==initial.trimester||notes!==initial.notes||selected.size!==initial.motherIds.length||initial.motherIds.some(id=>!selected.has(id)));},[visitNumber,visitDate,trimester,notes,selected,initial,onDirtyChange]);
 
   const puroks = useMemo(() => {
     const values = mothers.map((m) => m.purok).filter((p): p is string => !!p);
@@ -107,8 +110,10 @@ export default function ScheduleEditor({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if(pending.current||busy)return;
     setError('');
 
+    if(![1,2,3].includes(visitNumber)){setError('Choose 1st, 2nd or 3rd Visit.');return;}
     if (!visitDate) {
       setError('Choose the visit date.');
       return;
@@ -124,15 +129,12 @@ export default function ScheduleEditor({
       return;
     }
 
-    const ok = await onSubmit({
-      visitDate,
-      trimester,
-      notes,
-      motherIds: Array.from(selected),
-    });
-    if (!ok) {
-      return;
-    }
+    pending.current=true;
+    try{
+      await onSubmit({visitDate,visitNumber,trimester,notes,motherIds:Array.from(selected)});
+    }catch{setError('The schedule could not be saved. Please try again.');}
+    finally{pending.current=false;}
+
   }
 
   return (
@@ -161,15 +163,15 @@ export default function ScheduleEditor({
               { value: '3rd', label: '3rd Trimester' },
             ]}
           />
+          <Select label="Visits" value={String(visitNumber)} onChange={e=>setVisitNumber(Number(e.target.value))}
+            options={[{value:'0',label:'Select Visit'},{value:'1',label:'1st Visit'},{value:'2',label:'2nd Visit'},{value:'3',label:'3rd Visit'}]}/>
           <Input
-            label="Visit Date"
+            label="Date"
             type="date"
             value={visitDate}
             onChange={(e) => setVisitDate(e.target.value)}
             required
           />
-        </div>
-
         <Input
           label="Notes for the team (Optional)"
           type="text"
@@ -177,6 +179,7 @@ export default function ScheduleEditor({
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g. Bring BP measurement equipment and laboratory receipts"
         />
+        </div>
       </div>
 
       {/* Mother Picker Card */}
