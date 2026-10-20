@@ -6,7 +6,7 @@ import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
 
 // Report configuration without contacting the phone or submitting a message.
 export async function GET() {
-  const auth=await requireApiPermission('canManageUsers');
+  const auth=await requireApiPermission('canSendSMS');
   if(auth.error)return auth.error;
   const account=await gatewayStatus();const configured=gatewayConfigured();
   let migration014Present=false;

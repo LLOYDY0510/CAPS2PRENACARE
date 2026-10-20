@@ -15,6 +15,7 @@ export type ScheduleWithRecipients = {
   id: string;
   visit_date: string;
   trimester: string | null;
+  visit_number: number | null;
   status: string;
   reminder_sent: boolean;
   reminder_sent_at: string | null;
@@ -33,6 +34,7 @@ export type ScheduleWithRecipients = {
 export type ScheduleInput = {
   visitDate: string;
   trimester: '1st' | '2nd' | '3rd';
+  visitNumber?: number;
   motherIds: string[];
   notes?: string | null;
   setBy: string | null;
@@ -127,7 +129,7 @@ export async function listSchedules(limit = 25, scheduleId?: string, offset = 0)
   let query = supabase
     .from('prenatal_schedules')
     .select(
-      `id, visit_date, trimester, status, reminder_sent, reminder_sent_at, set_by, created_at${
+      `id, visit_date, trimester, visit_number, status, reminder_sent, reminder_sent_at, set_by, created_at${
         hasUpdatedAt ? ', updated_at' : ''
       }${hasScheduleNotes ? ', notes' : ''}`,
     )
@@ -193,14 +195,15 @@ export async function createSchedule(input: ScheduleInput): Promise<ServiceResul
   if (input.visitDate < manilaToday()) return { ok: false, error: 'The visit date cannot be in the past.' };
   if (!TRIMESTERS.includes(input.trimester)) return { ok: false, error: 'Unknown trimester.' };
 
+  if(!Number.isInteger(input.visitNumber)||! [1,2,3].includes(input.visitNumber!))return {ok:false,error:'Choose 1st, 2nd or 3rd Visit.'};
   const motherIds = Array.from(new Set(input.motherIds));
   if (motherIds.length === 0) return { ok: false, error: 'Select at least one pregnant mother.' };
 
   const supabase = createAdminClient(input.setBy ?? undefined);
 
-  const { data: scheduleId, error: insertError } = await supabase.rpc('save_prenatal_schedule', {
+  const { data: scheduleId, error: insertError } = await supabase.rpc('save_prenatal_schedule_visit', {
     schedule_uuid: null, visit_day: input.visitDate, trimester_value: input.trimester,
-    recipient_ids: motherIds, notes_value: input.notes?.trim() || null,
+    visit_value: input.visitNumber, recipient_ids: motherIds, notes_value: input.notes?.trim() || null,
     actor_uuid: input.setBy, status_value: 'scheduled',
   });
   if (insertError || !scheduleId) return { ok: false, error: insertError?.message ?? 'Could not create schedule.' };
@@ -232,12 +235,12 @@ export async function updateSchedule(
 
   const { data: existingRow, error: readError } = await supabase
     .from('prenatal_schedules')
-    .select(`id, visit_date, trimester, status, reminder_sent${hasScheduleNotes ? ', notes' : ''}`)    .eq('id', scheduleId)
+    .select(`id, visit_date, trimester, visit_number, status, reminder_sent${hasScheduleNotes ? ', notes' : ''}`)    .eq('id', scheduleId)
     .maybeSingle();
 
   if (readError) return { ok: false, error: readError.message };
   if (!existingRow) return { ok: false, error: 'That schedule no longer exists.' };
-  const existing = existingRow as unknown as { id: string; visit_date: string; trimester: string | null; status: string; reminder_sent: boolean };
+  const existing = existingRow as unknown as { id: string; visit_date: string; trimester: string | null; status: string; reminder_sent: boolean;visit_number:number|null };
 
   if (input.visitDate !== undefined) {
     if (!isValidDate(input.visitDate)) return { ok: false, error: 'Visit date is not a valid date.' };
@@ -246,14 +249,17 @@ export async function updateSchedule(
   if (input.trimester !== undefined && !TRIMESTERS.includes(input.trimester)) {
     return { ok: false, error: 'Unknown trimester.' };
   }
+  if(input.visitNumber!==undefined&&(!Number.isInteger(input.visitNumber)||![1,2,3].includes(input.visitNumber)))return {ok:false,error:'Choose 1st, 2nd or 3rd Visit.'};
   if (input.motherIds !== undefined && new Set(input.motherIds).size === 0) {
     return { ok: false, error: 'A schedule must keep at least one pregnant mother.' };
   }
 
   const recipients = input.motherIds ?? (await getSchedule(scheduleId))?.recipients.map((r) => r.pregnant_mother_id) ?? [];
-  const { error: updateError } = await supabase.rpc('save_prenatal_schedule', {
+  const visitNumber=input.visitNumber??existing.visit_number;
+  const legacyCancellation=visitNumber==null&&input.status==='cancelled';
+  const { error: updateError } = await supabase.rpc(legacyCancellation?'save_prenatal_schedule':'save_prenatal_schedule_visit', {
     schedule_uuid: scheduleId, visit_day: input.visitDate ?? existing.visit_date,
-    trimester_value: input.trimester ?? existing.trimester, recipient_ids: recipients,
+    trimester_value: input.trimester ?? existing.trimester, ...(!legacyCancellation?{visit_value:visitNumber}:{}), recipient_ids: recipients,
     notes_value: input.notes === undefined ? (existingRow as unknown as { notes?: string }).notes ?? null : input.notes?.trim() || null,
     actor_uuid: input.setBy ?? null,
     status_value: input.status ?? (input.visitDate && input.visitDate !== existing.visit_date ? 'scheduled' : existing.status),

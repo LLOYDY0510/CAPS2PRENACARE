@@ -65,6 +65,7 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
     para: '',
     edd: '',
     blood_pressure: '',
+    waist_cm: '',
     height_cm: '',
     weight_kg: '',
   });
@@ -409,6 +410,8 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
                 ...BLOOD_PRESSURE_OPTIONS.map((bp) => ({ value: bp, label: bp })),
               ]}
             />
+            <Input label="Waist Line (cm)" type="number" min="0" step="0.1" value={form.waist_cm}
+              onChange={e=>updateField('waist_cm',e.target.value)} helperText="Optional waist measurement in centimeters"/>
             <Select
               label="Height (cm)"
               value={form.height_cm}

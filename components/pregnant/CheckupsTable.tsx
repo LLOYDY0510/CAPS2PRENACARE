@@ -17,6 +17,7 @@ export type CheckupRecord = {
   purok: string | null;
   edd: string | null;
   checkupCount: number;
+  visitSummaries?:Record<string,{completed:number;assigned:number;complete:boolean}>;
   trimesterStatuses: Record<'1st' | '2nd' | '3rd', PrenatalVisitStatus | null>;
 };
 
@@ -106,7 +107,8 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
                     </span>
                   </td>
                   {(['1st', '2nd', '3rd'] as const).map((trimester) => {
-                    const status = r.trimesterStatuses[trimester];
+                    const summary=r.visitSummaries?.[trimester];
+                    const status = summary?(summary.complete?'completed':summary.assigned?'upcoming':null):r.trimesterStatuses[trimester];
                     const statusColor =
                       status === 'completed'
                         ? 'bg-green-50 text-green-700 border-green-200'
@@ -117,7 +119,7 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
                       <td key={trimester} className="py-3.5 px-4">
                         {status ? (
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
-                            {prenatalStatusLabel(status)}
+                            {summary?`${summary.completed}/3 complete · ${summary.assigned} assigned`:prenatalStatusLabel(status)}
                           </span>
                         ) : (
                           <span className="text-neutral-300 font-bold">—</span>

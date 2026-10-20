@@ -19,9 +19,9 @@ export default async function PregnantRecordsPage({
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
   const recordsSelect =
-    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level, checkup_recorded';
+    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, waist_cm, height_cm, weight_kg, risk_level, checkup_recorded';
   const legacyRecordsSelect =
-    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, height_cm, weight_kg, risk_level';
+    'id, serial_no, date_registered, first_name, middle_name, last_name, address, purok, age, lmp, gravida_para, edd, blood_pressure, waist_cm, height_cm, weight_kg, risk_level';
 
   let recordsQuery = supabase
     .from('pregnant_mothers')
@@ -44,19 +44,11 @@ export default async function PregnantRecordsPage({
   const { data: checkupRows } = await collectRows((start,end)=>supabase
     .from('prenatal_checkups')
     .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end));
-  const completedTrimesters: Record<string, Set<string>> = {};
-  (checkupRows ?? []).forEach((checkup) => {
-    const trimester = checkup.trimester;
-    if (!['1st', '2nd', '3rd'].includes(trimester)) return;
-    const status = visitStatusFor(checkup);
-    if (status === 'completed') {
-      if (!completedTrimesters[checkup.pregnant_mother_id]) completedTrimesters[checkup.pregnant_mother_id] = new Set();
-      completedTrimesters[checkup.pregnant_mother_id].add(trimester);
-    }
-  });
+  const completedVisits:Record<string,number>={};
+  (checkupRows??[]).forEach(checkup=>{if(visitStatusFor(checkup)==='completed')completedVisits[checkup.pregnant_mother_id]=(completedVisits[checkup.pregnant_mother_id]??0)+1;});
   const recordsWithCheckupCount = (records ?? []).map((record) => ({
     ...record,
-    checkupCount: completedTrimesters[record.id]?.size ?? 0,
+    checkupCount: completedVisits[record.id] ?? 0,
     canEditRecord: canEdit && canAccessPurok(role, profile?.purok ?? null, record.purok, profile?.access_all_zones),
   }));
 

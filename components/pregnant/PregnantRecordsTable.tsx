@@ -25,6 +25,7 @@ export type PregnantRecord = {
   gravida_para: string | null;
   edd: string | null;
   blood_pressure: string | null;
+  waist_cm?: number | null;
   height_cm: number | null;
   weight_kg: number | null;
   risk_level: string | null;

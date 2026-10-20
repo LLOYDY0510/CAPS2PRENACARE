@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     const result = await createSchedule({
       visitDate: String(body?.visitDate ?? ''),
       trimester: body?.trimester as Trimester,
+      visitNumber: body?.visitNumber,
       motherIds,
       notes: typeof body?.notes === 'string' ? body.notes : null,
       setBy: auth.user.id,

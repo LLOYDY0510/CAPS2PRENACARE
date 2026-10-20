@@ -6,9 +6,9 @@ import SessionPersistenceGuard from '@/components/auth/SessionPersistenceGuard';
 export const dynamic = 'force-dynamic';
 const MENUS: Record<string, [string,string][]> = {
   patient: [['Dashboard',''],['Prenatal Schedule','my-schedule'],['Medical Record','my-records'],['My Information','my-info']],
-  nurse: [['Dashboard',''],['Prenatal Schedule','schedule'],['Risk Indicators','risk-indicators'],['Health & Nutrition Tips','nutrition-tips'],['Pregnant Records','pregnant'],['Prenatal Checkups','checkups']],
-  bhw: [['Dashboard',''],['BHW for Zones','bhw'],['Pregnant Records','pregnant'],['Risk Map','risk-map'],['Prenatal Checkups','checkups'],['Prenatal Schedule','schedule'],['Reports','reports']],
-  admin: [['Dashboard',''],['User Management','users'],['SMS & Broadcast Dispatch','sms-log'],['Activity Logs','activity-logs']],
+  nurse: [['Dashboard',''],['Prenatal Schedule','schedule'],['Risk Indicators','risk-indicators'],['Health & Nutrition Tips','nutrition-tips'],['Pregnant Records','pregnant']],
+  bhw: [['Dashboard',''],['BHW for Zones','bhw'],['Pregnant Records','pregnant'],['Risk Map','risk-map'],['Prenatal Checkups','checkups'],['SMS & Broadcast Dispatch','sms-log'],['Reports','reports']],
+  admin: [['Dashboard',''],['User Management','users'],['Prenatal Schedule','schedule'],['Activity Logs','activity-logs']],
 };
 export default async function DashboardLayout({children,modal}: {children: React.ReactNode;modal:React.ReactNode}) {
   const {user,profile} = await getCurrentProfile();

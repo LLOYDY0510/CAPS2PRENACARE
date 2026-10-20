@@ -5,7 +5,7 @@ import { isValidBloodPressure } from '@/utils/maternalForm';
 import { createAdminClient } from '@/utils/supabase/admin';
 
 async function getAuthorizedStaff() {
-  return requireApiPermission('canManageReferrals');
+  return requireApiPermission('canManageCheckups');
 }
 
 async function canAccessMother(
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     if (auth.error) return auth.error;
 
     const body = await request.json() as {
+      scheduleId?:unknown;
       pregnantMotherId?: unknown;
       trimester?: unknown;
       bloodPressure?: unknown;
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (
-      typeof body.pregnantMotherId !== 'string' ||
+      typeof body.scheduleId!=='string'||typeof body.pregnantMotherId !== 'string' ||
       !['1st', '2nd', '3rd'].includes(String(body.trimester))
     ) {
       return NextResponse.json({ error: 'Invalid prenatal checkup data.' }, { status: 400 });
@@ -66,7 +67,8 @@ export async function POST(request: NextRequest) {
     const adminClient = createAdminClient();
     const { data: schedule } = await adminClient
       .from('prenatal_schedules')
-      .select('visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .select('id, visit_number, visit_date, trimester, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+      .eq('id',body.scheduleId)
       .eq('trimester', body.trimester)
       .eq('visit_date', body.scheduledCheckupDate)
       .neq('status', 'cancelled')
@@ -86,12 +88,14 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('pregnant_mother_id', body.pregnantMotherId)
       .eq('trimester', body.trimester)
-      .eq('scheduled_checkup_date', scheduledCheckupDate)
+      .eq('schedule_id',body.scheduleId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     const values = {
+      schedule_id:body.scheduleId,
+      visit_number:schedule.visit_number,
       pregnant_mother_id: body.pregnantMotherId,
       trimester: body.trimester,
       scheduled_checkup_date: scheduledCheckupDate,

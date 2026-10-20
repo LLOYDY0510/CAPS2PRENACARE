@@ -1,331 +1,73 @@
 'use client';
-import { useConfirmation } from '@/components/ui/useConfirmation';
 
-import { useState } from 'react';
-import { isValidBloodPressure } from '@/utils/maternalForm';
-import { localDate } from '@/utils/calendar';
-import { getPrenatalVisitStatus, prenatalStatusLabel } from '@/utils/prenatalStatus';
+import {useRef,useState} from 'react';
+import {localDate} from '@/utils/calendar';
+import {isValidBloodPressure} from '@/utils/maternalForm';
+import {TRIMESTERS,visitLabel,visitStatusFor,trimesterVisitSummary,type ScheduledVisit} from '@/utils/prenatalProjection';
+import {prenatalStatusLabel} from '@/utils/prenatalStatus';
+import {useConfirmation} from '@/components/ui/useConfirmation';
 import Button from '@/components/ui/Button';
-import { Input, Textarea } from '@/components/ui/Input';
+import {Input,Select,Textarea} from '@/components/ui/Input';
 import Tabs from '@/components/ui/Tabs';
-import { Alert } from '@/components/ui/ToastAlert';
-import { ClipboardCheck, Plus, Trash2 } from 'lucide-react';
+import {Alert} from '@/components/ui/ToastAlert';
+import {ClipboardCheck,Plus,Trash2} from 'lucide-react';
 
-type Checkup = {
-  id: string;
-  trimester: '1st' | '2nd' | '3rd';
-  checkup_date: string;
-  scheduled_checkup_date: string | null;
-  actual_checkup_date: string | null;
-  blood_pressure: string | null;
-  weight_kg: number | null;
-  notes: string | null;
-  status: 'scheduled' | 'completed' | 'missed' | 'cancelled';
-  scheduled_for: string | null;
-};
+type Checkup={id:string;schedule_id?:string|null;visit_number?:number|null;trimester:'1st'|'2nd'|'3rd';checkup_date:string;scheduled_checkup_date:string|null;actual_checkup_date:string|null;blood_pressure:string|null;weight_kg:number|null;notes:string|null;status:'scheduled'|'completed'|'missed'|'cancelled';scheduled_for:string|null};
 
-import { TRIMESTERS } from '@/utils/prenatalProjection';
+export default function PrenatalCheckups({motherId,initialCheckups,scheduledDates,scheduledVisits=[],canEdit=true}:{motherId:string;initialCheckups:Checkup[];scheduledDates:Record<'1st'|'2nd'|'3rd',string|null>;scheduledVisits?:ScheduledVisit[];canEdit?:boolean}){
+  const [checkups,setCheckups]=useState(initialCheckups);
+  const [activeTrimester,setActiveTrimester]=useState<'1st'|'2nd'|'3rd'>('1st');
+  const [showForm,setShowForm]=useState(false);
+  const [form,setForm]=useState({schedule_id:'',blood_pressure:'',weight_kg:'',notes:'',actual_checkup_date:localDate()});
+  const [saving,setSaving]=useState(false);const pending=useRef(false);
+  const [deletingId,setDeletingId]=useState<string|null>(null);
+  const [error,setError]=useState('');const [notice,setNotice]=useState('');
+  const {confirm,confirmation}=useConfirmation();
+  const visits=scheduledVisits.filter(v=>v.trimester===activeTrimester&&v.status!=='cancelled').sort((a,b)=>(a.visit_number??99)-(b.visit_number??99)||a.visit_date.localeCompare(b.visit_date));
+  const grouped=TRIMESTERS.reduce((acc,tri)=>{acc[tri]=checkups.filter(c=>c.trimester===tri).sort((a,b)=>(a.scheduled_checkup_date??a.checkup_date).localeCompare(b.scheduled_checkup_date??b.checkup_date));return acc;},{} as Record<string,Checkup[]>);
+  const summary=trimesterVisitSummary(scheduledVisits,checkups,activeTrimester);
 
-export default function PrenatalCheckups({
-  motherId,
-  initialCheckups,
-  scheduledDates,
-  canEdit = true,
-}: {
-  motherId: string;
-  initialCheckups: Checkup[];
-  scheduledDates: Record<'1st' | '2nd' | '3rd', string | null>;
-  canEdit?: boolean;
-}) {
-  const [checkups, setCheckups]           = useState(initialCheckups);
-  const [activeTrimester, setActiveTrimester] = useState<'1st' | '2nd' | '3rd'>('1st');
-  const [showForm, setShowForm]           = useState(false);
-  const [form, setForm]                   = useState({ blood_pressure: '', weight_kg: '', notes: '', actual_checkup_date: localDate() });
-  const [saving, setSaving]               = useState(false);
-  const [deletingId, setDeletingId]       = useState<string | null>(null);
-  const [error, setError]                 = useState('');
-  const [notice, setNotice]               = useState('');
-
-  const grouped = TRIMESTERS.reduce((acc, tri) => {
-    acc[tri] = checkups
-      .filter((c) => c.trimester === tri)
-      .sort((a, b) => (a.scheduled_checkup_date ?? a.checkup_date).localeCompare(b.scheduled_checkup_date ?? b.checkup_date));
-    return acc;
-  }, {} as Record<string, Checkup[]>);
-
-  const { confirm, confirmation } = useConfirmation();
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setNotice('');
-
-    const scheduledCheckupDate = scheduledDates[activeTrimester];
-    if (!scheduledCheckupDate) {
-      setError(`No ${activeTrimester} trimester schedule exists for this mother.`);
-      return;
-    }
-
-    const weight = form.weight_kg ? Number(form.weight_kg) : null;
-    if (weight != null && (!Number.isFinite(weight) || weight <= 0 || weight > 300)) {
-      setError('Weight must be between 0 and 300 kg.');
-      return;
-    }
-
-    if (form.blood_pressure && !isValidBloodPressure(form.blood_pressure.trim())) {
-      setError('Blood pressure must use the format 120/80.');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const response = await fetch('/api/prenatal-checkups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pregnantMotherId: motherId,
-          trimester: activeTrimester,
-          bloodPressure: form.blood_pressure,
-          weightKg: weight,
-          notes: form.notes,
-          actualCheckupDate: form.actual_checkup_date,
-          scheduledCheckupDate,
-        }),
-      });
-      const result = (await response.json().catch(() => ({}))) as { data?: Checkup; error?: string };
-
-      if (!response.ok || !result.data) {
-        setError(result.error ?? 'Failed to save checkup.');
-        return;
-      }
-
-      const saved = result.data;
-      setCheckups((prev) => [...prev.filter((checkup) => checkup.id !== saved.id), saved]);
-      setForm({ blood_pressure: '', weight_kg: '', notes: '', actual_checkup_date: localDate() });
-      setShowForm(false);
-      setNotice('Checkup saved.');
-    } catch {
-      setError('Network error while saving. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  async function handleAdd(event:React.FormEvent){
+    event.preventDefault();if(pending.current)return;setError('');setNotice('');
+    const visit=visits.find(v=>v.id===form.schedule_id);
+    if(!visit){setError('Select the scheduled visit being recorded.');return;}
+    const weight=form.weight_kg?Number(form.weight_kg):null;
+    if(weight!=null&&(!Number.isFinite(weight)||weight<=0||weight>300)){setError('Weight must be between 0 and 300 kg.');return;}
+    if(form.blood_pressure&&!isValidBloodPressure(form.blood_pressure.trim())){setError('Blood pressure must use the format 120/80.');return;}
+    pending.current=true;setSaving(true);
+    try{
+      const response=await fetch('/api/prenatal-checkups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pregnantMotherId:motherId,scheduleId:visit.id,trimester:activeTrimester,bloodPressure:form.blood_pressure,weightKg:weight,notes:form.notes,actualCheckupDate:form.actual_checkup_date,scheduledCheckupDate:visit.visit_date})});
+      const result=await response.json();if(!response.ok||!result.data)throw new Error(result.error??'Failed to save attendance.');
+      setCheckups(current=>[...current.filter(c=>c.id!==result.data.id),result.data]);setShowForm(false);
+      setForm({schedule_id:'',blood_pressure:'',weight_kg:'',notes:'',actual_checkup_date:localDate()});setNotice('Checkup saved.');
+    }catch(failure){setError(failure instanceof Error?failure.message:'Network error while saving.');}
+    finally{pending.current=false;setSaving(false);}
   }
 
-  async function handleDelete(id: string) {
-    if (deletingId) return;
-    const confirmed = await confirm({title:'Delete checkup?',description:'This checkup record will be removed.',confirmText:'Delete Checkup'});
-    if (!confirmed) return;
-
-    setError('');
-    setNotice('');
-    setDeletingId(id);
-
-    try {
-      const response = await fetch('/api/prenatal-checkups', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, pregnantMotherId: motherId }),
-      });
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? 'Failed to delete the checkup.');
-        return;
-      }
-      setCheckups((prev) => prev.filter((c) => c.id !== id));
-      setNotice('Checkup deleted.');
-    } catch {
-      setError('Network error while deleting. Please try again.');
-    } finally {
-      setDeletingId(null);
-    }
+  async function handleDelete(id:string){
+    if(pending.current)return;
+    if(!await confirm({title:'Delete checkup?',description:'This attendance record will be removed.',confirmText:'Delete Checkup'}))return;
+    if(pending.current)return;pending.current=true;setDeletingId(id);setError('');setNotice('');
+    try{
+      const response=await fetch('/api/prenatal-checkups',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,pregnantMotherId:motherId})});
+      const result=await response.json();if(!response.ok)throw new Error(result.error??'Could not delete the checkup.');
+      setCheckups(current=>current.filter(c=>c.id!==id));setNotice('Checkup deleted.');
+    }catch(failure){setError(failure instanceof Error?failure.message:'Network error while deleting.');}
+    finally{pending.current=false;setDeletingId(null);}
   }
 
-  return (
-    <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
-      {/* Header & Tabs */}
-      {confirmation}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
-        <div>
-          <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-            <ClipboardCheck size={20} className="text-[var(--brand)]" />
-            <span>Prenatal Checkup History</span>
-          </h2>
-          <p className="text-xs text-neutral-500 font-medium mt-0.5">Trimester progress and medical checkup records</p>
-        </div>
-
-        <Tabs
-          variant="segmented"
-          tabs={TRIMESTERS.map((tri) => ({
-            id: tri,
-            label: `${tri} Trimester`,
-            count: grouped[tri]?.length ?? 0,
-          }))}
-          activeTab={activeTrimester}
-          onChange={(id) => {
-            setActiveTrimester(id as '1st' | '2nd' | '3rd');
-            setShowForm(false);
-          }}
-        />
-      </div>
-
-      <div>
-        {error && (
-          <Alert type="error" className="mb-4" onClose={() => setError('')}>
-            {error}
-          </Alert>
-        )}
-        {notice && !error && (
-          <Alert type="success" className="mb-4" onClose={() => setNotice('')}>
-            {notice}
-          </Alert>
-        )}
-
-        {/* Checkup table */}
-        {grouped[activeTrimester].length === 0 ? (
-          <p className="text-xs text-neutral-400 font-medium text-center py-10">
-            No checkups recorded for the {activeTrimester} trimester.
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-neutral-100 mb-6">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Scheduled Date</th>
-                  <th className="py-3.5 px-4">Actual Visit Date</th>
-                  <th className="py-3.5 px-4">Blood Pressure</th>
-                  <th className="py-3.5 px-4">Weight (kg)</th>
-                  <th className="py-3.5 px-4">Clinical Notes</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  {canEdit && <th className="py-3.5 px-4 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 text-xs sm:text-sm">
-                {grouped[activeTrimester].map((c) => {
-                  const status = getPrenatalVisitStatus({
-                    scheduledFor:
-                      c.scheduled_checkup_date ??
-                      scheduledDates[c.trimester] ??
-                      c.scheduled_for ??
-                      c.checkup_date,
-                    actualCheckupDate: c.actual_checkup_date,
-                    recordedStatus: c.status,
-                  });
-                  const statusColor =
-                    status === 'completed'
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : status === 'missed'
-                        ? 'bg-green-50 text-green-600 border-green-200'
-                        : 'bg-neutral-100 text-neutral-600 border-neutral-200';
-                  return (
-                    <tr key={c.id} className="hover:bg-neutral-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-neutral-800">
-                        {c.scheduled_checkup_date ??
-                          scheduledDates[c.trimester] ??
-                          c.scheduled_for ??
-                          c.checkup_date}
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.actual_checkup_date ?? '—'}</td>
-                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.blood_pressure ?? '—'}</td>
-                      <td className="py-3.5 px-4 text-neutral-600 font-medium">{c.weight_kg != null ? `${c.weight_kg} kg` : '—'}</td>
-                      <td className="py-3.5 px-4 text-neutral-600 font-medium max-w-xs truncate">{c.notes ?? '—'}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
-                          {prenatalStatusLabel(status)}
-                        </span>
-                      </td>
-                      {canEdit && (
-                        <td className="py-3.5 px-4 text-right">
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            isLoading={deletingId === c.id}
-                            onClick={() => void handleDelete(c.id)}
-                            leftIcon={<Trash2 size={14} />}
-                          >
-                            Delete
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Add checkup form */}
-        {canEdit && (
-          !showForm ? (
-            <Button
-              variant="secondary"
-              onClick={() => setShowForm(true)}
-              leftIcon={<Plus size={16} />}
-            >
-              Add {activeTrimester} Trimester Checkup
-            </Button>
-          ) : (
-            <form
-              onSubmit={handleAdd}
-              className="bg-neutral-50/90 rounded-2xl border border-neutral-200/80 p-5 space-y-4"
-            >
-            <Input label="Actual attendance date" type="date" required max={localDate()}
-              value={form.actual_checkup_date}
-              onChange={(event) => setForm((current) => ({ ...current, actual_checkup_date: event.target.value }))} />
-
-              <h3 className="text-sm font-bold text-neutral-900">
-                New {activeTrimester} Trimester Checkup Record
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wide mb-1">
-                    Scheduled Checkup Date
-                  </label>
-                  <div className="h-11 px-4 flex items-center bg-white rounded-2xl border border-neutral-200 text-xs sm:text-sm font-semibold text-neutral-700">
-                    {scheduledDates[activeTrimester] ?? 'No schedule set'}
-                  </div>
-                </div>
-                <Input
-                  label="Blood Pressure"
-                  type="text"
-                  value={form.blood_pressure}
-                  onChange={(e) => setForm((p) => ({ ...p, blood_pressure: e.target.value }))}
-                  placeholder="e.g. 120/80"
-                />
-              </div>
-
-              <div className="w-full sm:w-1/2">
-                <Input
-                  label="Weight (kg)"
-                  type="number"
-                  step="0.1"
-                  value={form.weight_kg}
-                  onChange={(e) => setForm((p) => ({ ...p, weight_kg: e.target.value }))}
-                  placeholder="Weight in kg"
-                />
-              </div>
-
-              <Textarea
-                label="Clinical Notes"
-                value={form.notes}
-                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Doctor or midwife clinical notes..."
-                className="min-h-[80px]"
-              />
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button type="submit" isLoading={saving}>
-                  Save Checkup
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )
-        )}
-      </div>
-    </div>
-  );
+  return <section className="card p-6 space-y-6">{confirmation}
+    <div className="flex flex-wrap items-center justify-between gap-4"><h2 className="flex items-center gap-2 text-lg font-bold"><ClipboardCheck aria-hidden="true" size={20}/>Prenatal Checkup History</h2>{canEdit&&<Button leftIcon={<Plus size={16}/>} disabled={saving||deletingId!==null} onClick={()=>setShowForm(!showForm)}>{showForm?'Close Form':'Record Checkup'}</Button>}</div>
+    <Tabs variant="segmented" tabs={TRIMESTERS.map(tri=>({id:tri,label:`${tri} Trimester`}))} activeTab={activeTrimester} onChange={value=>{setActiveTrimester(value as typeof activeTrimester);setForm({...form,schedule_id:''});}}/>
+    {error&&<Alert type="error">{error}</Alert>}{notice&&<Alert type="success">{notice}</Alert>}
+    <p className="text-sm text-neutral-600">{summary.completed}/3 numbered visits completed · {summary.assigned}/3 assigned</p>
+    <div className="grid sm:grid-cols-3 gap-3">{[1,2,3].map(number=>{const visit=visits.find(v=>v.visit_number===number);const attendance=visit&&checkups.find(c=>c.schedule_id===visit.id);return <div className="rounded-xl border border-neutral-200 p-4" key={number}><h3 className="font-semibold">{visitLabel(number)}</h3><p className="text-sm">{visit?.visit_date??'Not scheduled'}</p><p className="text-sm text-neutral-600">{attendance?prenatalStatusLabel(visitStatusFor(attendance)):visit?prenatalStatusLabel(visitStatusFor({scheduled_checkup_date:visit.visit_date})):'Unassigned'}</p></div>;})}</div>
+    {showForm&&canEdit&&<form className="space-y-4" onSubmit={handleAdd}>
+      <Select label="Scheduled Visit" required value={form.schedule_id} onChange={e=>setForm({...form,schedule_id:e.target.value})} options={[{value:'',label:'Select a visit'},...visits.map(v=>({value:v.id,label:`${visitLabel(v.visit_number)} — ${v.visit_date}`}))]}/>
+      {!visits.length&&<p className="text-sm text-neutral-600">No assigned visit is available. Ask the midwife to schedule a visit.{scheduledDates[activeTrimester]?' Reload if a legacy schedule was recently updated.':''}</p>}
+      <div className="grid sm:grid-cols-2 gap-4"><Input label="Actual Checkup Date" type="date" required max={localDate()} value={form.actual_checkup_date} onChange={e=>setForm({...form,actual_checkup_date:e.target.value})}/><Input label="Blood Pressure" value={form.blood_pressure} onChange={e=>setForm({...form,blood_pressure:e.target.value})}/><Input label="Weight (kg)" type="number" step="0.1" value={form.weight_kg} onChange={e=>setForm({...form,weight_kg:e.target.value})}/></div>
+      <Textarea label="Notes" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/><Button type="submit" isLoading={saving} disabled={!visits.length}>Save Checkup</Button>
+    </form>}
+    <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Visit</th><th>Scheduled Date</th><th>Actual Date</th><th>BP</th><th>Weight</th><th>Notes</th><th>Status</th>{canEdit&&<th>Action</th>}</tr></thead><tbody>{grouped[activeTrimester].map(c=><tr key={c.id}><td>{visitLabel(c.visit_number)}</td><td>{c.scheduled_checkup_date??c.scheduled_for??c.checkup_date}</td><td>{c.actual_checkup_date??'—'}</td><td>{c.blood_pressure??'—'}</td><td>{c.weight_kg??'—'}</td><td>{c.notes??'—'}</td><td>{prenatalStatusLabel(visitStatusFor(c))}</td>{canEdit&&<td><Button variant="ghost" size="sm" disabled={saving||deletingId!==null} onClick={()=>void handleDelete(c.id)} leftIcon={<Trash2 size={14}/>}>Delete</Button></td>}</tr>)}{!grouped[activeTrimester].length&&<tr><td colSpan={canEdit?8:7}>No checkups recorded for this trimester.</td></tr>}</tbody></table></div>
+  </section>;
 }

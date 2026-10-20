@@ -6,6 +6,7 @@ import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import InfoRow from '@/components/ui/InfoRow';
 import PageHeader from '@/components/ui/PageHeader';
 import RiskBadge from '@/components/ui/RiskBadge';
+import { redirect } from 'next/navigation';
 import { EDIT_ROLES } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 import { User } from 'lucide-react';
@@ -35,7 +36,8 @@ export default async function ViewPregnantMotherPage({
     .single();
 
   const role = profile?.role ?? 'pending';
-  const canEdit = showCheckups && (role === 'nurse' || EDIT_ROLES.includes(role as UserRole));
+  if(showCheckups&&role!=='bhw')redirect('/dashboard/pregnant');
+  const canEdit = showCheckups && EDIT_ROLES.includes(role as UserRole);
 
   const { data: record } = await supabase
     .from('pregnant_mothers')
@@ -54,22 +56,24 @@ export default async function ViewPregnantMotherPage({
   const { data: checkups } = showCheckups
     ? await supabase
         .from('prenatal_checkups')
-        .select('id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
+        .select('id, schedule_id, visit_number, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, blood_pressure, weight_kg, notes, status, scheduled_for')
         .eq('pregnant_mother_id', id)
     : { data: [] };
 
   const { data: scheduleRows } = showCheckups
     ? await supabase
         .from('prenatal_schedules')
-        .select('trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+        .select('id, visit_number, trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
         .eq('prenatal_schedule_recipients.pregnant_mother_id', id)
         .not('trimester', 'is', null)
         .order('created_at', { ascending: false })
     : { data: [] };
 
-  const scheduledDates = scheduleProjection(scheduleRows ?? []).scheduledByMother[id] ?? emptyTrimesterDates();
+  const projection=scheduleProjection(scheduleRows??[]);
+  const scheduledDates = projection.scheduledByMother[id] ?? emptyTrimesterDates();
 
-  const [{ data: history }, { data: referrals }] = showCheckups
+  const showCareHistory = showCheckups && role !== 'bhw';
+  const [{ data: history }, { data: referrals }] = showCareHistory
     ? await Promise.all([
         supabase.from('maternal_health_history').select('id, condition, details, diagnosed_date, resolved_date, created_at').eq('pregnant_mother_id', id).order('created_at', { ascending: false }),
         supabase.from('maternal_referrals').select('id, referred_to, reason, status, referred_at, follow_up_date, outcome, updated_at').eq('pregnant_mother_id', id).order('updated_at', { ascending: false }),
@@ -87,13 +91,13 @@ export default async function ViewPregnantMotherPage({
 
       {showCheckups ? (
         <div className="space-y-6">
-          <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} canEdit={canEdit} />
-          <MaternalCarePanel
+          <PrenatalCheckups motherId={id} initialCheckups={checkups ?? []} scheduledDates={scheduledDates} scheduledVisits={projection.visitsByMother[id]??[]} canEdit={canEdit} />
+          {showCareHistory && <MaternalCarePanel
             motherId={id}
             canEdit={canEdit}
             initialHistory={history ?? []}
             initialReferrals={referrals ?? []}
-          />
+          />}
         </div>
       ) : (
         <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-6 sm:p-8 space-y-6">
@@ -115,7 +119,8 @@ export default async function ViewPregnantMotherPage({
             <InfoRow label="EDC (Expected Date)" value={record.edd} />
             <InfoRow label="Gravida-Para" value={record.gravida_para} />
             <InfoRow label="Blood Pressure" value={record.blood_pressure} />
-            <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
+            <InfoRow label="Waist Line" value={record.waist_cm != null ? `${record.waist_cm} cm` : null} />
+          <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
             <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
             <InfoRow label="Risk Assessment" value={record.risk_level === 'high' ? 'High Risk' : record.risk_level === 'low' ? 'Low Risk' : 'Unassessed'} />
           </div>

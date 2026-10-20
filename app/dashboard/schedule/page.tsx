@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PrenatalSchedulePage({searchParams}: {searchParams:Promise<{page?:string}>}) {
   const page=Math.max(1,Number((await searchParams).page)||1);
-  const { role, profile, supabase } = await requireRoles(['bhw', 'nurse']);
+  const { role, profile, supabase } = await requireRoles(['admin', 'nurse']);
   const {data: events,error:logError}=await supabase.from('schedule_log_latest').select('*').order('occurred_at',{ascending:false}).range((page-1)*25,page*25-1);
 
   const canEditSchedule = canManageSchedules(role);
@@ -43,7 +43,7 @@ export default async function PrenatalSchedulePage({searchParams}: {searchParams
         title="Prenatal Schedule"
         subtitle={
           canEditSchedule
-            ? 'Create and manage prenatal visits, dispatch instant SMS reminders, or rely on automated dispatch'
+            ? 'Schedule numbered prenatal visits and manage patient assignments'
             : 'View scheduled prenatal visits for your assigned purok'
         }
         icon={CalendarDays}

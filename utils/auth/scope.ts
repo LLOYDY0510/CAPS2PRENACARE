@@ -4,7 +4,7 @@ import type { Profile } from '@/types';
 
 export async function assertMotherScope(profile: Profile, ids: string[]) {
   if (profile.account_status !== 'active') throw new Error('Account is not active.');
-  if (profile.role === 'nurse') return;
+  if (profile.role === 'nurse' || profile.role === 'admin') return;
   if (profile.role !== 'bhw') throw new Error('Clinical action is not permitted.');
   if (profile.access_all_zones) return;
   if (!profile.purok) throw new Error('Assign a zone before managing clinical records.');

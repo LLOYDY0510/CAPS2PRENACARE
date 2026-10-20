@@ -23,7 +23,7 @@ export default async function ReportsPage() {
 
   const { data: checkupRows, error: checkupError } = await collectRows((start,end)=>supabase
     .from('prenatal_checkups')
-    .select('pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end));
+    .select('schedule_id, visit_number, pregnant_mother_id, trimester, checkup_date, scheduled_checkup_date, actual_checkup_date, scheduled_for, status').order('id').range(start,end));
 
   const checkupCounts: Record<string, number> = {};
   const missedCounts: Record<string, number> = {};
@@ -31,22 +31,28 @@ export default async function ReportsPage() {
 
   const { data: scheduleRows, error: scheduleError } = await collectRows((start,end)=>supabase
     .from('prenatal_schedules')
-    .select('trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
+    .select('id, visit_number, trimester, visit_date, status, created_at, prenatal_schedule_recipients!inner(pregnant_mother_id)')
     .not('trimester', 'is', null)
     .order('created_at', { ascending: false }).order('id').range(start,end));
   const error = recordsError ?? checkupError ?? scheduleError;
 
-  const { nextVisit, scheduledByMother } = scheduleProjection(scheduleRows ?? []);
+  const { nextVisit, scheduledByMother,visitsByMother } = scheduleProjection(scheduleRows ?? []);
 
   checkupRows?.forEach((c) => {
     const trimester = c.trimester as '1st' | '2nd' | '3rd';
     const scheduledDate = c.scheduled_checkup_date ?? c.scheduled_for ?? c.checkup_date ?? scheduledByMother[c.pregnant_mother_id]?.[trimester];
     const status = getPrenatalVisitStatus({ scheduledFor: scheduledDate, actualCheckupDate: c.actual_checkup_date, recordedStatus: c.status });
     if (status === 'completed') checkupCounts[c.pregnant_mother_id] = (checkupCounts[c.pregnant_mother_id] || 0) + 1;
-    if (status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
-    if (status === 'upcoming') upcomingCounts[c.pregnant_mother_id] = (upcomingCounts[c.pregnant_mother_id] || 0) + 1;
+    if (!c.schedule_id && status === 'missed') missedCounts[c.pregnant_mother_id] = (missedCounts[c.pregnant_mother_id] || 0) + 1;
+    if (!c.schedule_id && status === 'upcoming') upcomingCounts[c.pregnant_mother_id] = (upcomingCounts[c.pregnant_mother_id] || 0) + 1;
   });
 
+  for(const [motherId,visits] of Object.entries(visitsByMother))for(const visit of visits){
+    const attendance=checkupRows?.find(c=>c.pregnant_mother_id===motherId&&c.schedule_id===visit.id);
+    const status=getPrenatalVisitStatus({scheduledFor:visit.visit_date,actualCheckupDate:attendance?.actual_checkup_date,recordedStatus:attendance?.status});
+    if(status==='missed')missedCounts[motherId]=(missedCounts[motherId]??0)+1;
+    if(status==='upcoming')upcomingCounts[motherId]=(upcomingCounts[motherId]??0)+1;
+  }
   const rows: ReportRow[] = (records ?? []).map((r) => ({
     serial_no: r.serial_no,
     date_registered: r.date_registered,
