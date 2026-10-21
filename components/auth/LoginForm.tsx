@@ -7,10 +7,11 @@ import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { persistRememberPreference } from '@/utils/auth/session-persistence';
+import { getConfiguredOAuthProviders } from '@/utils/auth/oauth';
 
 type Mode = 'signin' | 'forgot';
 
-export default function LoginForm() {
+export default function LoginForm({ initialError = '' }: { initialError?: string }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -18,11 +19,40 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const pending = useRef(false);
   const [redirecting, setRedirecting] = useState(false);
+  const googleEnabled = getConfiguredOAuthProviders().some(
+    (provider) => provider.id === 'google' && provider.enabled,
+  );
+
+  async function handleGoogleSignIn() {
+    if (pending.current) return;
+    pending.current = true;
+    setError('');
+    setNotice('');
+    setLoading(true);
+
+    const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+
+    if (signInError || !data.url) {
+      setError('Google sign-in could not be started. Please try again.');
+      pending.current = false;
+      setLoading(false);
+      return;
+    }
+
+    setRedirecting(true);
+    window.location.assign(data.url);
+  }
 
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -129,6 +159,24 @@ export default function LoginForm() {
       )}
 
       {/* Form */}
+      {mode === 'signin' && googleEnabled && (
+        <>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full h-11 rounded-full border border-neutral-300 bg-white text-neutral-800 text-sm font-bold flex items-center justify-center gap-3 hover:bg-neutral-50 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span aria-hidden="true" className="text-base font-black">G</span>
+            {loading && redirecting ? 'Connecting to Google…' : 'Continue with Google'}
+          </button>
+          <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-400" aria-hidden="true">
+            <span className="h-px flex-1 bg-neutral-200" />
+            <span>OR SIGN IN WITH EMAIL</span>
+            <span className="h-px flex-1 bg-neutral-200" />
+          </div>
+        </>
+      )}
       <form
         onSubmit={mode === 'signin' ? handleSignIn : handleForgot}
         className="space-y-4"

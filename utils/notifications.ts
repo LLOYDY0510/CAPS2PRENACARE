@@ -1,5 +1,6 @@
 import 'server-only';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { isEmailConfigured, sendEmail } from '@/utils/email/mailer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type NotificationInput = {
@@ -50,7 +51,7 @@ export async function createMaternalNotification(
       title: input.title,
       message: input.message,
       email,
-      email_status: email && process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL ? 'pending' : 'skipped',
+      email_status: email && isEmailConfigured() ? 'pending' : 'skipped',
     })
     .select('id, email, email_status')
     .maybeSingle();
@@ -63,25 +64,15 @@ export async function createMaternalNotification(
   if (error || !notification || notification.email_status === 'skipped' || !notification.email) return notification;
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      signal: AbortSignal.timeout(10_000),
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL,
-        to: [notification.email],
-        subject: input.title,
-        text: `${input.message}\n\nOpen Prenatrack to view this update.`,
-      }),
+    await sendEmail({
+      to: notification.email,
+      subject: input.title,
+      text: `${input.message}\n\nOpen Prenatrack to view this update.`,
     });
-    const provider = await response.text();
     await delivery.from('maternal_notifications').update({
-      email_status: response.ok ? 'sent' : 'failed',
-      email_sent_at: response.ok ? new Date().toISOString() : null,
-      email_error: response.ok ? null : provider,
+      email_status: 'sent',
+      email_sent_at: new Date().toISOString(),
+      email_error: null,
     }).eq('id', notification.id);
   } catch (emailError) {
     await delivery.from('maternal_notifications').update({
