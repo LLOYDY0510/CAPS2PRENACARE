@@ -7,28 +7,58 @@ import type { SmsGatewayConfig } from './gatewayCrypto';
 const BASE = 'https://api.sms-gate.app/3rdparty/v1';
 let cached: { token: string; expires: number; fingerprint: string } | null = null;
 
+class GatewayAuthenticationError extends Error {
+  constructor(message: string, readonly httpStatus: number) {
+    super(message);
+  }
+}
+
 function configurationFingerprint(config: SmsGatewayConfig): string {
   return createHash('sha256').update(JSON.stringify(config)).digest('hex');
 }
 
 async function authorization(config: SmsGatewayConfig): Promise<string> {
   if (config.authMode === 'token' && config.token) return `Bearer ${config.token}`;
-  if (!config.username || !config.password) throw new Error('SMS Gateway credentials are incomplete.');
+  if (!config.username || !config.password) throw new GatewayAuthenticationError('SMS Gateway credentials are incomplete.', 400);
   const fingerprint = configurationFingerprint(config);
   if (cached && cached.fingerprint === fingerprint && cached.expires > Date.now() + 60_000) return `Bearer ${cached.token}`;
-  const response = await fetch(`${BASE}/auth/token`, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ttl: 3600, scopes: ['messages:send', 'messages:read', 'devices:read'] }),
-    signal: AbortSignal.timeout(10_000),
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error('SMS Gateway authentication failed. Check the configured credentials.');
-  const data = await response.json();
-  if (typeof data.access_token !== 'string') throw new Error('SMS Gateway returned no access token.');
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}/auth/token`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: 3600, scopes: ['messages:send', 'messages:read'] }),
+      signal: AbortSignal.timeout(10_000),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new GatewayAuthenticationError('SMS Gateway authentication could not be reached. No message was submitted.', 503);
+  }
+  if (!response.ok) {
+    const message = response.status === 401
+      ? 'SMS Gateway rejected the Cloud Server username and password. Update them in Configure SMS.'
+      : response.status === 403
+        ? 'SMS Gateway authentication access was denied (HTTP 403). Check the account permissions.'
+        : response.status === 429
+          ? 'SMS Gateway received too many authentication requests. Try again later.'
+          : response.status >= 500
+            ? `SMS Gateway authentication is temporarily unavailable (HTTP ${response.status}). No message was submitted.`
+            : `SMS Gateway rejected the authentication request (HTTP ${response.status}). No message was submitted.`;
+    throw new GatewayAuthenticationError(message, response.status);
+  }
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new GatewayAuthenticationError('SMS Gateway returned an unreadable authentication response. No message was submitted.', 502);
+  }
+  if (!data || typeof data !== 'object' || !('access_token' in data) || typeof data.access_token !== 'string' || !data.access_token.trim()) {
+    throw new GatewayAuthenticationError('SMS Gateway returned no usable access token. No message was submitted.', 502);
+  }
+  const expiresAt = 'expires_at' in data && typeof data.expires_at === 'string' ? Date.parse(data.expires_at) : NaN;
   cached = {
     token: data.access_token,
-    expires: Math.min(Date.now() + 3_500_000, Date.parse(data.expires_at) || Date.now() + 3_500_000),
+    expires: Math.min(Date.now() + 3_500_000, expiresAt || Date.now() + 3_500_000),
     fingerprint,
   };
   return `Bearer ${cached.token}`;
@@ -48,7 +78,9 @@ export async function sendGatewayBatch(input: { numbers: string[]; message: stri
   try {
     auth = await authorization(saved.config);
   } catch (error) {
-    return failure(error instanceof Error ? error.message : 'SMS Gateway authentication could not be established. No message was submitted.', 401);
+    return error instanceof GatewayAuthenticationError
+      ? failure(error.message, error.httpStatus)
+      : failure('SMS Gateway authentication could not be established. No message was submitted.', 502);
   }
   if (!input.numbers.length) return failure('No valid recipients.', 400);
   let response: Response;
