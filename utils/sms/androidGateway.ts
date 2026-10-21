@@ -43,6 +43,7 @@ export async function sendGatewayBatch(input: { numbers: string[]; message: stri
     return failure('SMS Gateway settings are unavailable. Ask a BHW to review the settings.', 503);
   }
   if (!saved?.config.deviceId) return failure('SMS Gateway is not configured. Ask a BHW to set it up.', 400);
+  if (!saved.config.simNumber) return failure('SMS Gateway SIM slot is not configured. Ask a BHW to update the settings.', 400);
   let auth: string;
   try {
     auth = await authorization(saved.config);
@@ -59,8 +60,8 @@ export async function sendGatewayBatch(input: { numbers: string[]; message: stri
         textMessage: { text: input.message },
         phoneNumbers: input.numbers,
         deviceId: saved.config.deviceId,
+        simNumber: Number(saved.config.simNumber),
         withDeliveryReport: true,
-        ...(saved.config.simNumber ? { simNumber: Number(saved.config.simNumber) } : {}),
       }),
       signal: AbortSignal.timeout(15_000),
       cache: 'no-store',

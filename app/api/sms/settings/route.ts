@@ -4,6 +4,7 @@ import { recordActivity } from '@/utils/audit/server';
 import { clearGatewayConfig, readGatewayConfig, writeGatewayConfig } from '@/utils/sms/gatewayConfig';
 import { hasGatewayEncryptionKey, maskGatewayIdentifier } from '@/utils/sms/gatewayCrypto';
 import { mergeGatewayConfig } from '@/utils/sms/gatewayPolicy';
+import { isSmsDryRun } from '@/utils/sms/semaphore';
 
 function sameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
@@ -32,8 +33,11 @@ export async function GET() {
       configured: !!saved,
       encryptionKeyReady: true,
       authMode: saved?.config.authMode ?? null,
+      deviceId: saved?.config.deviceId ?? null,
+      simNumber: saved?.config.simNumber ?? null,
       deviceHint: maskGatewayIdentifier(saved?.config.deviceId),
       simHint: maskGatewayIdentifier(saved?.config.simNumber),
+      dryRun: isSmsDryRun(),
       updatedAt: saved?.updatedAt ?? null,
     });
   } catch {
