@@ -9,7 +9,7 @@ import RiskBadge from '@/components/ui/RiskBadge';
 import Button from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import Pagination from '@/components/ui/Pagination';
-import { ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronRight, RotateCcw, Pencil } from 'lucide-react';
 
 export type PregnantRecord = {
   id: string;
@@ -31,6 +31,7 @@ export type PregnantRecord = {
   risk_level: string | null;
   checkup_recorded: boolean;
   checkupCount: number;
+  canEditRecord?: boolean;
 };
 
 const PAGE_SIZE = 10;
@@ -209,9 +210,9 @@ export default function PregnantRecordsTable({
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Link href={`/dashboard/pregnant/${r.id}?view=details`}>
-                        <Button variant="secondary" size="sm" rightIcon={<ChevronRight size={14} />}>
-                          View
+                      <Link href={`/dashboard/pregnant/${r.id}?view=${canEdit&&r.canEditRecord?'edit':'details'}`} >
+                        <Button variant="secondary" size="sm" rightIcon={canEdit&&r.canEditRecord?<Pencil size={14}/>:<ChevronRight size={14}/>}>
+                          {canEdit&&r.canEditRecord?'Edit':'View'}
                         </Button>
                       </Link>
                       {canEdit && <DeleteRecordButton id={r.id} />}

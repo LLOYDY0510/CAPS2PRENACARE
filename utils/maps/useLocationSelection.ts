@@ -21,6 +21,7 @@ export function useLocationSelection(initial: [number, number] | null, onDetecte
 
   const performGeocoding = useCallback((lat: number, lng: number) => {
     const current = ++revision.current;
+    setLocationData(null);setIsGeocoding(true);setGeocodeError(null);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       setIsGeocoding(true); setGeocodeError(null);

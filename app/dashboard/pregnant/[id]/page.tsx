@@ -1,6 +1,7 @@
 import { scheduleProjection, emptyTrimesterDates } from '@/utils/prenatalProjection';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import EditMotherDialog from '@/components/pregnant/EditMotherDialog';
 import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
 import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
 import InfoRow from '@/components/ui/InfoRow';
@@ -31,11 +32,12 @@ export default async function ViewPregnantMotherPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role,purok,account_status,access_all_zones')
     .eq('id', user?.id)
     .single();
 
   const role = profile?.role ?? 'pending';
+  if(view==='edit'&&(role!=='bhw'||profile?.account_status!=='active'))redirect('/dashboard/pregnant');
   if(showCheckups&&role!=='bhw')redirect('/dashboard/pregnant');
   const canEdit = showCheckups && EDIT_ROLES.includes(role as UserRole);
 
@@ -47,6 +49,13 @@ export default async function ViewPregnantMotherPage({
 
   if (!record) {
     notFound();
+  }
+
+  if(view==='edit'){
+    if(!profile?.access_all_zones&&(!profile?.purok||record.purok!==profile.purok))notFound();
+    const {data:links,error}=await supabase.from('pregnant_mother_indicators').select('indicator_id').eq('pregnant_mother_id',id);
+    if(error)throw new Error('Risk selections could not be loaded. Please reload the record.');
+    return <EditMotherDialog record={record} initialIndicatorIds={(links??[]).map(link=>link.indicator_id)}/>;
   }
 
   const fullName = [record.first_name, record.middle_name, record.last_name]

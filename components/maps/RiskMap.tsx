@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import ZoneAreaLayer from './ZoneAreaLayer';
+import {buildZoneAreas,validMapPoint,zoneIdentity} from '@/utils/maps/zoneAreas';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { divIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -30,7 +32,7 @@ function getRiskColor(level: string) {
   return RISK_COLORS[level] ?? { fill: '#6B7280', stroke: '#374151', label: 'Unassessed' };
 }
 
-function makePinIcon(riskLevel: string) {
+function makePinIcon(riskLevel: string, count?:number) {
   const { fill, stroke } = getRiskColor(riskLevel);
 
   const svg = `
@@ -41,7 +43,8 @@ function makePinIcon(riskLevel: string) {
         stroke="${stroke}"
         stroke-width="3"
       />
-      <circle cx="14" cy="14" r="6" fill="white" opacity="0.9"/>
+      <circle cx="14" cy="14" r="9" fill="white"/>
+      <text x="14" y="18" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold" fill="#111111">${count??(riskLevel==='high'?'H':riskLevel==='low'?'L':'?')}</text>
     </svg>
   `.trim();
 
@@ -83,12 +86,32 @@ function ClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => voi
 export default function RiskMap({
   records,
   pendingClick,
+  areaRecords,
+  showAreas=true,
 }: {
   records: RiskPoint[];
+  areaRecords?:RiskPoint[];
+  showAreas?:boolean;
   pendingClick?: (lat: number, lng: number) => void;
 }) {
+  const [selected,setSelected]=useState<Record<string,string>>({});
+  const areaSource=areaRecords??records;
+  const model=useMemo(()=>{
+    try{return {geometry:buildZoneAreas(areaSource),error:false};}
+    catch{return {geometry:{areas:[],borders:[]},error:true};}
+  },[areaSource]);
+  const visibleIds=useMemo(()=>new Set(records.map(p=>p.id)),[records]);
+  const groups=useMemo(()=>{
+    const grouped=new Map<string,RiskPoint[]>();
+    for(const point of records.filter(validMapPoint)){
+      const key=`${point.latitude}:${point.longitude}`;
+      grouped.set(key,[...(grouped.get(key)??[]),point]);
+    }
+    return [...grouped.entries()];
+  },[records]);
   return (
     <div className="relative w-full h-[520px] rounded-[24px] overflow-hidden border border-neutral-100 shadow-inner">
+      {model.error&&showAreas&&<p role="alert" className="absolute top-2 left-12 z-[1000] rounded bg-white p-2 error-message">Location areas could not be drawn. Pins remain available.</p>}
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={16}
@@ -102,15 +125,23 @@ export default function RiskMap({
         <AutoResize />
         <ClickHandler onClick={pendingClick} />
 
-        {records.map((point) => (
+        {showAreas&&<ZoneAreaLayer geometry={model.geometry} visibleIds={visibleIds}/>}
+        {groups.map(([key,group]) => {
+          const point=group.find(p=>p.id===selected[key])??group[0];
+          return (
           <Marker
-            key={point.id}
-            title={`${point.full_name}: ${getRiskColor(point.risk_level).label}`}
+            key={key}
+            title={group.length>1?`${group.length} records at this location · ${[...new Set(group.map(p=>zoneIdentity(p.purok).label))].join(", ")}`:`${point.full_name}: ${getRiskColor(point.risk_level).label}`}
             position={[point.latitude, point.longitude]}
-            icon={makePinIcon(point.risk_level)}
+            icon={makePinIcon(group.length>1?"unknown":point.risk_level,group.length>1?group.length:undefined)}
           >
             <Popup className="rounded-2xl shadow-xl">
               <div className="p-1 space-y-2 text-xs font-medium text-neutral-700 min-w-[200px]">
+                {group.length>1&&<label className="block space-y-1">Records at this location
+                  <select className="block w-full rounded border p-2" value={point.id} onChange={event=>setSelected(current=>({...current,[key]:event.target.value}))}>
+                    {group.map(p=><option key={p.id} value={p.id}>{p.full_name} · {zoneIdentity(p.purok).label}</option>)}
+                  </select>
+                </label>}
                 <div>
                   <p className="font-extrabold text-sm text-neutral-900">{point.full_name}</p>
                   {point.serial_no && (
@@ -138,7 +169,7 @@ export default function RiskMap({
               </div>
             </Popup>
           </Marker>
-        ))}
+        );})}
       </MapContainer>
     </div>
   );

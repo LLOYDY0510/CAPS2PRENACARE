@@ -1,5 +1,7 @@
 'use client';
 
+import ZoneAreaLayer from './ZoneAreaLayer';
+import {ZoneLocationLabel} from './ZoneLegend';
 import { useLocationSelection, openLocation } from '@/utils/maps/useLocationSelection';
 
 import Modal from '@/components/ui/Modal';
@@ -24,6 +26,7 @@ const DEFAULT_CENTER: [number, number] = [8.315242, 124.860898];
 
 interface FullscreenMapModalProps {
   isOpen: boolean;
+  zone?: string | null;
   onClose: () => void;
   initialPosition: [number, number] | null;
   onLocationSelected: (data: LocationData) => void;
@@ -44,6 +47,7 @@ function MapClickHandler({
 
 export default function FullscreenMapModal({
   isOpen,
+  zone,
   onClose,
   initialPosition,
   onLocationSelected,
@@ -69,8 +73,8 @@ export default function FullscreenMapModal({
   function handleDragEnd(lat: number, lng: number) { selectPosition(lat, lng); }
 
   function handleApplyLocation() {
-    if (locationData) {
-      onLocationSelected(locationData);
+    if (position) {
+      onLocationSelected(locationData??{lat:position[0],lng:position[1]});
       onClose();
     }
   }
@@ -124,6 +128,7 @@ export default function FullscreenMapModal({
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapClickHandler onPick={handlePick} />
+            {position&&<ZoneAreaLayer records={[{id:"draft",purok:zone??null,latitude:position[0],longitude:position[1]}]}/>}
             {position && (
               <Marker
                 ref={markerRef}
@@ -141,8 +146,9 @@ export default function FullscreenMapModal({
           </MapContainer>
 
           {/* Location Info Panel - Floating on Map */}
-          <div className="absolute bottom-4 left-4 right-4 max-w-md">
+          <div className="absolute bottom-4 left-4 right-4 z-[1000] max-w-md max-h-[45%] overflow-y-auto">
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-neutral-200 p-4 space-y-3">
+              {position&&<ZoneLocationLabel zone={zone}/>}
               {/* Loading state */}
               {isGeocoding && (
                 <div className="flex items-center gap-2 py-2">
@@ -197,7 +203,7 @@ export default function FullscreenMapModal({
               )}
 
               {/* Action buttons */}
-              {locationData && !isGeocoding && (
+              {position && !isGeocoding && (
                 <div className="space-y-2 pt-2 border-t border-neutral-200">
                   <button
                     type="button"

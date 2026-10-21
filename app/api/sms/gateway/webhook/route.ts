@@ -2,9 +2,10 @@ import {NextRequest,NextResponse} from 'next/server';
 import {verifyGatewaySignature} from '@/utils/sms/webhook';
 import {createAdminClient} from '@/utils/supabase/admin';
 import {toE164} from '@/utils/sms/phone';
+import {readGatewayConfig} from '@/utils/sms/gatewayConfig';
 export async function POST(request:NextRequest){
-  const secret=process.env.SMS_GATEWAY_WEBHOOK_SECRET;const device=process.env.SMS_GATEWAY_DEVICE_ID;
-  if(!secret||!device)return NextResponse.json({error:'Webhook is not configured.'},{status:503});
+  const secret=process.env.SMS_GATEWAY_WEBHOOK_SECRET;
+  if(!secret)return NextResponse.json({error:'Webhook is not configured.'},{status:503});
   if(Number(request.headers.get('content-length'))>65536)return new Response(null,{status:413});
   const reader=request.body?.getReader();const chunks:Uint8Array[]=[];let size=0;
   if(reader){
@@ -14,6 +15,9 @@ export async function POST(request:NextRequest){
   }
   const raw=Buffer.concat(chunks).toString('utf8');
   if(!verifyGatewaySignature(raw,request.headers.get('x-timestamp'),request.headers.get('x-signature'),secret))return new Response(null,{status:401});
+  let device:string|undefined;
+  try{device=(await readGatewayConfig())?.config.deviceId;}catch{return NextResponse.json({error:'Webhook configuration is unavailable.'},{status:503});}
+  if(!device)return NextResponse.json({error:'Webhook is not configured.'},{status:503});
   let events:unknown;try{events=JSON.parse(raw);}catch{return new Response(null,{status:400});}
   const batch=Array.isArray(events)?events:[events];if(batch.length>100)return new Response(null,{status:413});
   const db=createAdminClient();
