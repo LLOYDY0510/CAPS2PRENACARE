@@ -437,7 +437,9 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
     .filter((o) => o.status === 'sent' || o.status === 'failed')
     .map((o) => ({
       provider: 'android_sms_gateway',
-      device_id: process.env.SMS_GATEWAY_DEVICE_ID ?? null,
+      device_id: input.raw && typeof input.raw === 'object' && typeof (input.raw as Record<string, unknown>).deviceId === 'string'
+        ? (input.raw as Record<string, string>).deviceId
+        : null,
       sms_log_id: log.id,
       schedule_id: input.scheduleId,
       pregnant_mother_id: o.pregnantMotherId,

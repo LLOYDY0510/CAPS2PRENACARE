@@ -4,6 +4,7 @@ import { requireRoles } from '@/utils/auth/roles';
 import { getSmsSchemaCapabilities } from '@/utils/sms/schema';
 import PageHeader from '@/components/ui/PageHeader';
 import { Send } from 'lucide-react';
+import SmsGatewaySettingsCard from '@/components/schedule/SmsGatewaySettingsCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,6 +164,7 @@ export default async function SmsLogPage() {
         badge="Messaging Log"
       />
 
+      <SmsGatewaySettingsCard />
       <SmsLogTable logs={rows} followUps={followUpRows} />
     </div>
   );

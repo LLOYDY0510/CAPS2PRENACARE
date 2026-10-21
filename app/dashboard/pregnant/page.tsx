@@ -12,9 +12,9 @@ import Button from '@/components/ui/Button';
 export default async function PregnantRecordsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string; search?: string }>;
+  searchParams?: Promise<{ q?: string; search?: string; updated?:string }>;
 }) {
-  const { q, search } = (await searchParams) ?? {};
+  const { q, search,updated } = (await searchParams) ?? {};
   const { supabase, profile, role } = await requireRoles(['admin', 'nurse', 'bhw']);
   const canEdit = EDIT_ROLES.includes(role as UserRole);
 
@@ -68,6 +68,7 @@ export default async function PregnantRecordsPage({
         )}
       </div>
 
+      {role==='bhw'&&updated==='1'&&<p role="status" className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-900">Maternal record updated.</p>}
       {error && (
         <div className="error-message p-4 rounded-2xl bg-green-50 border border-green-200 text-green-600 text-xs font-semibold" role="alert">
           Failed to load records: {error.message}

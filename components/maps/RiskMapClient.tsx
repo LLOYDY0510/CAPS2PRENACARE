@@ -1,5 +1,7 @@
 'use client';
 
+import {validMapPoint} from '@/utils/maps/zoneAreas';
+import ZoneLegend from './ZoneLegend';
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/ui/SearchBar';
@@ -27,7 +29,7 @@ type RiskPoint = {
 type RiskFilter = 'all' | 'high' | 'low';
 
 /* Dynamic import of the actual map (SSR off) */
-const RiskMap = dynamic<{ records: RiskPoint[]; pendingClick?: (lat: number, lng: number) => void }>(
+const RiskMap = dynamic<{ records: RiskPoint[]; areaRecords?:RiskPoint[]; showAreas?:boolean; pendingClick?: (lat: number, lng: number) => void }>(
   () => import('@/components/maps/RiskMap'),
   {
     ssr: false,
@@ -40,7 +42,7 @@ const RiskMap = dynamic<{ records: RiskPoint[]; pendingClick?: (lat: number, lng
 );
 
 /* Legend pin swatch */
-function PinSwatch({ color, stroke }: { color: string; stroke: string }) {
+function PinSwatch({ color, stroke, symbol }: { color: string; stroke: string; symbol?:string }) {
   return (
     <svg
       viewBox="0 0 28 38"
@@ -56,14 +58,16 @@ function PinSwatch({ color, stroke }: { color: string; stroke: string }) {
         stroke={stroke}
         strokeWidth="1.5"
       />
-      <circle cx="14" cy="14" r="6" fill="white" opacity="0.9" />
+      <circle cx="14" cy="14" r="9" fill="white" />
+      <text x="14" y="18" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#111111">{symbol}</text>
     </svg>
   );
 }
 
 const RISK_META = {
-  high: { label: 'High Risk', fill: '#14532D', stroke: '#111111' },
-  low: { label: 'Low Risk', fill: '#86EFAC', stroke: '#14532D' },
+  high: { label: 'High Risk', symbol:'H', fill: '#14532D', stroke: '#111111' },
+  low: { label: 'Low Risk', symbol:'L', fill: '#86EFAC', stroke: '#14532D' },
+  unassessed:{label:'Unassessed',symbol:'?',fill:'#6B7280',stroke:'#374151'},
 } as const;
 
 const FILTER_TABS: { key: RiskFilter; label: string }[] = [
@@ -73,15 +77,17 @@ const FILTER_TABS: { key: RiskFilter; label: string }[] = [
 ];
 
 export default function RiskMapClient({
-  records,
+  records:inputRecords,
   pendingClick,
 }: {
   records: RiskPoint[];
   pendingClick?: (lat: number, lng: number) => void;
 }) {
+  const records=useMemo(()=>inputRecords.filter(validMapPoint),[inputRecords]);
   const [riskFilter, setRiskFilter]   = useState<RiskFilter>('all');
   const [purokFilter, setPurokFilter] = useState<string>('');
   const [search, setSearch]           = useState('');
+  const [showAreas,setShowAreas]=useState(true);
 
   const purokOptions = useMemo(() => {
     const puroks = Array.from(
@@ -150,6 +156,7 @@ export default function RiskMapClient({
                   <PinSwatch
                     color={RISK_META[key].fill}
                     stroke={RISK_META[key].stroke}
+                    symbol={RISK_META[key].symbol}
                   />
                 )}
                 <span>{label}</span>
@@ -165,16 +172,20 @@ export default function RiskMapClient({
         )}
       </div>
 
+      <div className="space-y-3">
+        <label className="inline-flex items-center gap-2 min-h-11 text-sm text-neutral-700"><input type="checkbox" checked={showAreas} onChange={event=>setShowAreas(event.target.checked)}/>Show zone areas</label>
+        <ZoneLegend/>
+      </div>
       {/* Legend & Stats Banner */}
       <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-neutral-600">
         <div className="flex items-center gap-5 flex-wrap">
-          <span className="font-bold text-neutral-800 uppercase tracking-wider text-[11px]">Legend:</span>
-          {Object.entries(RISK_META).map(([key, { label, fill, stroke }]) => (
+          <span className="font-bold text-neutral-800 uppercase tracking-wider text-[11px]">Risk:</span>
+          {Object.entries(RISK_META).map(([key, { label, fill, stroke, symbol }]) => (
             <span key={key} className="flex items-center gap-2">
-              <PinSwatch color={fill} stroke={stroke} />
+              <PinSwatch color={fill} stroke={stroke} symbol={symbol} />
               <span>{label}</span>
               <span className="text-neutral-400 font-bold">
-                ({records.filter((r) => r.risk_level === key).length})
+                ({records.filter((r) => (key==='unassessed'?!['high','low'].includes(r.risk_level):r.risk_level === key)).length})
               </span>
             </span>
           ))}
@@ -185,9 +196,10 @@ export default function RiskMapClient({
         </div>
       </div>
 
+      {inputRecords.length>records.length&&<p role="status" className="error-message text-sm">{inputRecords.length-records.length} records have invalid coordinates and cannot be mapped. Update their locations in Pregnant Records.</p>}
       {/* Map Card */}
       <div className="bg-white rounded-[28px] border border-neutral-100 shadow-xl shadow-neutral-200/50 p-3 overflow-hidden">
-        <RiskMap records={filtered} pendingClick={pendingClick} />
+        <RiskMap records={filtered} areaRecords={records} showAreas={showAreas} pendingClick={pendingClick} />
       </div>
     </div>
   );

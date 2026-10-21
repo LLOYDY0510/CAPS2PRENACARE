@@ -1,5 +1,7 @@
 'use client';
 
+import ZoneAreaLayer from './ZoneAreaLayer';
+import {ZoneLocationLabel} from './ZoneLegend';
 import { useLocationSelection, openLocation } from '@/utils/maps/useLocationSelection';
 
 import { useState, useRef } from 'react';
@@ -178,9 +180,11 @@ export default function LocationPicker({
   longitude,
   onChange,
   onLocationDetected,
+  zone,
 }: {
   latitude: number | null;
   longitude: number | null;
+  zone?: string | null;
   onChange: (lat: number, lng: number) => void;
   onLocationDetected?: (data: LocationData) => void;
 }) {
@@ -252,6 +256,7 @@ export default function LocationPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ClickHandler onPick={handlePick} />
+          {position&&<ZoneAreaLayer records={[{id:"draft",purok:zone??null,latitude:position[0],longitude:position[1]}]}/>}
           {position && (
             <Marker
               ref={markerRef}
@@ -269,6 +274,7 @@ export default function LocationPicker({
         </MapContainer>
       </div>
 
+      {position&&<ZoneLocationLabel zone={zone}/>}
       {/* Location Details Card */}
       <LocationDetailsCard
         locationData={locationData}
@@ -286,12 +292,13 @@ export default function LocationPicker({
       </p>
 
       {/* Fullscreen Map Modal */}
-      <FullscreenMapModal
+      {isFullscreenOpen&&<FullscreenMapModal
+        zone={zone}
         isOpen={isFullscreenOpen}
         onClose={() => setIsFullscreenOpen(false)}
         initialPosition={position}
         onLocationSelected={handleFullscreenLocationSelected}
-      />
+      />}
     </div>
   );
 }
