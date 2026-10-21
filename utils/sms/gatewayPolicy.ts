@@ -35,9 +35,10 @@ export function mergeGatewayConfig(input: GatewayConfigInput, current: SmsGatewa
   if (input.simNumber !== undefined) {
     const value = text(input.simNumber, 'SIM number', 8).trim();
     if (!value) simNumber = null;
-    else if (!/^[1-8]$/.test(value)) throw new Error('SIM number must be a number from 1 to 8.');
+    else if (!/^[1-3]$/.test(value)) throw new Error('SIM slot number must be from 1 to 3.');
     else simNumber = value;
   }
+  if (!simNumber) throw new Error('Enter the SIM slot number used to send SMS.');
 
   if (authMode === 'token') {
     const entered = input.token === undefined ? '' : text(input.token, 'API token', 4096).trim();
