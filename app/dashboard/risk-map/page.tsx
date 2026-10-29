@@ -4,6 +4,7 @@ import { requireRoles } from '@/utils/auth/roles';
 import { canEditRiskMap } from '@/utils/auth/permissions';
 import PageHeader from '@/components/ui/PageHeader';
 import { Map } from 'lucide-react';
+import ZoneProgramRecommendations from '@/components/maps/ZoneProgramRecommendations';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export default async function RiskMapPage() {
       />
 
       {error ? <p role="alert" className="error-message">Map records could not be loaded.</p> : <RiskMapClient records={records ?? []} />}
+      <ZoneProgramRecommendations canManage={role === 'bhw'} />
     </div>
   );
 }

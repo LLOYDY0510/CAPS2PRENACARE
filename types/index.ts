@@ -159,7 +159,7 @@ export type MaternalNotification = {
   id: string;
   pregnant_mother_id: string;
   event_key: string;
-  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message';
+  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message' | 'program_recommendation';
   title: string;
   message: string;
   email: string | null;

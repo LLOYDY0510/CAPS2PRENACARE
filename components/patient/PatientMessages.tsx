@@ -10,7 +10,7 @@ export default async function PatientMessages({pregnantMotherId,page=1}: {pregna
   const [{data:record,error},{count,error:scheduleError},{data:tips,error:tipError}]=await Promise.all([
     db.from('pregnant_mothers').select('serial_no,full_name,risk_level').eq('id',pregnantMotherId).single(),
     db.from('prenatal_schedules').select('id,prenatal_schedule_recipients!inner(pregnant_mother_id)',{head:true,count:'exact'}).eq('prenatal_schedule_recipients.pregnant_mother_id',pregnantMotherId).eq('status','scheduled').gte('visit_date',localDate()),
-    db.from('maternal_notifications').select('id,title,message,category,created_at').eq('pregnant_mother_id',pregnantMotherId).in('category',['health_tip','risk_alert','care_message']).order('created_at',{ascending:false}).order('id').range((page-1)*25,page*25-1),
+    db.from('maternal_notifications').select('id,title,message,category,created_at').eq('pregnant_mother_id',pregnantMotherId).in('category',['health_tip','risk_alert','care_message','program_recommendation']).order('created_at',{ascending:false}).order('id').range((page-1)*25,page*25-1),
   ]);
   if(error||tipError||scheduleError) return <p role="alert" className="error-message">Your dashboard could not be loaded. Please try again.</p>;
   return <div className="space-y-6"><PageHeader title="Dashboard" subtitle={record?.full_name} icon={HeartPulse}/>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bell, CheckCheck, CheckCircle2 } from 'lucide-react';
 
 export type NotificationBellItem = {
@@ -16,8 +16,33 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const request = useRef<AbortController | null>(null);
+  const marking = useRef(false);
+  const [error, setError] = useState('');
+  const [unreadCount, setUnreadCount] = useState(() => initialNotifications.filter(notification => !notification.read_at).length);
 
-  const unreadCount = notifications.filter((notification) => !notification.read_at).length;
+  const loadNotifications = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    try {
+      const response = await fetch('/api/notifications/read', { cache: 'no-store', signal: controller.signal });
+      const data = await response.json();
+      if (!response.ok) throw new Error('Notifications could not be loaded.');
+      if (!controller.signal.aborted) {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+        setError('');
+      }
+    } catch { if (!controller.signal.aborted) setError('Notifications could not be loaded. Try reopening the panel.'); }
+  }, []);
+
+  useEffect(() => {
+    const startup = setTimeout(() => { void loadNotifications(); }, 0);
+    function onVisible() { if (document.visibilityState === 'visible') void loadNotifications(); }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearTimeout(startup); document.removeEventListener('visibilitychange', onVisible); request.current?.abort(); };
+  }, [loadNotifications]);
 
   useEffect(() => {
     if (!open) return;
@@ -31,28 +56,42 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
   }, [open]);
 
   async function markRead(id: string) {
+    if (marking.current) return;
+    marking.current = true;
+    try {
     const response = await fetch('/api/notifications/read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notificationId: id }),
     });
-    if (response.ok) setNotifications((current) => current.map((notification) => notification.id === id ? { ...notification, read_at: new Date().toISOString() } : notification));
+    if (!response.ok) throw new Error();
+    setNotifications((current) => current.map((notification) => notification.id === id ? { ...notification, read_at: new Date().toISOString() } : notification));
+    await loadNotifications();
+    } catch { setError('The notification could not be marked as read.'); }
+    finally { marking.current = false; }
   }
 
   async function markAllRead() {
+    if (marking.current) return;
+    marking.current = true;
+    try {
     const response = await fetch('/api/notifications/read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ markAll: true }),
     });
-    if (response.ok) setNotifications((current) => current.map((notification) => ({ ...notification, read_at: notification.read_at ?? new Date().toISOString() })));
+    if (!response.ok) throw new Error();
+    setNotifications((current) => current.map((notification) => ({ ...notification, read_at: notification.read_at ?? new Date().toISOString() })));
+    await loadNotifications();
+    } catch { setError('Notifications could not be marked as read.'); }
+    finally { marking.current = false; }
   }
 
   return (
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { if (!open) void loadNotifications(); setOpen(current => !current); }}
         className="relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white hover:bg-neutral-50 border border-neutral-100 shadow-xs text-neutral-600 hover:text-neutral-900 transition-all"
         aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
@@ -88,7 +127,8 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
           </div>
 
           <div className="max-h-[min(65vh,440px)] overflow-y-auto p-2 space-y-1">
-            {notifications.length === 0 ? (
+            {error && <p role="alert" className="error-message p-3">{error}</p>}
+            {!error && notifications.length === 0 ? (
               <div className="py-10 text-center">
                 <CheckCircle2 size={32} className="mx-auto text-green-500 mb-2 opacity-60" />
                 <p className="text-xs font-bold text-neutral-700">No notifications</p>

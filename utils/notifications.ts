@@ -1,12 +1,13 @@
 import 'server-only';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { isEmailConfigured, sendEmail } from '@/utils/email/mailer';
+import { canEmailRecipient } from '@/utils/email/recipients';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type NotificationInput = {
   pregnantMotherId: string;
   eventKey: string;
-  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message' | 'system' | 'staff' | 'maternal_report' | 'follow_up' | 'referral' | 'record_update';
+  category: 'health_tip' | 'prenatal_reminder' | 'appointment' | 'missed_visit' | 'risk_alert' | 'care_message' | 'system' | 'staff' | 'maternal_report' | 'follow_up' | 'referral' | 'record_update' | 'program_recommendation';
   title: string;
   message: string;
 };
@@ -51,7 +52,7 @@ export async function createMaternalNotification(
       title: input.title,
       message: input.message,
       email,
-      email_status: email && isEmailConfigured() ? 'pending' : 'skipped',
+      email_status: canEmailRecipient(email) && isEmailConfigured() ? 'pending' : 'skipped',
     })
     .select('id, email, email_status')
     .maybeSingle();
