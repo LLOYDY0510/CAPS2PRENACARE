@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isUserRole, isStaffRole } from '@/utils/auth/roles';
+import { requireApiPermission } from '@/utils/auth/api';
+
+export async function GET() {
+  const auth = await requireApiPermission();
+  if (auth.error) return auth.error;
+  const headers = { 'Cache-Control': 'private, no-store' };
+  if (auth.role === 'patient' && !auth.profile.pregnant_mother_id) return NextResponse.json({ notifications: [], unreadCount: 0 }, { headers });
+  const scope = auth.role === 'patient' ? `pregnant_mother_id.eq.${auth.profile.pregnant_mother_id}`
+    : `recipient_user_id.eq.${auth.user.id},recipient_role.eq.${auth.role}`;
+  try {
+    const [items, unread] = await Promise.all([
+      auth.supabase.from('maternal_notifications').select('id,title,message,category,read_at,created_at').or(scope)
+        .order('created_at', { ascending: false }).order('id').limit(30),
+      auth.supabase.from('maternal_notifications').select('id', { count: 'exact', head: true }).or(scope).is('read_at', null),
+    ]);
+    if (items.error || unread.error) throw new Error();
+    return NextResponse.json({ notifications: items.data ?? [], unreadCount: unread.count ?? 0 }, { headers });
+  } catch { return NextResponse.json({ error: 'Notifications could not be loaded.' }, { status: 503, headers }); }
+}
 
 /* Marks one notification, or every unread notification, as read. */
 export async function POST(request: NextRequest) {

@@ -1,5 +1,5 @@
 import { Delaunay } from 'd3-delaunay';
-import { union, intersection, type MultiPolygon, type Pair } from 'polygon-clipping';
+import polygonClipping, { type MultiPolygon, type Pair } from 'polygon-clipping';
 import { normalizeZone } from '@/utils/maternalRegistration';
 
 export const LOCATION_AREA_METERS = 100;
@@ -20,6 +20,7 @@ export type ZoneGeometry = {areas:ZoneArea[];borders:ZoneBorder[]};
 const EARTH_RADIUS = 6371008.8;
 const RAD = Math.PI/180;
 const HALF = LOCATION_AREA_METERS/2;
+const { union, intersection } = polygonClipping;
 
 export function validMapPoint(point:AreaPoint): point is AreaPoint & {latitude:number;longitude:number} {
   return typeof point.latitude==='number'&&typeof point.longitude==='number'&&Number.isFinite(point.latitude)&&Number.isFinite(point.longitude)&&Math.abs(point.latitude)<=85.05112878&&Math.abs(point.longitude)<=180;

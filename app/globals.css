@@ -1734,6 +1734,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .workspace-content form>label .form-input,.workspace-content form>label .form-select { display:block; width:100%; margin-top:8px; font-weight:400; }
 .risk-map-pin { border:2px solid var(--brand); border-radius:50%; background:white; box-shadow:0 0 0 4px var(--brand-subtle); }
 .leaflet-tile-pane { filter:grayscale(1); }
+.leaflet-tile-pane:has(.satellite-tiles) { filter:none; }
 @media(min-width:1600px) { .app-main { padding:40px 48px 64px; } }
 @media(max-width:1100px) and (min-width:768px) { .app-sidebar { width:250px; flex-basis:250px; padding-inline:12px; } .app-main { padding:28px 24px 48px; } .sidebar-brand-row { padding-inline:6px; } }
 @media(max-width:767px) {

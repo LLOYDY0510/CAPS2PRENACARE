@@ -1,5 +1,6 @@
 import 'server-only';
 import nodemailer, { type Transporter } from 'nodemailer';
+import { canEmailRecipient } from './recipients';
 
 let transporter: Transporter | null = null;
 
@@ -32,6 +33,7 @@ function getTransporter() {
 }
 
 export async function sendEmail(input: { to: string; subject: string; text: string }) {
+  if (!canEmailRecipient(input.to)) throw new Error('This address is reserved for testing; no email was sent.');
   await getTransporter().sendMail({
     from: process.env.EMAIL_FROM_EMAIL,
     to: input.to,
