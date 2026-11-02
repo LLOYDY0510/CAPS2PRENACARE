@@ -1,5 +1,6 @@
 import { collectRows } from '@/utils/supabase/collectRows';
 import { scheduleProjection } from '@/utils/prenatalProjection';
+import ZoneProgramRecommendations from '@/components/maps/ZoneProgramRecommendations';
 import ReportsTable from '@/components/reports/ReportsTable';
 import { type ReportRow } from '@/components/reports/ReportExport';
 import { requirePermission } from '@/utils/auth/middleware';
@@ -105,6 +106,7 @@ export default async function ReportsPage() {
       )}
 
       <ReportsTable rowsWithId={rowsWithId} meta={meta} />
+      {role === 'bhw' && <ZoneProgramRecommendations canManage />}
     </div>
   );
 }
