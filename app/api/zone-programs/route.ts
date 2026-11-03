@@ -4,8 +4,8 @@ import { validDate } from '@/utils/calendar';
 
 function programError(code?: string) {
   if (code === '42501') return NextResponse.json({ error: 'You cannot manage programs in this zone.' }, { status: 403 });
-  if (code === '22023') return NextResponse.json({ error: 'Check the assessment fields and available patient accounts.' }, { status: 400 });
-  if (code === '40001') return NextResponse.json({ error: 'The recommendation or recipients changed. Refresh and review before sending.' }, { status: 409 });
+  if (code === '22023') return NextResponse.json({ error: 'Check the assessment fields.' }, { status: 400 });
+  if (code === '40001') return NextResponse.json({ error: 'The recommendation changed. Refresh and review it again.' }, { status: 409 });
   return NextResponse.json({ error: 'Program recommendations are unavailable. Please try again.' }, { status: 503 });
 }
 
@@ -59,17 +59,11 @@ export async function PUT(request: NextRequest) {
   } catch { return programError(); }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const auth = await requireApiPermission();
   if (auth.error) return auth.error;
-  if (auth.role !== 'bhw') return programError('42501');
-  try {
-    const input = await programBody(request, ['zone', 'programId', 'revision']);
-    if (input.error) return input.error;
-    if (typeof input.body.revision !== 'string' || !/^[a-f0-9]{32}$/.test(input.body.revision)) return programError('22023');
-    const { error, data } = await auth.supabase.rpc('send_zone_program', {
-      zone_value: input.body.zone, program_value: input.body.programId, revision_value: input.body.revision,
-    });
-    return error ? programError(error.code) : NextResponse.json(data);
-  } catch { return programError(); }
+  return NextResponse.json(
+    { error: 'Program suggestions are for BHW review only. Patient notifications are disabled.' },
+    { status: 405, headers: { Allow: 'GET, PUT' } },
+  );
 }
