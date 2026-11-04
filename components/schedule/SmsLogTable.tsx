@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { Fragment, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
@@ -100,7 +102,7 @@ export default function SmsLogTable({
   }, []);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     return logs.filter((log) => {
       if (status !== 'all' && log.status !== status) return false;
       if (type !== 'all' && log.message_type !== type) return false;
@@ -113,7 +115,7 @@ export default function SmsLogTable({
       ]
         .join(' ')
         .toLowerCase();
-      return haystack.includes(q);
+      return matchesSearch(q, haystack);
     });
   }, [logs, search, status, type]);
 

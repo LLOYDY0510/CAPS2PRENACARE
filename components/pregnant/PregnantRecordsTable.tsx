@@ -1,10 +1,11 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
-import DeleteRecordButton from '@/components/pregnant/DeleteRecordButton';
 import RiskBadge from '@/components/ui/RiskBadge';
 import Button from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
@@ -58,27 +59,10 @@ export default function PregnantRecordsTable({
   const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     return records.filter((r) => {
-      const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
-      const serial = (r.serial_no ?? '').toLowerCase();
-      const purok = (r.purok ?? '').toLowerCase();
-      const purokZone = r.purok ? `zone ${r.purok.toLowerCase()}` : '';
-      const address = (r.address ?? '').toLowerCase();
-      const riskLevel = (r.risk_level ?? '').toLowerCase();
       const age = r.age;
-
-      if (
-        q &&
-        !name.includes(q) &&
-        !serial.includes(q) &&
-        !purok.includes(q) &&
-        !purokZone.includes(q) &&
-        !address.includes(q) &&
-        !riskLevel.includes(q)
-      ) {
-        return false;
-      }
+      if (!matchesSearch(q, r.first_name, r.middle_name, r.last_name, r.serial_no, r.purok, `zone ${r.purok??''}`, r.address, r.risk_level)) return false;
       if (risk !== 'all' && r.risk_level !== risk) return false;
       if (ageFilter === 'under-18' && (age == null || age >= 18)) return false;
       if (ageFilter === '18-24' && (age == null || age < 18 || age > 24)) return false;
@@ -215,7 +199,6 @@ export default function PregnantRecordsTable({
                           {canEdit&&r.canEditRecord?'Edit':'View'}
                         </Button>
                       </Link>
-                      {canEdit && <DeleteRecordButton id={r.id} />}
                     </div>
                   </td>
                 </tr>

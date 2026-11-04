@@ -13,7 +13,7 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex w-full min-w-0 sm:max-w-md items-center">
       <Search
         size={16}
         className="absolute left-3 text-neutral-400 pointer-events-none"
@@ -26,7 +26,8 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="form-input pl-10 pr-10 min-w-[220px]"
+        onKeyDown={event=>{if(event.key==='Enter')event.preventDefault();}}
+        className="form-input w-full min-w-0 pl-10 pr-12"
         aria-label={placeholder}
       />
 
@@ -35,7 +36,7 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…' }
           type="button"
           onClick={() => { onChange(''); inputRef.current?.focus(); }}
           aria-label="Clear search"
-          className="absolute right-2.5 flex items-center justify-center w-6 h-6 rounded-full bg-neutral-200 text-neutral-500 hover:bg-neutral-300 transition-colors"
+          className="absolute right-0.5 flex items-center justify-center w-11 h-11 rounded-full bg-neutral-200 text-neutral-500 hover:bg-neutral-300 transition-colors"
         >
           <X size={12} />
         </button>

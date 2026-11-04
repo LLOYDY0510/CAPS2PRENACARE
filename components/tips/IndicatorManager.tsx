@@ -221,7 +221,7 @@ export default function IndicatorManager({
                 {ind.active ? 'Deactivate' : 'Activate'}
               </Button>
               <Button
-                variant="ghost"
+                variant="danger"
                 size="sm"
           disabled={saving}
                 onClick={() => handleDelete(ind.id)}

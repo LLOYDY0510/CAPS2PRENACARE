@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
@@ -28,16 +30,10 @@ export default function CheckupsTable({ records }: { records: CheckupRecord[] })
   const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     if (!q) return records;
     return records.filter((r) => {
-      const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').toLowerCase();
-      return (
-        name.includes(q) ||
-        (r.serial_no ?? '').toLowerCase().includes(q) ||
-        (r.purok ?? '').toLowerCase().includes(q) ||
-        (r.purok ? `zone ${r.purok.toLowerCase()}` : '').includes(q)
-      );
+      return matchesSearch(q, r.first_name, r.middle_name, r.last_name, r.serial_no, r.purok, `zone ${r.purok??''}`);
     });
   }, [records, search]);
 

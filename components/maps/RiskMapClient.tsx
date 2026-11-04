@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import {validMapPoint} from '@/utils/maps/zoneAreas';
 import ZoneLegend from './ZoneLegend';
 import { useState, useMemo } from 'react';
@@ -65,9 +67,9 @@ function PinSwatch({ color, stroke, symbol }: { color: string; stroke: string; s
 }
 
 const RISK_META = {
-  high: { label: 'High Risk', symbol:'H', fill: '#14532D', stroke: '#111111' },
-  low: { label: 'Low Risk', symbol:'L', fill: '#86EFAC', stroke: '#14532D' },
-  unassessed:{label:'Unassessed',symbol:'?',fill:'#6B7280',stroke:'#374151'},
+  high: { label: 'High Risk', symbol:'H', fill: '#FFFFFF', stroke: '#404040' },
+  low: { label: 'Low Risk', symbol:'L', fill: '#FFFFFF', stroke: '#404040' },
+  unassessed:{label:'Unassessed',symbol:'?',fill:'#FFFFFF',stroke:'#404040'},
 } as const;
 
 const FILTER_TABS: { key: RiskFilter; label: string }[] = [
@@ -97,15 +99,11 @@ export default function RiskMapClient({
   }, [records]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     return records.filter((r) => {
       if (riskFilter !== 'all' && r.risk_level !== riskFilter) return false;
       if (purokFilter && r.purok !== purokFilter) return false;
-      if (q) {
-        const nameMatch   = r.full_name.toLowerCase().includes(q);
-        const serialMatch = r.serial_no?.toLowerCase().includes(q) ?? false;
-        if (!nameMatch && !serialMatch) return false;
-      }
+      if (!matchesSearch(q, r.full_name, r.serial_no)) return false;
       return true;
     });
   }, [records, riskFilter, purokFilter, search]);
@@ -175,6 +173,7 @@ export default function RiskMapClient({
       <div className="space-y-3">
         <label className="inline-flex items-center gap-2 min-h-11 text-sm text-neutral-700"><input type="checkbox" checked={showAreas} onChange={event=>setShowAreas(event.target.checked)}/>Show zone areas</label>
         <ZoneLegend/>
+        <p className="text-sm text-neutral-600">Pin and area colors identify zones. Letters identify risk; striped pins contain records from multiple zones.</p>
       </div>
       {/* Legend & Stats Banner */}
       <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-neutral-600">

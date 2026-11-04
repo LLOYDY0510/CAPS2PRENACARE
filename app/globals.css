@@ -49,9 +49,9 @@
   --control-border: #7A8F80;
 
   /* Status */
-  --danger:        #14532D;
-  --danger-bg:     #F0FDF4;
-  --danger-border: #BBF7D0;
+  --danger:        #B91C1C;
+  --danger-bg:     #FEF2F2;
+  --danger-border: #FECACA;
   --success:       #15803D;
   --success-bg:    #F0FDF4;
   --success-border:#BBF7D0;
@@ -337,7 +337,7 @@ p { margin: 0; }
     border-color: var(--danger-border);
   }
   .btn-danger:hover:not(:disabled) {
-    background: #DCFCE7;
+    background: #FEE2E2;
   }
 
   /* Ghost */
@@ -931,8 +931,8 @@ p { margin: 0; }
   color: var(--text-inverse);
 }
 .btn-danger:hover:not(:disabled) {
-  background: #14532D;
-  border-color: #14532D;
+  background: #991B1B;
+  border-color: #991B1B;
   color: var(--text-inverse);
 }
 .btn-ghost:hover:not(:disabled) {
@@ -1709,7 +1709,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .ui-button-outline:hover:not(:disabled) { background:var(--surface-alt); border-color:var(--brand); }
 .ui-button-ghost { color:var(--ink-secondary); background:transparent; }
 .ui-button-ghost:hover:not(:disabled) { background:var(--surface-alt); }
-.ui-button-danger { color:var(--brand-dark); background:var(--brand-light); border-color:var(--brand); }
+.ui-button-danger { color:var(--danger); background:var(--error-bg); border-color:var(--error-border); }
+.ui-button-danger:hover:not(:disabled) { background:#FEE2E2; }
 .ui-button:disabled { opacity:.5; cursor:not-allowed; }
 .ui-button-sm { font-size:13px; padding:8px 12px; }
 .ui-button-lg { min-height:48px; padding:12px 24px; }
@@ -1773,3 +1774,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .error-message svg { color: inherit; }
 
 .error-message[class*="bg-green-"] { background: var(--error-bg); border-color: var(--error-border); }
+
+.action-danger { color:var(--danger); background:var(--error-bg); border-color:var(--error-border); }
+.action-danger:hover:not(:disabled) { color:#991B1B; background:#FEE2E2; border-color:#FCA5A5; text-decoration:none; }
+
+.action-link:disabled { opacity:.5; cursor:not-allowed; }
+
+[data-removal="true"] { color:var(--danger) !important; background:var(--danger-bg) !important; border-color:var(--danger-border) !important; }

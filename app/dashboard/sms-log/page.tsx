@@ -1,3 +1,5 @@
+import { collectRows } from '@/utils/supabase/collectRows';
+import { collectInRows } from '@/utils/supabase/collectInRows';
 import SmsLogTable, { type SmsLogRow } from '@/components/schedule/SmsLogTable';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { requireRoles } from '@/utils/auth/roles';
@@ -12,7 +14,7 @@ export default async function SmsLogPage() {
   const { supabase } = await requireRoles(['bhw']);
   const { hasReceipts } = await getSmsSchemaCapabilities();
 
-  const { data: logs } = await supabase
+  const { data: logs, error: logsError } = await collectRows((start,end)=>supabase
     .from('sms_logs')
     .select(
       `id, recipient_count, recipient_numbers, recipient_mother_ids, message, message_type, status, delivery_status, error_message, created_at, sent_by${
@@ -20,7 +22,7 @@ export default async function SmsLogPage() {
       }`,
     )
     .order('created_at', { ascending: false })
-    .limit(200);
+    .order('id').range(start,end));
 
   type LogRow = {
     id: string;
@@ -39,12 +41,12 @@ export default async function SmsLogPage() {
   const logRows = (logs ?? []) as unknown as LogRow[];
 
   const logIds = logRows.map((log) => log.id);
-  const { data: receipts } = hasReceipts && logIds.length
-    ? await supabase
+  const { data: receipts, error: receiptsError } = hasReceipts && logIds.length
+    ? await collectInRows(logIds,(batch,start,end)=>supabase
         .from('sms_recipient_receipts')
         .select('id, sms_log_id, pregnant_mother_id, contact_number, provider_message_id, provider_status, error_message')
-        .in('sms_log_id', logIds)
-    : { data: [] };
+        .in('sms_log_id', batch).order('id').range(start,end))
+    : { data: [], error: null };
 
   type Receipt = {
     id: string;
@@ -63,17 +65,17 @@ export default async function SmsLogPage() {
   }
 
   const recipientIds = Array.from(
-    new Set(logRows.flatMap((log) => (log.recipient_mother_ids ?? []) as string[])),
+    new Set([...logRows.flatMap((log) => (log.recipient_mother_ids ?? []) as string[]), ...(receipts??[]).map(receipt=>receipt.pregnant_mother_id).filter((id):id is string=>!!id)]),
   );
-  const { data: recipientMothers } = recipientIds.length
-    ? await supabase.from('pregnant_mothers').select('id, full_name, contact_number').in('id', recipientIds)
-    : { data: [] };
+  const { data: recipientMothers, error: recipientsError } = recipientIds.length
+    ? await collectInRows(recipientIds,(batch,start,end)=>supabase.from('pregnant_mothers').select('id, full_name, contact_number').in('id', batch).order('id').range(start,end))
+    : { data: [], error: null };
   const mothersById = new Map((recipientMothers ?? []).map((mother) => [mother.id, mother]));
 
   const senderIds = Array.from(new Set(logRows.map((log) => log.sent_by).filter((v): v is string => !!v)));
-  const { data: senders } = senderIds.length
-    ? await createAdminClient().from('profiles').select('id, full_name, email').in('id', senderIds)
-    : { data: [] };
+  const { data: senders, error: sendersError } = senderIds.length
+    ? await collectInRows(senderIds,(batch,start,end)=>createAdminClient().from('profiles').select('id, full_name, email').in('id', batch).order('id').range(start,end))
+    : { data: [], error: null };
   const senderById = new Map((senders ?? []).map((s) => [s.id, s]));
 
   const { data: followUps } = await supabase
@@ -165,6 +167,7 @@ export default async function SmsLogPage() {
       />
 
       <SmsGatewaySettingsCard />
+      {(logsError||receiptsError||recipientsError||sendersError)&&<p role="alert" className="error-message">The complete SMS history could not be loaded. Refresh and try again.</p>}
       <SmsLogTable logs={rows} followUps={followUpRows} />
     </div>
   );

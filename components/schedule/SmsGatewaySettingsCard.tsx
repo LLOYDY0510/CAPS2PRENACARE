@@ -183,14 +183,14 @@ export default function SmsGatewaySettingsCard() {
       </div>
 
       {error && !isOpen && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{error}</p>}
-      {success && !isOpen && <p role="status" className="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900"><CheckCircle2 size={18} aria-hidden="true"/>{success}</p>}
+      {success && !isOpen && <p data-removal={success.includes('cleared')} role="status" className="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900"><CheckCircle2 size={18} aria-hidden="true"/>{success}</p>}
       {warning && !isOpen && <p role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">{warning}</p>}
     </section>
 
     <Modal isOpen={isOpen} onClose={() => { if (!busy && !testBusy) setIsOpen(false); }} title="Configure SMS" description="The saved Gateway settings are shared by all SMS features." maxWidth="xl">
       <div className="max-h-[min(78dvh,820px)] space-y-5 overflow-y-auto p-5 sm:p-6">
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{error}</p>}
-        {success && <p role="status" className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900"><CheckCircle2 size={18} aria-hidden="true"/>{success}</p>}
+        {success && <p data-removal={success.includes('cleared')} role="status" className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900"><CheckCircle2 size={18} aria-hidden="true"/>{success}</p>}
         {warning && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">{warning}</p>}
 
         <section aria-labelledby="current-sms-config-title" className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
