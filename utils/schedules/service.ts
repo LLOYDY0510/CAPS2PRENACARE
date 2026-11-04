@@ -244,7 +244,7 @@ export async function updateSchedule(
 
   if (input.visitDate !== undefined) {
     if (!isValidDate(input.visitDate)) return { ok: false, error: 'Visit date is not a valid date.' };
-    if (input.visitDate < manilaToday()) return { ok: false, error: 'The visit date cannot be in the past.' };
+    if (input.visitDate < manilaToday() && input.visitDate !== existing.visit_date) return { ok: false, error: 'The visit date cannot be in the past.' };
   }
   if (input.trimester !== undefined && !TRIMESTERS.includes(input.trimester)) {
     return { ok: false, error: 'Unknown trimester.' };

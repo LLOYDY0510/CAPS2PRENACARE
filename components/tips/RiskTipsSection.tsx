@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import SectionHeading from '@/components/ui/SectionHeading';
@@ -70,13 +72,8 @@ export default function RiskTipsSection({
   }
 
   const filteredMothers = mothers.filter((m) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      m.fullName.toLowerCase().includes(q) ||
-      (m.serialNo ?? '').toLowerCase().includes(q) ||
-      (m.purok ?? '').toLowerCase().includes(q);
-
-    if (!matchesSearch) return false;
+    const q = normalizeSearch(search);
+    if (!matchesSearch(q, m.fullName, m.serialNo, m.purok, `zone ${m.purok??''}`)) return false;
 
     if (selectedIndicator !== 'all') {
       if (!m.matchedIndicators.some((ind) => ind.id === selectedIndicator || ind.label === selectedIndicator))
@@ -91,6 +88,7 @@ export default function RiskTipsSection({
     return true;
   });
 
+  const visiblePage = Math.min(page, Math.max(1, Math.ceil(filteredMothers.length / 25)));
   return <section className="card p-6">
     <SectionHeading title="Automatic Risk Tips & Clinical Advice" description="Review assessment-based guidance before sharing with a patient" icon={HeartPulse}/>
     {sendError&&<p role="alert" className="error-message">{sendError}</p>}
@@ -100,9 +98,9 @@ export default function RiskTipsSection({
       <select aria-label="Urgency" value={selectedUrgency} onChange={e=>{setSelectedUrgency(e.target.value);setPage(1);}}><option value="all">All urgency levels</option><option value="high">High priority</option><option value="moderate">Moderate</option></select>
     </div>
     <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Patient</th><th>Serial No.</th><th>Zone/Purok</th><th>Assessment/Indicator</th><th>Advice</th><th>Clinical Action</th><th>Actions</th></tr></thead><tbody>
-    {filteredMothers.slice((page-1)*25,page*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}><Copy size={15} aria-hidden="true"/>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}><Send size={15} aria-hidden="true"/>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
+    {filteredMothers.slice((visiblePage-1)*25,visiblePage*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}><Copy size={15} aria-hidden="true"/>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}><Send size={15} aria-hidden="true"/>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
     {!filteredMothers.length&&<tr><td colSpan={7}>No patients match the selected indicators.</td></tr>}
-    </tbody></table></div><nav aria-label="Advice pages" className="flex gap-4 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page}</span><button disabled={page*25>=filteredMothers.length} onClick={()=>setPage(page+1)}>Next</button></nav></section>;
+    </tbody></table></div><nav aria-label="Advice pages" className="flex gap-4 mt-4"><button disabled={visiblePage===1} onClick={()=>setPage(visiblePage-1)}>Previous</button><span>Page {visiblePage}</span><button disabled={visiblePage*25>=filteredMothers.length} onClick={()=>setPage(visiblePage+1)}>Next</button></nav></section>;
 }
 
 /* Mother risk card */

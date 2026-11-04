@@ -97,7 +97,7 @@ export function ConfirmDialog({
       <div className="flex flex-col items-center text-center space-y-4">
         <div
           className={`w-14 h-14 rounded-full flex items-center justify-center ${
-            variant === 'danger' ? 'bg-green-50 text-green-600' : 'bg-green-50 text-[var(--brand)]'
+            variant === 'danger' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-[var(--brand)]'
           }`}
         >
           <AlertTriangle size={28} />

@@ -1,4 +1,6 @@
 import { collectRows } from '@/utils/supabase/collectRows';
+import { mergeAccountDirectory } from '@/utils/users/directory';
+import type { User } from '@supabase/supabase-js';
 import UsersTable from '@/components/users/UsersTable';
 import { requireUserManagement } from '@/utils/auth/middleware';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -18,21 +20,31 @@ export default async function ManageUsersPage() {
     .select('id, email, full_name, role, purok, pregnant_mother_id, created_at, account_status, can_manage_bhw, access_all_zones')
     .order('created_at', { ascending: false }).order('id').range(start, end));
 
+  const authUsers: User[] = [];
+  let directoryError: string | null = null;
+  for (let page = 1; ; page++) {
+    const result = await supabase.auth.admin.listUsers({ page, perPage: 500 });
+    if (result.error) { directoryError = 'The complete login directory could not be loaded.'; break; }
+    authUsers.push(...result.data.users);
+    if (result.data.users.length < 500) break;
+  }
+  const accounts = mergeAccountDirectory(profiles ?? [], authUsers);
+
   const { data: allMothers, error: mothersError } = await collectRows((start, end) => supabase
     .from('pregnant_mothers')
     .select('id, full_name, serial_no')
     .order('serial_no', { ascending: true }).order('id').range(start, end));
 
-  if (error || mothersError) {
+  if (error || mothersError || directoryError) {
     return (
       <div>
         <PageHeader
           title="User Management"
           icon={Users}
-          subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
+          subtitle={`${accounts.length} account${accounts.length === 1 ? '' : 's'}`}
         />
         <div className="error-message alert-error">
-          Failed to load accounts: {error?.message ?? mothersError?.message}
+          Failed to load accounts: {directoryError ?? error?.message ?? mothersError?.message}
         </div>
       </div>
     );
@@ -49,11 +61,11 @@ export default async function ManageUsersPage() {
       <PageHeader
         title="User Management"
         icon={Users}
-        subtitle={`${profiles?.length ?? 0} account${profiles?.length === 1 ? '' : 's'}`}
+        subtitle={`${accounts.length} account${accounts.length === 1 ? '' : 's'}`}
       />
 
       <UsersTable
-        profiles={profiles ?? []}
+        profiles={accounts}
         availableMothers={availableMothers}
         allMothers={allMothers ?? []}
       />

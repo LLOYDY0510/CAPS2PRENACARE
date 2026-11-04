@@ -32,17 +32,23 @@ function getRiskColor(level: string) {
   return RISK_COLORS[level] ?? { fill: '#6B7280', stroke: '#374151', label: 'Unassessed' };
 }
 
-function makePinIcon(riskLevel: string, count?:number) {
-  const { fill, stroke } = getRiskColor(riskLevel);
+function makePinIcon(riskLevel: string, count?:number, zones:(string|null)[] = [null]) {
+  const colors = [...new Set(zones.map(zone => zoneIdentity(zone).color))];
+  const fill = colors[0];
+  const stroke = '#FFFFFF';
+  const clipId = `pin-${colors.join('').replaceAll('#','')}`;
+  const shape = 'M14 0C6.27 0 0 6.27 0 14c0 9.33 14 24 14 24S28 23.33 28 14C28 6.27 21.73 0 14 0z';
 
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 38" width="28" height="38">
-      <path
-        d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 24 14 24S28 23.33 28 14C28 6.27 21.73 0 14 0z"
+      <defs><clipPath id="${clipId}"><path d="${shape}"/></clipPath></defs>
+      <path d="${shape}"
         fill="${fill}"
         stroke="${stroke}"
         stroke-width="3"
       />
+      <g clip-path="url(#${clipId})">${colors.map((color,index)=>`<rect x="${index*28/colors.length}" y="0" width="${28/colors.length}" height="38" fill="${color}"/>`).join('')}</g>
+      <path d="${shape}" fill="none" stroke="${stroke}" stroke-width="2"/>
       <circle cx="14" cy="14" r="9" fill="white"/>
       <text x="14" y="18" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold" fill="#111111">${count??(riskLevel==='high'?'H':riskLevel==='low'?'L':'?')}</text>
     </svg>
@@ -139,9 +145,9 @@ export default function RiskMap({
           return (
           <Marker
             key={key}
-            title={group.length>1?`${group.length} records at this location · ${[...new Set(group.map(p=>zoneIdentity(p.purok).label))].join(", ")}`:`${point.full_name}: ${getRiskColor(point.risk_level).label}`}
+            title={group.length>1?`${group.length} records at this location · ${[...new Set(group.map(p=>zoneIdentity(p.purok).label))].join(", ")}`:`${point.full_name}: ${zoneIdentity(point.purok).label} · ${getRiskColor(point.risk_level).label}`}
             position={[point.latitude, point.longitude]}
-            icon={makePinIcon(group.length>1?"unknown":point.risk_level,group.length>1?group.length:undefined)}
+            icon={makePinIcon(group.length>1?"unknown":point.risk_level,group.length>1?group.length:undefined,group.map(p=>p.purok))}
           >
             <Popup className="rounded-2xl shadow-xl">
               <div className="p-1 space-y-2 text-xs font-medium text-neutral-700 min-w-[200px]">

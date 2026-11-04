@@ -32,7 +32,7 @@ export const ROLE_PERMISSIONS = {
     canManageRiskIndicators: true,
     canViewReports: false,
     canManageReferrals: true,
-    canManageSchedules: true,
+    canManageSchedules: false,
     canManageCheckups: false,
     canManageFollowUps: true,
   },

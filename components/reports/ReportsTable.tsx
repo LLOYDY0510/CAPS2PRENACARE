@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { localDate } from '@/utils/calendar';
 
 import { useState, useMemo, useRef } from 'react';
@@ -111,14 +113,10 @@ export default function ReportsTable({
   }, [rowsWithId, reportType, meta]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     return byType.filter((r) => {
       if (zoneFilter !== 'all' && r.purok !== zoneFilter) return false;
-      if (q) {
-        const matchName   = (r.name ?? '').toLowerCase().includes(q);
-        const matchSerial = String(r.serial_no ?? '').toLowerCase().includes(q);
-        if (!matchName && !matchSerial) return false;
-      }
+      if (!matchesSearch(q, r.name, r.serial_no)) return false;
       return true;
     });
   }, [byType, search, zoneFilter]);

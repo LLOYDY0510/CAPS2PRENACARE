@@ -1,5 +1,7 @@
 'use client';
 
+import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
+
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
@@ -31,14 +33,9 @@ export default function RiskListTable({
   const [currentPage, setCurrentPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearch(search);
     if (!q) return records;
-    return records.filter((r) =>
-      (r.full_name ?? '').toLowerCase().includes(q) ||
-      (r.purok ? `zone ${r.purok}` : '').includes(q) ||
-      (r.purok ?? '').includes(q) ||
-      (r.serial_no ?? '').toLowerCase().includes(q)
-    );
+    return records.filter(r => matchesSearch(q, r.full_name, r.serial_no, r.purok, `zone ${r.purok??''}`));
   }, [records, search]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;

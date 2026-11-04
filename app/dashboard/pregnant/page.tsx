@@ -75,7 +75,7 @@ export default async function PregnantRecordsPage({
         </div>
       )}
 
-      <PregnantRecordsTable
+      <PregnantRecordsTable key={q??search??''}
         records={recordsWithCheckupCount}
         canEdit={canEdit}
         initialSearch={q || search || ''}
