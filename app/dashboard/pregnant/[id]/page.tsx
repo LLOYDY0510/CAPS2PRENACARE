@@ -128,7 +128,6 @@ export default async function ViewPregnantMotherPage({
             <InfoRow label="EDC (Expected Date)" value={record.edd} />
             <InfoRow label="Gravida-Para" value={record.gravida_para} />
             <InfoRow label="Blood Pressure" value={record.blood_pressure} />
-            <InfoRow label="Waist Line" value={record.waist_cm != null ? `${record.waist_cm} cm` : null} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
             <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
             <InfoRow label="Risk Assessment" value={record.risk_level === 'high' ? 'High Risk' : record.risk_level === 'low' ? 'Low Risk' : 'Unassessed'} />
