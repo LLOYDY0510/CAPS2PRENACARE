@@ -50,7 +50,6 @@ export default async function MyRecordsPage() {
         <SectionHeading title="Medical Records" icon={ClipboardList}/>
         <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5 mb-6">
           <InfoRow label="Blood Pressure" value={record.blood_pressure} />
-          <InfoRow label="Waist Line" value={record.waist_cm != null ? `${record.waist_cm} cm` : null} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />
           <InfoRow label="Weight" value={record.weight_kg ? `${record.weight_kg} kg` : null} />
         </div>

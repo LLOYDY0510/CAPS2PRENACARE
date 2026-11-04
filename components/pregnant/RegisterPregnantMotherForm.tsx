@@ -397,8 +397,7 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
                 ...BLOOD_PRESSURE_OPTIONS.map((bp) => ({ value: bp, label: bp })),
               ]}
             />
-            <Input label="Waist Line (cm)" type="number" min="0" step="0.1" value={form.waist_cm} error={invalidField==='waist_cm'?error:undefined}
-              onChange={e=>updateField('waist_cm',e.target.value)} helperText="Optional waist measurement in centimeters"/>
+
             <Select
               label="Height (cm)"
               value={form.height_cm} error={invalidField==='height_cm'?error:undefined}

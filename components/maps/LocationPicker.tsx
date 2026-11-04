@@ -251,9 +251,9 @@ export default function LocationPicker({
             }
           }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          <TileLayer className="satellite-tiles" maxNativeZoom={19} maxZoom={20}
+            attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Sources: Esri, Vantor, Earthstar Geographics, and the GIS User Community'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           />
           <ClickHandler onPick={handlePick} />
           {position&&<ZoneAreaLayer records={[{id:"draft",purok:zone??null,latitude:position[0],longitude:position[1]}]}/>}

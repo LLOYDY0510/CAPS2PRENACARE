@@ -24,30 +24,26 @@ type RiskPoint = {
 };
 
 const RISK_COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
-  high: { fill: '#14532D', stroke: '#111111', label: 'High Risk' },
-  low: { fill: '#86EFAC', stroke: '#166534', label: 'Low Risk' },
+  high: { fill: '#DC2626', stroke: '#7F1D1D', label: 'High Risk' },
+  low: { fill: '#16A34A', stroke: '#14532D', label: 'Low Risk' },
 };
 
 function getRiskColor(level: string) {
   return RISK_COLORS[level] ?? { fill: '#6B7280', stroke: '#374151', label: 'Unassessed' };
 }
 
-function makePinIcon(riskLevel: string, count?:number, zones:(string|null)[] = [null]) {
-  const colors = [...new Set(zones.map(zone => zoneIdentity(zone).color))];
-  const fill = colors[0];
-  const stroke = '#FFFFFF';
-  const clipId = `pin-${colors.join('').replaceAll('#','')}`;
+function makePinIcon(riskLevel: string, count?:number, levels:string[] = [riskLevel]) {
+  const level = levels.includes('high') ? 'high' : levels.every(value=>value==='low') ? 'low' : 'unknown';
+  const { fill, stroke } = getRiskColor(level);
   const shape = 'M14 0C6.27 0 0 6.27 0 14c0 9.33 14 24 14 24S28 23.33 28 14C28 6.27 21.73 0 14 0z';
 
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 38" width="28" height="38">
-      <defs><clipPath id="${clipId}"><path d="${shape}"/></clipPath></defs>
       <path d="${shape}"
         fill="${fill}"
         stroke="${stroke}"
         stroke-width="3"
       />
-      <g clip-path="url(#${clipId})">${colors.map((color,index)=>`<rect x="${index*28/colors.length}" y="0" width="${28/colors.length}" height="38" fill="${color}"/>`).join('')}</g>
       <path d="${shape}" fill="none" stroke="${stroke}" stroke-width="2"/>
       <circle cx="14" cy="14" r="9" fill="white"/>
       <text x="14" y="18" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold" fill="#111111">${count??(riskLevel==='high'?'H':riskLevel==='low'?'L':'?')}</text>
@@ -147,7 +143,7 @@ export default function RiskMap({
             key={key}
             title={group.length>1?`${group.length} records at this location · ${[...new Set(group.map(p=>zoneIdentity(p.purok).label))].join(", ")}`:`${point.full_name}: ${zoneIdentity(point.purok).label} · ${getRiskColor(point.risk_level).label}`}
             position={[point.latitude, point.longitude]}
-            icon={makePinIcon(group.length>1?"unknown":point.risk_level,group.length>1?group.length:undefined,group.map(p=>p.purok))}
+            icon={makePinIcon(group.length>1?"unknown":point.risk_level,group.length>1?group.length:undefined,group.map(p=>p.risk_level))}
           >
             <Popup className="rounded-2xl shadow-xl">
               <div className="p-1 space-y-2 text-xs font-medium text-neutral-700 min-w-[200px]">
@@ -174,7 +170,7 @@ export default function RiskMap({
                 <div className="pt-1">
                   <span
                     className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs ${
-                      point.risk_level === 'high' ? 'bg-green-600' : 'bg-green-600'
+                      point.risk_level === 'high' ? 'bg-red-700' : point.risk_level === 'low' ? 'bg-green-700' : 'bg-neutral-600'
                     }`}
                   >
                     {getRiskColor(point.risk_level).label}

@@ -67,9 +67,9 @@ function PinSwatch({ color, stroke, symbol }: { color: string; stroke: string; s
 }
 
 const RISK_META = {
-  high: { label: 'High Risk', symbol:'H', fill: '#FFFFFF', stroke: '#404040' },
-  low: { label: 'Low Risk', symbol:'L', fill: '#FFFFFF', stroke: '#404040' },
-  unassessed:{label:'Unassessed',symbol:'?',fill:'#FFFFFF',stroke:'#404040'},
+  high: { label: 'High Risk', symbol:'H', fill: '#DC2626', stroke: '#7F1D1D' },
+  low: { label: 'Low Risk', symbol:'L', fill: '#16A34A', stroke: '#14532D' },
+  unassessed:{label:'Unassessed',symbol:'?',fill:'#6B7280',stroke:'#374151'},
 } as const;
 
 const FILTER_TABS: { key: RiskFilter; label: string }[] = [
@@ -173,7 +173,7 @@ export default function RiskMapClient({
       <div className="space-y-3">
         <label className="inline-flex items-center gap-2 min-h-11 text-sm text-neutral-700"><input type="checkbox" checked={showAreas} onChange={event=>setShowAreas(event.target.checked)}/>Show zone areas</label>
         <ZoneLegend/>
-        <p className="text-sm text-neutral-600">Pin and area colors identify zones. Letters identify risk; striped pins contain records from multiple zones.</p>
+        <p className="text-sm text-neutral-600">Pins show risk: red for high, green for low, and gray for unassessed. Shared pins are red when any mother is high risk. Area colors identify zones.</p>
       </div>
       {/* Legend & Stats Banner */}
       <div className="bg-white rounded-[24px] border border-neutral-100 shadow-md p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-neutral-600">
