@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
   }
   try {
     const { data, error } = await auth.supabase.rpc('schedule_planning_rows', {
-      mode_value: mode, query_value: term, zone_value: zone, trimester_value: trimester,
-      visit_value: mode === 'eligibility' ? visit : null, visit_day: mode === 'eligibility' ? date : null,
-      exclude_uuid: scheduleId, offset_value: (page - 1) * 25, limit_value: 25,
+      mode_value: mode, query_value: term, zone_value: zone,
+      ...(mode === 'eligibility' ? { trimester_value: trimester, visit_value: visit, visit_day: date } : {}),
+      ...(scheduleId ? { exclude_uuid: scheduleId } : {}),
+      offset_value: (page - 1) * 25, limit_value: 25,
     }, { get: true });
     if (error) return NextResponse.json({ error: 'Scheduling data could not be refreshed. Try again.' }, { status: error.code === '42501' ? 403 : 503 });
     return NextResponse.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
