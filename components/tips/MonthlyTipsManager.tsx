@@ -4,10 +4,12 @@ import { smsEventFeedback, type SmsEventSummary } from '@/utils/sms/eventFeedbac
 import Modal from '@/components/ui/Modal';
 import {useConfirmation} from '@/components/ui/useConfirmation';
 import SectionHeading from '@/components/ui/SectionHeading';
+import SearchBar from '@/components/ui/SearchBar';
+import { broadcastMatches } from '@/utils/tips/broadcastFilter';
 import { Leaf, Clock3, CircleCheckBig, Send, Plus, Settings2, Pencil, Save, Check } from 'lucide-react';
 import { localDate } from '@/utils/calendar';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
@@ -64,6 +66,23 @@ function currentPeriod(): string {
   return localDate().slice(0, 7);
 }
 
+const MESSAGE_PREVIEW = 140;
+
+function ClampedMessage({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  if (text.length <= MESSAGE_PREVIEW) return <>{text}</>;
+  return <>{open ? text : `${text.slice(0, MESSAGE_PREVIEW)}…`} <button type="button" className="action-link" onClick={() => setOpen((value) => !value)}>{open ? 'Show less' : 'Show more'}</button></>;
+}
+
+function RecipientList({ items }: { items: Recipient[] }) {
+  const sentCount = items.filter((recipient) => recipient.sent).length;
+  return <details><summary>{items.length} recipient{items.length === 1 ? '' : 's'} · {sentCount} sent</summary>
+    <ul className="space-y-1.5 pt-2">{items.map((recipient) => <li key={recipient.pregnant_mother_id} className="flex items-center gap-2 text-sm">
+      <span>{recipient.pregnant_mothers?.full_name ?? 'Unknown'}</span>
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${recipient.sent ? 'bg-green-50 text-green-700 border-green-200' : 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}>{recipient.sent ? 'Sent' : 'Pending'}</span>
+    </li>)}{!items.length && <li className="text-sm text-neutral-500">No recipients.</li>}</ul></details>;
+}
+
 export default function MonthlyTipsManager({
   monthlyTips,
   pregnantMothers,
@@ -99,10 +118,24 @@ export default function MonthlyTipsManager({
   const pending = broadcasts.filter((b) => b.status === 'pending');
   const approved = broadcasts.filter((b) => b.status === 'approved');
   const sent = broadcasts.filter((b) => b.status === 'sent');
+  const [search, setSearch] = useState('');
 
   function recipientsFor(broadcastId: string) {
     return recipients.filter((r) => r.broadcast_id === broadcastId);
   }
+
+  const groups = useMemo(() => {
+    const namesFor = (broadcastId: string) => recipients
+      .filter((recipient) => recipient.broadcast_id === broadcastId)
+      .map((recipient) => recipient.pregnant_mothers?.full_name ?? '');
+    const visible = (rows: Broadcast[]) => rows.filter((row) => broadcastMatches(row, namesFor(row.id), search));
+    return [
+      { title: 'Pending Review', rows: visible(pending) },
+      { title: 'Approved and Ready to Send', rows: visible(approved) },
+      { title: 'Sent', rows: visible(sent) },
+    ];
+  }, [pending, approved, sent, recipients, search]);
+  const visibleCount = groups.reduce((count, group) => count + group.rows.length, 0);
 
   async function handleGenerate() {
     return runAction(async()=>{
@@ -234,8 +267,9 @@ export default function MonthlyTipsManager({
   return <section className="space-y-6">
     <div className="flex flex-wrap justify-between gap-4"><SectionHeading title="Monthly Nutrition & Health Tips" icon={Leaf}/><div className="flex gap-3"><button disabled={busy} className="btn-secondary" onClick={()=>setShowTemplates(true)}><Settings2 size={16} aria-hidden="true"/>Manage Templates</button><button disabled={busy} className="btn-primary" onClick={handleGenerate}><Plus size={16} aria-hidden="true"/>{generating?'Generating…':'Generate Pending Tips'}</button></div></div>
     {confirmation}{message&&<p role={messageError?"alert":"status"} className={messageError?"error-message":""}>{message}</p>}
+    <div className="flex flex-wrap items-center gap-3"><div className="flex-1 min-w-[220px]"><SearchBar value={search} onChange={setSearch} placeholder="Search messages or recipients..."/></div><span className="text-xs font-bold text-neutral-500 whitespace-nowrap">{visibleCount} of {broadcasts.length} messages</span></div>
     <Modal isOpen={showTemplates} onClose={()=>void closeTemplates()} title="Manage Templates" maxWidth="xl">{messageError&&message&&<p role="alert" className="error-message">{message}</p>}<div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Month</th><th>Risk</th><th>Title</th><th>Message</th><th>Action</th></tr></thead><tbody>{monthlyTips.map(tip=><tr key={tip.id}><td>{tip.month}</td><td>{tip.risk_level}</td><td>{tip.title}</td><td>{editingTemplateId===tip.id?<textarea aria-label="Template message" value={templateDraft} onChange={e=>setTemplateDraft(e.target.value)}/>:tip.content}</td><td>{editingTemplateId===tip.id?<><button disabled={busy} onClick={()=>saveTemplate(tip)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingTemplateId(null)}>Cancel</button></>:<button disabled={busy} onClick={()=>{setEditingTemplateId(tip.id);setTemplateDraft(tip.content);}}>Edit</button>}</td></tr>)}</tbody></table></div></Modal>
-    <div className="grid lg:grid-cols-2 gap-6">{[{title:'Pending Review',rows:pending},{title:'Approved and Ready to Send',rows:approved},{title:'Sent',rows:sent}].map((group,index)=><section key={group.title} className={`card p-5 ${index===2?'lg:col-span-2':''}`}>
-      <SectionHeading title={group.title} icon={index===0?Clock3:index===1?CircleCheckBig:Send}/><div className={`overflow-auto ${index<2?'h-96':''}`}><table className="data-table"><thead><tr><th>Month / Period</th><th>Risk Group</th><th>Message</th><th>Recipients</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{group.rows.map(b=><tr key={b.id}><td>{b.month} / {b.period}</td><td>{b.risk_level}</td><td className="min-w-64">{editingBroadcastId===b.id?<><textarea aria-label="Broadcast message" value={broadcastDraft} onChange={e=>setBroadcastDraft(e.target.value)}/><button disabled={busy} onClick={()=>saveBroadcastEdit(b)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingBroadcastId(null)}>Cancel</button></>:b.content}</td><td><details><summary>{recipientsFor(b.id).length} recipients</summary>{recipientsFor(b.id).map(r=><p key={r.pregnant_mother_id}>{r.pregnant_mothers?.full_name??'Unknown'}</p>)}</details></td><td>{b.sent_at??b.approved_at??b.created_at}</td><td>{b.status==='approved'&&b.smsSummary&&<p>{smsEventFeedback(b.smsSummary)}</p>}{b.status!=='sent'&&<div className="flex flex-col gap-2"><button disabled={busy || !!b.smsSummary} className="btn-secondary" onClick={()=>{setEditingBroadcastId(b.id);setBroadcastDraft(b.content);}}><Pencil size={15} aria-hidden="true"/>Edit Message</button>{b.status==='pending'?<button disabled={busy} className="btn-primary" onClick={()=>approveBroadcast(b)}><Check size={15} aria-hidden="true"/>Approve</button>:<button disabled={busy} className="btn-primary" onClick={()=>sendBroadcast(b)}><Send size={15} aria-hidden="true"/>Send Now</button>}</div>}{b.status==='sent'&&<div className="space-y-2"><p>In-app notices sent</p>{b.smsSummary&&<><p>{smsEventFeedback(b.smsSummary)}</p>{(b.smsSummary.pending>0||b.smsSummary.failed>0||b.smsSummary.invalid>0)&&<button disabled={busy} className="btn-secondary" onClick={()=>sendBroadcast(b)}>Resume / Retry SMS</button>}</>}</div>}</td></tr>)}{!group.rows.length&&<tr><td colSpan={6}>No messages.</td></tr>}</tbody></table></div>
+    <div className="grid lg:grid-cols-2 gap-6">{groups.map((group,index)=><section key={group.title} className={`card p-5 ${index===2?'lg:col-span-2':''}`}>
+      <SectionHeading title={group.title} icon={index===0?Clock3:index===1?CircleCheckBig:Send}/><div className={`overflow-auto ${index<2?'h-96':''}`}><table className="data-table"><thead><tr><th>Month / Period</th><th>Risk Group</th><th>Message</th><th>Recipients</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{group.rows.map(b=><tr key={b.id}><td>{b.month} / {b.period}</td><td>{b.risk_level}</td><td className="min-w-64">{editingBroadcastId===b.id?<><textarea aria-label="Broadcast message" value={broadcastDraft} onChange={e=>setBroadcastDraft(e.target.value)}/><button disabled={busy} onClick={()=>saveBroadcastEdit(b)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingBroadcastId(null)}>Cancel</button></>:<ClampedMessage text={b.content}/>}</td><td><RecipientList items={recipientsFor(b.id)}/></td><td>{b.sent_at??b.approved_at??b.created_at}</td><td>{b.status==='approved'&&b.smsSummary&&<p>{smsEventFeedback(b.smsSummary)}</p>}{b.status!=='sent'&&<div className="flex flex-col gap-2"><button disabled={busy || !!b.smsSummary} className="btn-secondary" onClick={()=>{setEditingBroadcastId(b.id);setBroadcastDraft(b.content);}}><Pencil size={15} aria-hidden="true"/>Edit Message</button>{b.status==='pending'?<button disabled={busy} className="btn-primary" onClick={()=>approveBroadcast(b)}><Check size={15} aria-hidden="true"/>Approve</button>:<button disabled={busy} className="btn-primary" onClick={()=>sendBroadcast(b)}><Send size={15} aria-hidden="true"/>Send Now</button>}</div>}{b.status==='sent'&&<div className="space-y-2"><p>In-app notices sent</p>{b.smsSummary&&<><p>{smsEventFeedback(b.smsSummary)}</p>{(b.smsSummary.pending>0||b.smsSummary.failed>0||b.smsSummary.invalid>0)&&<button disabled={busy} className="btn-secondary" onClick={()=>sendBroadcast(b)}>Resume / Retry SMS</button>}</>}</div>}</td></tr>)}{!group.rows.length&&<tr><td colSpan={6}>{search?'No messages match the current search.':'No messages.'}</td></tr>}</tbody></table></div>
     </section>)}</div></section>;
 }

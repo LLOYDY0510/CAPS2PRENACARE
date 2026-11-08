@@ -1,9 +1,11 @@
 import { assertMotherScope } from '@/utils/auth/scope';
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiPermission } from '@/utils/auth/api';
 import { createSchedule, listSchedules, type Trimester } from '@/utils/schedules/service';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 async function requireScheduleManager() {
   return requireApiPermission('canManageSchedules');
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
     if (!motherIds) {
       return NextResponse.json({ error: 'A list of pregnant mothers is required.' }, { status: 400 });
     }
+    const requestId = typeof body?.requestId === 'string' && body.requestId ? body.requestId : randomUUID();
+    if (!/^[0-9a-f-]{36}$/i.test(requestId)) {
+      return NextResponse.json({ error: 'Invalid schedule request.' }, { status: 400 });
+    }
 
     await assertMotherScope(auth.profile, motherIds);
     const result = await createSchedule({
@@ -47,10 +53,11 @@ export async function POST(req: NextRequest) {
       motherIds,
       notes: typeof body?.notes === 'string' ? body.notes : null,
       setBy: auth.user.id,
+      requestId,
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-    return NextResponse.json({ schedule: result.data }, { status: 201 });
+    return NextResponse.json({ schedule: result.data, sms: result.sms ?? null, smsError: result.smsError ?? null }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not create the schedule.' },

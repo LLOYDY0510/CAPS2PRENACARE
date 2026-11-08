@@ -1,5 +1,8 @@
 import { collectRows } from '@/utils/supabase/collectRows';
 import 'server-only';
+import { randomUUID } from 'crypto';
+import { dispatchScheduleConfirmation } from '@/utils/sms/scheduleConfirmation';
+import type { SmsEventSummary } from '@/utils/sms/eventFeedback';
 import { TRIMESTERS } from '@/utils/prenatalProjection';
 import { createClient } from '@/utils/supabase/server';
 import { validDate } from '@/utils/calendar';
@@ -39,7 +42,16 @@ export type ScheduleInput = {
   notes?: string | null;
   setBy: string | null;
   timeLabel?: string | null;
+  requestId?: string;
 };
+
+export type ScheduleCreation =
+  | { ok: true; data: ScheduleWithRecipients; sms: SmsEventSummary | null; smsError: string | null }
+  | { ok: false; error: string };
+
+function isMissingFunction(error: { code?: string | null; message?: string | null }): boolean {
+  return error?.code === 'PGRST202' || /could not find the function/i.test(error?.message ?? '');
+}
 
 export { TRIMESTERS };
 export type Trimester = (typeof TRIMESTERS)[number];
@@ -190,7 +202,7 @@ export async function tryListSchedules(
   }
 }
 
-export async function createSchedule(input: ScheduleInput): Promise<ServiceResult<ScheduleWithRecipients>> {
+export async function createSchedule(input: ScheduleInput): Promise<ScheduleCreation> {
   if (!isValidDate(input.visitDate)) return { ok: false, error: 'Visit date is not a valid date.' };
   if (input.visitDate < manilaToday()) return { ok: false, error: 'The visit date cannot be in the past.' };
   if (!TRIMESTERS.includes(input.trimester)) return { ok: false, error: 'Unknown trimester.' };
@@ -200,14 +212,29 @@ export async function createSchedule(input: ScheduleInput): Promise<ServiceResul
   if (motherIds.length === 0) return { ok: false, error: 'Select at least one pregnant mother.' };
 
   const supabase = createAdminClient(input.setBy ?? undefined);
+  const requestId = input.requestId?.trim() ? input.requestId : randomUUID();
 
-  const { data: scheduleId, error: insertError } = await supabase.rpc('save_prenatal_schedule_visit', {
-    schedule_uuid: null, visit_day: input.visitDate, trimester_value: input.trimester,
+  let scheduleId: string;
+  let smsError: string | null = null;
+  const { data: saved, error: saveError } = await supabase.rpc('save_schedule_with_confirmation', {
+    request_uuid: requestId, visit_day: input.visitDate, trimester_value: input.trimester,
     visit_value: input.visitNumber, recipient_ids: motherIds, notes_value: input.notes?.trim() || null,
-    actor_uuid: input.setBy, status_value: 'scheduled',
+    actor_uuid: input.setBy,
   });
-  if (insertError || !scheduleId) return { ok: false, error: insertError?.message ?? 'Could not create schedule.' };
-  const schedule = { id: String(scheduleId) };
+  if (saveError && isMissingFunction(saveError)) {
+    const legacy = await supabase.rpc('save_prenatal_schedule_visit', {
+      schedule_uuid: null, visit_day: input.visitDate, trimester_value: input.trimester,
+      visit_value: input.visitNumber, recipient_ids: motherIds, notes_value: input.notes?.trim() || null,
+      actor_uuid: input.setBy, status_value: 'scheduled',
+    });
+    if (legacy.error || !legacy.data) return { ok: false, error: legacy.error?.message ?? 'Could not create schedule.' };
+    scheduleId = String(legacy.data);
+    smsError = 'Schedule confirmations need migration 035. The schedule was saved without SMS.';
+  } else {
+    if (saveError || !saved) return { ok: false, error: saveError?.message ?? 'Could not create schedule.' };
+    scheduleId = String(saved);
+  }
+  const schedule = { id: scheduleId };
 
   await createRoleNotification(supabase, {
     eventKey: `schedule-created:${schedule.id}`,
@@ -217,7 +244,21 @@ export async function createSchedule(input: ScheduleInput): Promise<ServiceResul
     message: `A prenatal schedule for ${input.visitDate} was created for ${motherIds.length} pregnant mother(s).`,
   });
 
-  return { ok: true, data: (await getSchedule(schedule.id))! };
+  const created = await getSchedule(schedule.id);
+  if (!created) return { ok: false, error: 'The schedule was saved but could not be read. Retry this same save to recover it.' };
+
+  let sms: SmsEventSummary | null = null;
+  if (!smsError) {
+    if (!input.setBy) smsError = 'The schedule was saved, but SMS needs a signed-in Admin to submit.';
+    else {
+      try {
+        sms = await dispatchScheduleConfirmation(schedule.id, input.setBy);
+      } catch (error) {
+        smsError = error instanceof Error ? error.message : 'Schedule SMS is unavailable. Retry from the saved schedule.';
+      }
+    }
+  }
+  return { ok: true, data: created, sms, smsError };
 }
 
 export async function getSchedule(scheduleId: string): Promise<ScheduleWithRecipients | null> {
