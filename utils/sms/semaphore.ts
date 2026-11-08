@@ -15,6 +15,8 @@ export type SemaphoreRecipientResult = {
 export type SemaphoreSendResult = {
   ok: boolean;
   httpStatus: number;
+  /** False only when failure occurred before contacting the message endpoint. */
+  submissionAttempted?: boolean;
   /** Verbatim provider body, stored on sms_logs for auditing. */
   raw: unknown;
   /** Per-recipient results, in the order the numbers were supplied. */

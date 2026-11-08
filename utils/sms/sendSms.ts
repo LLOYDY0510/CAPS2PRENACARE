@@ -78,8 +78,10 @@ export function buildDedupeKey(input: {
   day?: string;
   messageType?: SmsMessageType;
   revision?: string;
+  eventKey?: string;
 }): string {
   const { sendKind, scheduleId, motherId, phone, message } = input;
+  if (input.eventKey) return `event:${input.eventKey}:${motherId ?? phone}`;
   const day = input.day ?? localDate();
 
   const purpose = input.messageType ?? 'general';
@@ -107,6 +109,8 @@ type SendSmsInput = {
   /** Set for the automatic job so the caller's daily run stays idempotent. */
   dedupeDay?: string;
   dedupeRevision?: string;
+  /** Durable registration or broadcast identity, independent of date or content. */
+  eventKey?: string;
   /** Bypass the dedupe check (still enforced by the unique index). */
   force?: boolean;
 };
@@ -204,6 +208,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
         day: input.dedupeDay,
         messageType: input.messageType,
         revision: input.dedupeRevision,
+        eventKey: input.eventKey,
       }),
     ]),
   );
@@ -232,7 +237,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
         phone: p.phone,
         pregnantMotherId: p.motherId,
         status: 'skipped_duplicate',
-        detail: sendKind === 'auto'
+        detail: input.eventKey ? 'This event was already submitted for this mother.' : sendKind === 'auto'
           ? 'The automatic reminder for this visit was already sent.'
           : 'Already sent today for this mother and visit.',
         providerMessageId: null,
@@ -267,7 +272,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     message,
     senderName: input.senderName,
   }).catch((error) => ({ ok: false, httpStatus: 0, raw: null,
-    recipients: [] as SemaphoreRecipientResult[], accepted: false,
+    recipients: [] as SemaphoreRecipientResult[], accepted: false, submissionAttempted: true,
     batchError: error instanceof Error ? error.message : 'SMS configuration failed.' }));
 
   const after = await safeAccount();
@@ -319,7 +324,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   for (const target of toSend) {
     const outcome = outcomes.find((item) => toE164(item.phone) === target.phone && item.pregnantMotherId === target.motherId);
     const accepted = outcome?.status === 'sent';
-    const definiteFailure = response.httpStatus >= 400 && response.httpStatus < 500 ||
+    const definiteFailure = response.submissionAttempted === false || response.httpStatus >= 400 && response.httpStatus < 500 ||
       (response.httpStatus > 0 && outcome?.providerStatus === 'failed');
     if (!accepted && !definiteFailure) result.warnings.push('Provider acceptance is uncertain. Review the dispatch before retrying.');
     const { error } = await supabase.rpc('finish_sms_dispatch', {
@@ -375,6 +380,8 @@ type WriteLogInput = {
   sentBy?: string | null;
   dedupeDay?: string;
   dedupeRevision?: string;
+  /** Durable registration or broadcast identity, independent of date or content. */
+  eventKey?: string;
   creditsBefore?: number | null;
   creditsAfter?: number | null;
   raw: unknown;
@@ -453,6 +460,7 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
         day: input.dedupeDay,
         messageType: input.messageType,
         revision: input.dedupeRevision,
+        eventKey: input.eventKey,
       }),
       send_kind: input.sendKind,
       provider_message_id: o.providerMessageId,

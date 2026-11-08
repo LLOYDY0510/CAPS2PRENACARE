@@ -32,24 +32,24 @@ async function authorization(config: SmsGatewayConfig): Promise<string> {
 }
 
 export async function sendGatewayBatch(input: { numbers: string[]; message: string }): Promise<SemaphoreSendResult> {
-  const failure = (message: string, httpStatus: number): SemaphoreSendResult => ({ ok: false, httpStatus, raw: null, recipients: [], batchError: message, accepted: false });
+  const failure = (message: string, httpStatus: number, submissionAttempted = true): SemaphoreSendResult => ({ ok: false, httpStatus, submissionAttempted, raw: null, recipients: [], batchError: message, accepted: false });
   let saved: Awaited<ReturnType<typeof readGatewayConfig>>;
   try {
     saved = await readGatewayConfig();
   } catch {
-    return failure('SMS Gateway settings are unavailable. Ask a BHW to review the settings.', 503);
+    return failure('SMS Gateway settings are unavailable. Ask a BHW to review the settings.', 503, false);
   }
-  if (!saved?.config.deviceId) return failure('SMS Gateway is not configured. Ask a BHW to set it up.', 400);
-  if (!saved.config.simNumber) return failure('SMS Gateway SIM slot is not configured. Ask a BHW to update the settings.', 400);
+  if (!saved?.config.deviceId) return failure('SMS Gateway is not configured. Ask a BHW to set it up.', 400, false);
+  if (!saved.config.simNumber) return failure('SMS Gateway SIM slot is not configured. Ask a BHW to update the settings.', 400, false);
   let auth: string;
   try {
     auth = await authorization(saved.config);
   } catch (error) {
     return error instanceof GatewayAuthenticationError
-      ? failure(error.message, error.httpStatus)
-      : failure('SMS Gateway authentication could not be established. No message was submitted.', 502);
+      ? failure(error.message, error.httpStatus, false)
+      : failure('SMS Gateway authentication could not be established. No message was submitted.', 502, false);
   }
-  if (!input.numbers.length) return failure('No valid recipients.', 400);
+  if (!input.numbers.length) return failure('No valid recipients.', 400, false);
   let response: Response;
   try {
     response = await fetch(`${BASE}/messages`, {

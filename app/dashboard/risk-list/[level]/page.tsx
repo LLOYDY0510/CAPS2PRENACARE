@@ -54,7 +54,7 @@ export default async function RiskListPage({
         badge={`${sorted.length} total ${isHigh ? 'high risk' : 'low risk'}`}
       />
 
-      <RiskListTable records={sorted} isHigh={isHigh} />
+      <RiskListTable records={sorted} isHigh={isHigh} canViewRecords={role!=='nurse'} />
     </div>
   );
 }

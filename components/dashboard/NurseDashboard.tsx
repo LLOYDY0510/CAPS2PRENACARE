@@ -122,8 +122,7 @@ export default async function NurseDashboard() {
           trend={`${total} total patients`}
           icon={Users}
           variant="brand"
-          href="/dashboard/pregnant"
-          footerText="View all records"
+          footerText="Registered maternal patients"
         />
         <StatCard
           title="High Risk Cases"
@@ -149,8 +148,7 @@ export default async function NurseDashboard() {
           trend={`${unassessed} pending evaluation`}
           icon={HelpCircle}
           variant="warning"
-          href="/dashboard/pregnant"
-          footerText="Review records"
+          footerText="Awaiting risk assessment"
         />
       </div>
 

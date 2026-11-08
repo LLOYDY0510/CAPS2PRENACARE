@@ -25,9 +25,11 @@ export type RiskRecord = {
 export default function RiskListTable({
   records,
   isHigh,
+  canViewRecords = true,
 }: {
   records: RiskRecord[];
   isHigh: boolean;
+  canViewRecords?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,13 +78,13 @@ export default function RiskListTable({
                 <th className="py-3.5 px-4">Age</th>
                 <th className="py-3.5 px-4">Contact Number</th>
                 <th className="py-3.5 px-4">Risk Level</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                {canViewRecords&&<th className="py-3.5 px-4 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 text-xs sm:text-sm">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-neutral-400 font-medium">
+                  <td colSpan={canViewRecords?7:6} className="text-center py-10 text-neutral-400 font-medium">
                     {search
                       ? 'No records match your search.'
                       : `No ${isHigh ? 'high' : 'low'} risk records found.`}
@@ -99,13 +101,13 @@ export default function RiskListTable({
                   <td className="py-3.5 px-4">
                     <RiskBadge riskLevel={r.risk_level} />
                   </td>
-                  <td className="py-3.5 px-4 text-right">
+                  {canViewRecords&&<td className="py-3.5 px-4 text-right">
                     <Link href={`/dashboard/pregnant/${r.id}`}>
                       <Button variant="secondary" size="sm" rightIcon={<ChevronRight size={14} />}>
                         View Details
                       </Button>
                     </Link>
-                  </td>
+                  </td>}
                 </tr>
               ))}
             </tbody>
