@@ -5,10 +5,11 @@ import Modal, { ConfirmDialog } from '@/components/ui/Modal';
 import { visitLabel } from '@/utils/prenatalProjection';
 import { localDate } from '@/utils/calendar';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ScheduleEditor, { type ScheduleEditorValue, type ScheduleMother, type Trimester } from './ScheduleEditor';
 import { friendlySmsError, DryRunBadge } from './smsStatusUi';
+import { smsEventFeedback, type SmsEventSummary } from '@/utils/sms/eventFeedback';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { relativeDayLabel, weekdayLabel } from '@/utils/sms/clock';
 import Button from '@/components/ui/Button';
@@ -78,6 +79,8 @@ export default function ScheduleSetter({
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, SendOutcome[]>>({});
+  // One request identity per create attempt, so a retry recovers the same save.
+  const createRequestId = useRef<string | null>(null);
   // null = unknown (health endpoint is admin-only).
   const [dryRun, setDryRun] = useState<boolean | null>(null);
 
@@ -109,6 +112,7 @@ export default function ScheduleSetter({
     setError('');
     setNotice('');
     try {
+      if (!createRequestId.current) createRequestId.current = crypto.randomUUID();
       const response = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,6 +122,7 @@ export default function ScheduleSetter({
           visitNumber:value.visitNumber,
           notes: value.notes,
           motherIds: value.motherIds,
+          requestId: createRequestId.current,
         }),
       });
       const payload = await response.json();
@@ -125,8 +130,27 @@ export default function ScheduleSetter({
         setError(payload.error ?? 'Could not create the schedule.');
         return false;
       }
+      createRequestId.current = null;
       setMode('idle');
-      setNotice('Schedule created.');
+      let sms = payload.sms as SmsEventSummary | null;
+      const smsError = payload.smsError as string | null;
+      if (sms && !sms.dryRun && sms.pending > 0 && typeof payload.schedule?.id === 'string') {
+        let previousPending = sms.pending;
+        while (true) {
+          const resume = await fetch('/api/schedule/confirmation-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scheduleId: payload.schedule.id }),
+          });
+          const resumed = await resume.json().catch(() => ({}));
+          if (!resume.ok) break;
+          sms = resumed.sms as SmsEventSummary | null;
+          if (!sms || sms.dryRun || !sms.pending || sms.pending >= previousPending) break;
+          previousPending = sms.pending;
+        }
+      }
+      setNotice(['Schedule created.', sms ? smsEventFeedback(sms) : null].filter(Boolean).join(' '));
+      if (smsError) setError(smsError);
       setChecklistRevision(value => value + 1); router.refresh();
       return true;
     } catch {
@@ -134,6 +158,30 @@ export default function ScheduleSetter({
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleRetryConfirmation(scheduleId: string) {
+    setSendingId(scheduleId);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch('/api/schedule/confirmation-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduleId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? 'Could not send the confirmation.');
+        return;
+      }
+      setNotice(payload.sms ? smsEventFeedback(payload.sms as SmsEventSummary) : 'Confirmation SMS status unavailable.');
+      setChecklistRevision(value => value + 1); router.refresh();
+    } catch {
+      setError('Network error while sending the confirmation.');
+    } finally {
+      setSendingId(null);
     }
   }
 
@@ -254,7 +302,7 @@ export default function ScheduleSetter({
       {error&&<p role="alert" className="error-message">{error}</p>}
       <ScheduleEditor scheduleId={target?.id} onDirtyChange={setDirty} key={target?.id??'new'} mothers={scopedMothers} initial={target?{visitNumber:target.visit_number??undefined,visitDate:target.visit_date,trimester:(target.trimester??'1st') as Trimester,notes:target.notes??'',motherIds:target.recipients.map(row=>row.pregnant_mother_id)}:{visitDate:'',trimester:'1st',notes:'',motherIds:[]}} submitLabel="Save Schedule" busy={busy} onSubmit={value=>target?handleUpdate(target.id,value):handleCreate(value)} onCancel={()=>void closeForm()}/>
     </Modal>
-    <section className="card p-6"><SectionHeading title="Upcoming Schedules" description="Planned prenatal visits and patient assignments" icon={CalendarDays}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Trimester / Visit</th><th>Date of Visit</th><th>Notes</th><th>Timestamp</th></tr></thead><tbody>{upcoming.flatMap(schedule=>schedule.recipients.map(recipient=><tr key={schedule.id+recipient.pregnant_mother_id}><td>{recipient.full_name??'Unknown'}{canEdit&&<details className="mt-2"><summary>Actions</summary><div className="flex flex-wrap gap-2 py-3"><button className="btn-secondary" disabled={busy} onClick={()=>{setDirty(false);setMode({edit:schedule.id});}}><Edit size={15} aria-hidden="true"/>Edit</button>{role!=='admin'&&<button className="btn-secondary" disabled={sendingId!==null} onClick={()=>handleSend(schedule)}><Send size={15} aria-hidden="true"/>Send reminder</button>}<button className="btn-secondary action-danger" disabled={busy} onClick={()=>void handleCancel(schedule.id)}>Cancel Schedule</button><button className="btn-secondary action-danger" disabled={busy} onClick={()=>setConfirmDeleteId(schedule.id)}><Trash2 size={15} aria-hidden="true"/>Delete</button></div>{outcomes[schedule.id]?.map((outcome,index)=><p key={index}>{outcome.phone}: {outcome.status}</p>)}</details>}</td><td>{schedule.trimester} · {visitLabel(schedule.visit_number)}</td><td>{schedule.visit_date}</td><td>{schedule.notes??'—'}</td><td>{schedule.created_at?new Date(schedule.created_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'—'}</td></tr>))}{!upcoming.length&&<tr><td colSpan={5}>No upcoming schedules.</td></tr>}</tbody></table></div></section>
+    <section className="card p-6"><SectionHeading title="Upcoming Schedules" description="Planned prenatal visits and patient assignments" icon={CalendarDays}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Trimester / Visit</th><th>Date of Visit</th><th>Notes</th><th>Timestamp</th></tr></thead><tbody>{upcoming.flatMap(schedule=>schedule.recipients.map(recipient=><tr key={schedule.id+recipient.pregnant_mother_id}><td>{recipient.full_name??'Unknown'}{canEdit&&<details className="mt-2"><summary>Actions</summary><div className="flex flex-wrap gap-2 py-3"><button className="btn-secondary" disabled={busy} onClick={()=>{setDirty(false);setMode({edit:schedule.id});}}><Edit size={15} aria-hidden="true"/>Edit</button>{role!=='admin'&&<button className="btn-secondary" disabled={sendingId!==null} onClick={()=>handleSend(schedule)}><Send size={15} aria-hidden="true"/>Send reminder</button>}{role==='admin'&&<button className="btn-secondary" disabled={sendingId!==null} onClick={()=>handleRetryConfirmation(schedule.id)}><Send size={15} aria-hidden="true"/>Retry confirmation SMS</button>}<button className="btn-secondary action-danger" disabled={busy} onClick={()=>void handleCancel(schedule.id)}>Cancel Schedule</button><button className="btn-secondary action-danger" disabled={busy} onClick={()=>setConfirmDeleteId(schedule.id)}><Trash2 size={15} aria-hidden="true"/>Delete</button></div>{outcomes[schedule.id]?.map((outcome,index)=><p key={index}>{outcome.phone}: {outcome.status}</p>)}</details>}</td><td>{schedule.trimester} · {visitLabel(schedule.visit_number)}</td><td>{schedule.visit_date}</td><td>{schedule.notes??'—'}</td><td>{schedule.created_at?new Date(schedule.created_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'—'}</td></tr>))}{!upcoming.length&&<tr><td colSpan={5}>No upcoming schedules.</td></tr>}</tbody></table></div></section>
     {role === 'admin' && <PrenatalVisitChecklist revision={checklistRevision}/>}
     <section className="card p-6"><SectionHeading title="Schedule Logs" description="A retained record of scheduling activity" icon={History}/><div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Name</th><th>Trimester / Visit</th><th>Date of Visit</th><th>Notes</th><th>Status</th><th>Timestamp</th></tr></thead><tbody>{events.map(event=><tr key={event.id}><td>{event.patient_name}<a className="block text-green-800 text-sm mt-2" href={`/dashboard/schedule/history/${event.schedule_id}`}>View history</a></td><td>{event.trimester??'—'} · {visitLabel(event.visit_number)}</td><td>{event.visit_date}</td><td>{event.notes??'—'}</td><td className={['cancelled','deleted','removed'].includes(event.status)?'text-red-700':undefined}>{event.status}</td><td>{new Date(event.occurred_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'})}</td></tr>)}{!events.length&&<tr><td colSpan={6}>No schedule events yet.</td></tr>}</tbody></table></div></section>
     {confirmation}

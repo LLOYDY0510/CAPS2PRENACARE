@@ -15,6 +15,14 @@ export function prenatalReminderMessageToday(visitDate: string, timeLabel?: stri
   return `Paalala: Ngayong araw (${visitDate})${when} po ang inyong prenatal checkup sa Barangay Health Center. Mangyaring pumunta sa nakatakdang oras. Salamat!`;
 }
 
+const VISIT_ORDINALS = ['1st', '2nd', '3rd'];
+
+/* Booking confirmation for a newly saved schedule. Migration 035 builds this same text in SQL. */
+export function scheduleConfirmationMessage(visitDate: string, trimester: string, visitNumber: number): string {
+  const visit = `${VISIT_ORDINALS[visitNumber - 1] ?? `${visitNumber}th`} Visit`;
+  return `Nakatakda po ang inyong prenatal checkup sa ${visitDate} sa Barangay Health Center (${trimester} Trimester, ${visit}). Mangyaring pumunta sa nakatakdang araw. Salamat!`;
+}
+
 export function missedVisitMessage(visitDate: string): string {
   return `Paalala: Hindi kayo nakadalo sa prenatal visit noong ${visitDate}. Mangyaring makipag-ugnayan sa Barangay Health Center para sa follow-up schedule. Salamat!`;
 }
