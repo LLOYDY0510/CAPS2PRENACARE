@@ -171,7 +171,7 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
       const result=await response.json();
       if(!response.ok)throw new Error(result.error??'Save failed.');
       onDirtyChange(false);
-      router.replace(initialRecord?'/dashboard/pregnant?updated=1':'/dashboard/pregnant');router.refresh();
+      router.replace(initialRecord?'/dashboard/pregnant?updated=1':`/dashboard/pregnant?registered=${encodeURIComponent(result.data.id)}`);router.refresh();
     } catch (failure) {
       setError(failure instanceof Error?failure.message:'Save failed. Please try again.');
       submitting.current=false;setLoading(false);onBusyChange(false);

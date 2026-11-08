@@ -145,7 +145,7 @@ export function LegacySidebar({
   // schedules the debounced fetch and applies its async result.
   useEffect(() => {
     const q = searchQuery.trim().replace(/[%,().\\"]/g, '').slice(0, 80);
-    if (!q) return;
+    if (!q || role === 'nurse') return;
     let cancelled = false;
 
     const timer = setTimeout(async () => {
@@ -175,7 +175,7 @@ export function LegacySidebar({
     }, 250);
 
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [searchQuery, supabase]);
+  }, [searchQuery, supabase, role]);
 
   // Close search dropdown on outside click
   useEffect(() => {
@@ -193,6 +193,7 @@ export function LegacySidebar({
 
   function handleSearchSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (role === 'nurse') return;
     const q = searchQuery.trim();
     if (!q) return;
 
@@ -456,7 +457,7 @@ export function LegacySidebar({
             </div>
 
             {/* Center: Wide Pill Search Bar with Interactive Dropdown */}
-            <div ref={searchContainerRef} className="hidden md:flex items-center relative max-w-md w-full mx-4">
+            {role!=='nurse'&&<div ref={searchContainerRef} className="hidden md:flex items-center relative max-w-md w-full mx-4">
               <form onSubmit={handleSearchSubmit} className="relative w-full">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
                 <input
@@ -602,7 +603,7 @@ export function LegacySidebar({
                   )}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Right: Notifications & User Profile Dropdown */}
             <div className="flex items-center gap-3 shrink-0">

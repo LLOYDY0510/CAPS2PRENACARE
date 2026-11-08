@@ -1,6 +1,5 @@
 import { scheduleProjection, emptyTrimesterDates } from '@/utils/prenatalProjection';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/utils/supabase/server';
 import EditMotherDialog from '@/components/pregnant/EditMotherDialog';
 import PrenatalCheckups from '@/components/pregnant/PrenatalCheckups';
 import MaternalCarePanel from '@/components/pregnant/MaternalCarePanel';
@@ -8,7 +7,7 @@ import InfoRow from '@/components/ui/InfoRow';
 import PageHeader from '@/components/ui/PageHeader';
 import RiskBadge from '@/components/ui/RiskBadge';
 import { redirect } from 'next/navigation';
-import { EDIT_ROLES } from '@/utils/auth/roles';
+import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 import { User } from 'lucide-react';
 
@@ -24,19 +23,7 @@ export default async function ViewPregnantMotherPage({
   const { id } = await params;
   const { view } = await searchParams;
   const showCheckups = view === 'checkups';
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role,purok,account_status,access_all_zones')
-    .eq('id', user?.id)
-    .single();
-
-  const role = profile?.role ?? 'pending';
+  const { supabase, profile, role } = await requireRoles(['admin', 'bhw']);
   if(view==='edit'&&(role!=='bhw'||profile?.account_status!=='active'))redirect('/dashboard/pregnant');
   if(showCheckups&&role!=='bhw')redirect('/dashboard/pregnant');
   const canEdit = showCheckups && EDIT_ROLES.includes(role as UserRole);

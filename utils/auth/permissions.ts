@@ -3,7 +3,7 @@ import type { UserRole } from '@/types';
 // Define access permissions for each role
 export const ROLE_PERMISSIONS = {
   admin: {
-    canViewAllRecords: false,
+    canViewAllRecords: true,
     canManageUsers: true,
     canManageRoles: true,
     canViewRiskMap: false,
@@ -20,7 +20,7 @@ export const ROLE_PERMISSIONS = {
     canManageFollowUps: false,
   },
   nurse: {
-    canViewAllRecords: true,
+    canViewAllRecords: false,
     canManageUsers: false,
     canManageRoles: false,
     canViewRiskMap: false,

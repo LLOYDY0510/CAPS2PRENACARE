@@ -1,5 +1,6 @@
 'use client';
 
+import { smsEventFeedback, type SmsEventSummary } from '@/utils/sms/eventFeedback';
 import Modal from '@/components/ui/Modal';
 import {useConfirmation} from '@/components/ui/useConfirmation';
 import SectionHeading from '@/components/ui/SectionHeading';
@@ -38,6 +39,7 @@ type Broadcast = {
   created_at: string;
   approved_at: string | null;
   sent_at: string | null;
+  smsSummary?: SmsEventSummary | null;
 };
 
 type Recipient = {
@@ -209,13 +211,21 @@ export default function MonthlyTipsManager({
 
   async function sendBroadcast(broadcast: Broadcast) {
     return runAction(async()=>{
-    const response = await fetch('/api/notifications/dispatch', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'health_tip', broadcastId: broadcast.id }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) { setMessageError(true);setMessage(result.error ?? 'Dispatch failed; the broadcast remains approved.'); return; }
-    setMessageError(false);setMessage(`Dispatched ${result.created ?? 0} recipient notices.`);
+    let previousPending = Number.POSITIVE_INFINITY;
+    while (true) {
+      setMessageError(false);setMessage('Sending in-app notices and SMS…');
+      const response = await fetch('/api/notifications/dispatch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'health_tip', broadcastId: broadcast.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { setMessageError(true);setMessage(result.error ?? 'Dispatch interrupted. Resume this broadcast to continue.'); router.refresh(); return; }
+      const sms = result.sms as SmsEventSummary | undefined;
+      setMessageError(!!result.smsError || !!sms?.failed || !!sms?.blocked || !!sms?.invalid);
+      setMessage(`In-app notices sent to ${result.created ?? 0} recipients. ${sms ? smsEventFeedback(sms) : result.smsError ?? 'SMS status unavailable.'}`);
+      if (!sms || sms.dryRun || !sms.pending || sms.pending >= previousPending) break;
+      previousPending = sms.pending;
+    }
 
     router.refresh();
     });
@@ -226,6 +236,6 @@ export default function MonthlyTipsManager({
     {confirmation}{message&&<p role={messageError?"alert":"status"} className={messageError?"error-message":""}>{message}</p>}
     <Modal isOpen={showTemplates} onClose={()=>void closeTemplates()} title="Manage Templates" maxWidth="xl">{messageError&&message&&<p role="alert" className="error-message">{message}</p>}<div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Month</th><th>Risk</th><th>Title</th><th>Message</th><th>Action</th></tr></thead><tbody>{monthlyTips.map(tip=><tr key={tip.id}><td>{tip.month}</td><td>{tip.risk_level}</td><td>{tip.title}</td><td>{editingTemplateId===tip.id?<textarea aria-label="Template message" value={templateDraft} onChange={e=>setTemplateDraft(e.target.value)}/>:tip.content}</td><td>{editingTemplateId===tip.id?<><button disabled={busy} onClick={()=>saveTemplate(tip)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingTemplateId(null)}>Cancel</button></>:<button disabled={busy} onClick={()=>{setEditingTemplateId(tip.id);setTemplateDraft(tip.content);}}>Edit</button>}</td></tr>)}</tbody></table></div></Modal>
     <div className="grid lg:grid-cols-2 gap-6">{[{title:'Pending Review',rows:pending},{title:'Approved and Ready to Send',rows:approved},{title:'Sent',rows:sent}].map((group,index)=><section key={group.title} className={`card p-5 ${index===2?'lg:col-span-2':''}`}>
-      <SectionHeading title={group.title} icon={index===0?Clock3:index===1?CircleCheckBig:Send}/><div className={`overflow-auto ${index<2?'h-96':''}`}><table className="data-table"><thead><tr><th>Month / Period</th><th>Risk Group</th><th>Message</th><th>Recipients</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{group.rows.map(b=><tr key={b.id}><td>{b.month} / {b.period}</td><td>{b.risk_level}</td><td className="min-w-64">{editingBroadcastId===b.id?<><textarea aria-label="Broadcast message" value={broadcastDraft} onChange={e=>setBroadcastDraft(e.target.value)}/><button disabled={busy} onClick={()=>saveBroadcastEdit(b)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingBroadcastId(null)}>Cancel</button></>:b.content}</td><td><details><summary>{recipientsFor(b.id).length} recipients</summary>{recipientsFor(b.id).map(r=><p key={r.pregnant_mother_id}>{r.pregnant_mothers?.full_name??'Unknown'}</p>)}</details></td><td>{b.sent_at??b.approved_at??b.created_at}</td><td>{b.status!=='sent'&&<div className="flex flex-col gap-2"><button disabled={busy} className="btn-secondary" onClick={()=>{setEditingBroadcastId(b.id);setBroadcastDraft(b.content);}}><Pencil size={15} aria-hidden="true"/>Edit Message</button>{b.status==='pending'?<button disabled={busy} className="btn-primary" onClick={()=>approveBroadcast(b)}><Check size={15} aria-hidden="true"/>Approve</button>:<button disabled={busy} className="btn-primary" onClick={()=>sendBroadcast(b)}><Send size={15} aria-hidden="true"/>Send Now</button>}</div>}{b.status==='sent'&&'In-app notices sent'}</td></tr>)}{!group.rows.length&&<tr><td colSpan={6}>No messages.</td></tr>}</tbody></table></div>
+      <SectionHeading title={group.title} icon={index===0?Clock3:index===1?CircleCheckBig:Send}/><div className={`overflow-auto ${index<2?'h-96':''}`}><table className="data-table"><thead><tr><th>Month / Period</th><th>Risk Group</th><th>Message</th><th>Recipients</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{group.rows.map(b=><tr key={b.id}><td>{b.month} / {b.period}</td><td>{b.risk_level}</td><td className="min-w-64">{editingBroadcastId===b.id?<><textarea aria-label="Broadcast message" value={broadcastDraft} onChange={e=>setBroadcastDraft(e.target.value)}/><button disabled={busy} onClick={()=>saveBroadcastEdit(b)} className="action-link"><Save size={15} aria-hidden="true"/>Save</button><button disabled={busy} onClick={()=>setEditingBroadcastId(null)}>Cancel</button></>:b.content}</td><td><details><summary>{recipientsFor(b.id).length} recipients</summary>{recipientsFor(b.id).map(r=><p key={r.pregnant_mother_id}>{r.pregnant_mothers?.full_name??'Unknown'}</p>)}</details></td><td>{b.sent_at??b.approved_at??b.created_at}</td><td>{b.status==='approved'&&b.smsSummary&&<p>{smsEventFeedback(b.smsSummary)}</p>}{b.status!=='sent'&&<div className="flex flex-col gap-2"><button disabled={busy || !!b.smsSummary} className="btn-secondary" onClick={()=>{setEditingBroadcastId(b.id);setBroadcastDraft(b.content);}}><Pencil size={15} aria-hidden="true"/>Edit Message</button>{b.status==='pending'?<button disabled={busy} className="btn-primary" onClick={()=>approveBroadcast(b)}><Check size={15} aria-hidden="true"/>Approve</button>:<button disabled={busy} className="btn-primary" onClick={()=>sendBroadcast(b)}><Send size={15} aria-hidden="true"/>Send Now</button>}</div>}{b.status==='sent'&&<div className="space-y-2"><p>In-app notices sent</p>{b.smsSummary&&<><p>{smsEventFeedback(b.smsSummary)}</p>{(b.smsSummary.pending>0||b.smsSummary.failed>0||b.smsSummary.invalid>0)&&<button disabled={busy} className="btn-secondary" onClick={()=>sendBroadcast(b)}>Resume / Retry SMS</button>}</>}</div>}</td></tr>)}{!group.rows.length&&<tr><td colSpan={6}>No messages.</td></tr>}</tbody></table></div>
     </section>)}</div></section>;
 }

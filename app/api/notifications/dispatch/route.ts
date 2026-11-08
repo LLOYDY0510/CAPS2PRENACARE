@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { canManageHealthTips, canManageSchedules } from '@/utils/auth/permissions';
 import { createMaternalNotification, createRoleNotification } from '@/utils/notifications';
+import { collectRows } from '@/utils/supabase/collectRows';
+import { dispatchSmsEvent } from '@/utils/sms/events';
 import { createHash } from 'crypto';
+
+export const maxDuration = 60;
 
 type DispatchBody = {
   type: 'appointment' | 'health_tip' | 'risk_alert' | 'care_message' | 'role_alert';
@@ -19,6 +23,7 @@ type DispatchBody = {
 };
 
 export async function POST(request: NextRequest) {
+  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
   const auth=await requireApiPermission();
   if(auth.error)return auth.error;
   const {supabase,user,profile}=auth;
@@ -64,20 +69,36 @@ export async function POST(request: NextRequest) {
     const { data: broadcast, error: readError } = await admin.from('tip_broadcasts')
       .select('id, title, content, status').eq('id', body.broadcastId).maybeSingle();
     if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
-    if (!broadcast || broadcast.status !== 'approved') return NextResponse.json({ error: 'Approve the broadcast before dispatching.' }, { status: 409 });
-    const { data: links, error: linkError } = await admin.from('tip_broadcast_recipients')
-      .select('pregnant_mother_id').eq('broadcast_id', broadcast.id);
+    if (!broadcast || !['approved','sent'].includes(broadcast.status)) return NextResponse.json({ error: 'Approve the broadcast before dispatching.' }, { status: 409 });
+    const { data: frozen, error: prepareError } = await admin.rpc('prepare_tip_sms', { broadcast_uuid: broadcast.id, actor_uuid: user.id });
+    if (prepareError) return NextResponse.json({ error: prepareError.message }, { status: 409 });
+    const frozenBroadcast = Array.isArray(frozen) ? frozen[0] : frozen;
+    if (!frozenBroadcast || frozenBroadcast.id !== broadcast.id || !['approved','sent'].includes(frozenBroadcast.status)) {
+      return NextResponse.json({ error: 'The approved broadcast could not be loaded. No SMS was submitted.' }, { status: 503 });
+    }
+    const { data: links, error: linkError } = await collectRows((start,end)=>admin.from('tip_broadcast_recipients')
+      .select('pregnant_mother_id').eq('broadcast_id', broadcast.id).order('pregnant_mother_id').range(start,end));
     if (linkError || !links?.length) return NextResponse.json({ error: linkError?.message ?? 'The broadcast has no recipients.' }, { status: 400 });
     try {
-      for (const link of links) {
+      if (frozenBroadcast.status === 'approved') for (const link of links) {
         const notice = await createMaternalNotification(admin, { pregnantMotherId: link.pregnant_mother_id,
           eventKey: `health-tip:${broadcast.id}:${link.pregnant_mother_id}`, category: 'health_tip',
-          title: broadcast.title, message: broadcast.content });
+          title: frozenBroadcast.title, message: frozenBroadcast.content });
         if (!notice) throw new Error('A recipient notice could not be created.');
       }
-      const { error } = await admin.rpc('complete_tip_broadcast', { broadcast_uuid: broadcast.id });
-      if (error) throw new Error(error.message);
-      return NextResponse.json({ success: true, created: links.length });
+      if (frozenBroadcast.status === 'approved') {
+        const { error } = await admin.rpc('complete_tip_broadcast', { broadcast_uuid: broadcast.id });
+        if (error) {
+          const { data: current } = await admin.from('tip_broadcasts').select('status').eq('id',broadcast.id).maybeSingle();
+          if (current?.status !== 'sent') throw new Error(error.message);
+        }
+      }
+      try {
+        const sms = await dispatchSmsEvent(`broadcast:${broadcast.id}`, user.id);
+        return NextResponse.json({ success: true, created: links.length, sms });
+      } catch {
+        return NextResponse.json({ success: true, created: links.length, smsError: 'In-app notices sent. SMS processing is unavailable; resume SMS from this broadcast.' });
+      }
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : 'Dispatch failed.' }, { status: 500 });
     }
