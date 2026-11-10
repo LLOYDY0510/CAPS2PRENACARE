@@ -187,7 +187,7 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
 
     const { data: mothers } = await supabase
       .from('pregnant_mothers')
-      .select('id, contact_number')
+      .select('id, full_name, contact_number')
       .in('id', motherIds);
 
     const message = isToday
@@ -198,6 +198,8 @@ export async function sendAutomaticPrenatalReminders(): Promise<ReminderRunRepor
       targets: (mothers ?? []).map((m) => ({
         pregnantMotherId: m.id,
         contactNumber: m.contact_number as string | null,
+        fullName: m.full_name as string | null,
+        visitDate: schedule.visit_date,
       })),
       message,
       messageType: 'prenatal_reminder',
@@ -333,13 +335,15 @@ export async function createMissedVisitFollowUps(): Promise<number> {
 
     const { data: mothers } = await supabase
       .from('pregnant_mothers')
-      .select('id, contact_number')
+      .select('id, full_name, contact_number')
       .in('id', missedMotherIds);
 
     const result = await sendSmsAndLog({
       targets: (mothers ?? []).map((m) => ({
         pregnantMotherId: m.id,
         contactNumber: m.contact_number as string | null,
+        fullName: m.full_name as string | null,
+        visitDate: schedule.visit_date,
       })),
       message: missedVisitMessage(schedule.visit_date),
       messageType: 'missed_visit_follow_up',

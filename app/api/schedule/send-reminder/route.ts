@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
     const withNumbers = (mothers ?? []).map((m) => ({
       pregnantMotherId: m.id,
       contactNumber: m.contact_number as string | null,
+      fullName: m.full_name as string | null,
+      visitDate: schedule.visit_date as string,
     }));
 
     const today = manilaToday();

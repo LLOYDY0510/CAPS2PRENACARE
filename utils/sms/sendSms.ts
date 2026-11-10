@@ -11,6 +11,7 @@ import {
   type SemaphoreRecipientResult,
 } from './semaphore';
 import { toE164 } from './phone';
+import { personalizeSmsMessage } from './templates';
 import { createMaternalNotification } from '@/utils/notifications';
 import { getSmsSchemaCapabilities, MIGRATION_014_HINT } from './schema';
 
@@ -38,6 +39,9 @@ export type SendKind = 'auto' | 'manual';
 export type SmsTarget = {
   pregnantMotherId: string | null;
   contactNumber: string | null;
+  /* Resolves [Ngalan] and [Petsa] per recipient on the server. */
+  fullName?: string | null;
+  visitDate?: string | null;
 };
 
 export type RecipientOutcome = {
@@ -161,11 +165,17 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
     motherId: target.pregnantMotherId,
     phone: toE164(target.contactNumber),
     raw: target.contactNumber,
+    fullName: target.fullName ?? null,
+    visitDate: target.visitDate ?? null,
   }));
 
   const validTargets = prepared.filter(
-    (p): p is { motherId: string | null; phone: string; raw: string | null } => p.phone !== null,
+    (p): p is { motherId: string | null; phone: string; raw: string | null; fullName: string | null; visitDate: string | null } => p.phone !== null,
   );
+
+  /* One resolved message per recipient; identical texts still batch together. */
+  const resolvedMessage = (target: { fullName: string | null; visitDate: string | null }): string =>
+    personalizeSmsMessage(message, { name: target.fullName, date: target.visitDate });
 
   const sendable = Array.from(new Map(validTargets.map((target) => [smsTargetKey(target), target])).values());
 
@@ -204,7 +214,7 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
         scheduleId,
         motherId: p.motherId,
         phone: p.phone,
-        message,
+        message: resolvedMessage(p),
         day: input.dedupeDay,
         messageType: input.messageType,
         revision: input.dedupeRevision,
@@ -267,13 +277,72 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   // account endpoint and a null balance must not fail the send.
   const before = await safeAccount();
 
-  const response = await sendSmsBatch({
-    numbers: Array.from(new Set(toSend.map((p) => p.phone))),
-    message,
-    senderName: input.senderName,
-  }).catch((error) => ({ ok: false, httpStatus: 0, raw: null,
-    recipients: [] as SemaphoreRecipientResult[], accepted: false, submissionAttempted: true,
-    batchError: error instanceof Error ? error.message : 'SMS configuration failed.' }));
+  /* One provider batch per distinct resolved text; no-token sends stay single. */
+  const groups = new Map<string, typeof toSend>();
+  for (const target of toSend) {
+    const text = resolvedMessage(target);
+    groups.set(text, [...(groups.get(text) ?? []), target]);
+  }
+
+  const outcomes: RecipientOutcome[] = [];
+  let firstRaw: unknown = null;
+  let firstStatus = 0;
+  for (const [text, group] of groups) {
+    const response = await sendSmsBatch({
+      numbers: Array.from(new Set(group.map((p) => p.phone))),
+      message: text,
+      senderName: input.senderName,
+    }).catch((error) => ({ ok: false, httpStatus: 0, raw: null,
+      recipients: [] as SemaphoreRecipientResult[], accepted: false, submissionAttempted: true,
+      batchError: error instanceof Error ? error.message : 'SMS configuration failed.' }));
+    if (firstRaw === null) { firstRaw = response.raw; firstStatus = response.httpStatus; }
+
+    if (response.batchError && !result.batchError) {
+      result.batchError = response.batchError;
+      // Raw provider body is already saved by writeLog below; the friendly text
+      // is what the UI shows so staff know what to fix.
+      const classified = classifySemaphoreError(response.batchError);
+      result.errorKind = classified.kind;
+      result.friendlyError = classified.friendly;
+    }
+
+    // Map each provider row back to the mother it belongs to.
+    const byNumber = new Map<string, typeof group>();
+    for (const target of group) {
+      const key = target.phone.replace(/[^\d]/g, '');
+      byNumber.set(key, [...(byNumber.get(key) ?? []), target]);
+    }
+    const answered = new Set<string>();
+    for (const row of response.recipients) {
+      const phone = toE164(row.number);
+      const targets = byNumber.get((phone ?? row.number).replace(/[^\d]/g, '')) ?? [];
+      if (!targets.length) continue;
+      answered.add(targets[0].phone);
+      const accepted = ['pending', 'queued', 'sent', 'delivered'].includes(row.status.toLowerCase()) && !row.error;
+      for (const target of targets) outcomes.push({
+        phone: target.phone, pregnantMotherId: target.motherId,
+        status: accepted ? 'sent' : 'failed', detail: row.error ?? `SMS Gateway status: ${row.status}`,
+        providerMessageId: row.messageId, providerStatus: row.status.toLowerCase(),
+      });
+    }
+    for (const target of group) {
+      if (answered.has(target.phone)) continue;
+      outcomes.push({ phone: target.phone, pregnantMotherId: target.motherId, status: 'failed',
+        detail: response.batchError ?? 'SMS Gateway did not return a result for this number.', providerMessageId: null });
+    }
+    for (const target of group) {
+      const outcome = outcomes.find((item) => toE164(item.phone) === target.phone && item.pregnantMotherId === target.motherId);
+      const accepted = outcome?.status === 'sent';
+      const definiteFailure = response.submissionAttempted === false || response.httpStatus >= 400 && response.httpStatus < 500 ||
+        (response.httpStatus > 0 && outcome?.providerStatus === 'failed');
+      if (!accepted && !definiteFailure) result.warnings.push('Provider acceptance is uncertain. Review the dispatch before retrying.');
+      const { error } = await supabase.rpc('finish_sms_dispatch', {
+        dispatch_key: dedupeKeys.get(smsTargetKey(target)),
+        dispatch_state: accepted ? 'accepted' : definiteFailure ? 'failed' : 'unknown',
+      });
+      if (error) result.warnings.push('Dispatch outcome could not be persisted; automatic retries remain blocked.');
+    }
+  }
 
   const after = await safeAccount();
   result.creditsBefore = before;
@@ -284,63 +353,16 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   if (result.dryRun) {
     result.warnings.push('DRY RUN: no message left the server (SMS_DRY_RUN=true).');
   }
-
-  if (response.batchError) {
-    result.batchError = response.batchError;
-    // Raw provider body is already saved by writeLog below; the friendly text
-    // is what the UI shows so staff know what to fix.
-    const classified = classifySemaphoreError(response.batchError);
-    result.errorKind = classified.kind;
-    result.friendlyError = classified.friendly;
-  }
-
-  // Map each provider row back to the mother it belongs to.
-  const byNumber = new Map<string, typeof toSend>();
-  for (const target of toSend) {
-    const key = target.phone.replace(/[^\d]/g, '');
-    byNumber.set(key, [...(byNumber.get(key) ?? []), target]);
-  }
-  const outcomes: RecipientOutcome[] = [];
-  const answered = new Set<string>();
-  for (const row of response.recipients) {
-    const phone = toE164(row.number);
-    const targets = byNumber.get((phone ?? row.number).replace(/[^\d]/g, '')) ?? [];
-    if (!targets.length) continue;
-    answered.add(targets[0].phone);
-    const accepted = ['pending', 'queued', 'sent', 'delivered'].includes(row.status.toLowerCase()) && !row.error;
-    for (const target of targets) outcomes.push({
-      phone: target.phone, pregnantMotherId: target.motherId,
-      status: accepted ? 'sent' : 'failed', detail: row.error ?? `SMS Gateway status: ${row.status}`,
-      providerMessageId: row.messageId, providerStatus: row.status.toLowerCase(),
-    });
-  }
-  for (const target of toSend) {
-    if (answered.has(target.phone)) continue;
-    outcomes.push({ phone: target.phone, pregnantMotherId: target.motherId, status: 'failed',
-      detail: response.batchError ?? 'SMS Gateway did not return a result for this number.', providerMessageId: null });
-  }
   result.submittedNumbers = new Set(outcomes.filter((outcome) => outcome.status === 'sent').map((outcome) => outcome.phone)).size;
-
-  for (const target of toSend) {
-    const outcome = outcomes.find((item) => toE164(item.phone) === target.phone && item.pregnantMotherId === target.motherId);
-    const accepted = outcome?.status === 'sent';
-    const definiteFailure = response.submissionAttempted === false || response.httpStatus >= 400 && response.httpStatus < 500 ||
-      (response.httpStatus > 0 && outcome?.providerStatus === 'failed');
-    if (!accepted && !definiteFailure) result.warnings.push('Provider acceptance is uncertain. Review the dispatch before retrying.');
-    const { error } = await supabase.rpc('finish_sms_dispatch', {
-      dispatch_key: dedupeKeys.get(smsTargetKey(target)),
-      dispatch_state: accepted ? 'accepted' : definiteFailure ? 'failed' : 'unknown',
-    });
-    if (error) result.warnings.push('Dispatch outcome could not be persisted; automatic retries remain blocked.');
-  }
 
   const logId = await writeLog(supabase, {
     ...input,
     scheduleId,
-    raw: response.raw,
-    httpStatus: response.httpStatus,
+    raw: firstRaw,
+    httpStatus: firstStatus,
     creditsBefore: result.creditsBefore,
     creditsAfter: result.creditsAfter,
+    dedupeKeys,
     outcomes,
   });
   result.logId = logId;
@@ -354,16 +376,16 @@ export async function sendSmsAndLog(input: SendSmsInput): Promise<SendSmsResult>
   // Mirror the reminder into the mother's in-app notifications, but only for
   // messages that actually left the building.
   if (messageType === 'prenatal_reminder' || messageType === 'missed_visit_follow_up') {
-    const motherIds = outcomes
-      .filter((o) => o.status === 'sent' && o.pregnantMotherId)
-      .map((o) => o.pregnantMotherId as string);
-    for (const motherId of motherIds) {
+    const sentMothers = outcomes.filter((o) => o.status === 'sent' && o.pregnantMotherId);
+    for (const outcome of sentMothers) {
+      const motherId = outcome.pregnantMotherId as string;
+      const target = sendable.find((p) => p.motherId === motherId && p.phone === outcome.phone) ?? null;
       await createMaternalNotification(supabase, {
         pregnantMotherId: motherId,
         eventKey: `${messageType}:${scheduleId ?? logId ?? 'log'}:${input.dedupeRevision ?? input.dedupeDay ?? 'current'}:${motherId}`,
         category: messageType === 'prenatal_reminder' ? 'prenatal_reminder' : 'missed_visit',
         title: messageType === 'prenatal_reminder' ? 'Prenatal schedule reminder' : 'Missed prenatal visit follow-up',
-        message,
+        message: target ? resolvedMessage(target) : message,
       });
     }
   }
@@ -386,6 +408,7 @@ type WriteLogInput = {
   creditsAfter?: number | null;
   raw: unknown;
   httpStatus: number;
+  dedupeKeys?: Map<string, string>;
   outcomes: RecipientOutcome[];
 };
 
@@ -451,17 +474,18 @@ async function writeLog(supabase: ReturnType<typeof createAdminClient>, input: W
       schedule_id: input.scheduleId,
       pregnant_mother_id: o.pregnantMotherId,
       contact_number: o.phone ?? 'unknown',
-      dedupe_key: buildDedupeKey({
-        sendKind: input.sendKind,
-        scheduleId: input.scheduleId,
-        motherId: o.pregnantMotherId,
-        phone: o.phone ?? 'unknown',
-        message: input.message,
-        day: input.dedupeDay,
-        messageType: input.messageType,
-        revision: input.dedupeRevision,
-        eventKey: input.eventKey,
-      }),
+      dedupe_key: input.dedupeKeys?.get(smsTargetKey({ phone: o.phone ?? 'unknown', motherId: o.pregnantMotherId }))
+        ?? buildDedupeKey({
+          sendKind: input.sendKind,
+          scheduleId: input.scheduleId,
+          motherId: o.pregnantMotherId,
+          phone: o.phone ?? 'unknown',
+          message: input.message,
+          day: input.dedupeDay,
+          messageType: input.messageType,
+          revision: input.dedupeRevision,
+          eventKey: input.eventKey,
+        }),
       send_kind: input.sendKind,
       provider_message_id: o.providerMessageId,
       provider_status: o.providerStatus ?? (o.status === 'sent' ? 'queued' : 'failed'),

@@ -11,12 +11,12 @@ type EventRow = {
   pregnant_mother_id: string;
   message: string;
   message_type: 'care_message' | 'health_tip' | 'nutrition_tip';
-  pregnant_mothers: { contact_number: string | null } | { contact_number: string | null }[] | null;
+  pregnant_mothers: { contact_number: string | null; full_name: string | null } | { contact_number: string | null; full_name: string | null }[] | null;
 };
 
 function eventTarget(row: EventRow) {
   const mother = Array.isArray(row.pregnant_mothers) ? row.pregnant_mothers[0] : row.pregnant_mothers;
-  return { pregnantMotherId: row.pregnant_mother_id, contactNumber: mother?.contact_number ?? null };
+  return { pregnantMotherId: row.pregnant_mother_id, contactNumber: mother?.contact_number ?? null, fullName: mother?.full_name ?? null };
 }
 
 function dispatchKey(row: EventRow) {
@@ -27,7 +27,7 @@ function dispatchKey(row: EventRow) {
 async function readEvent(eventKey: string) {
   const admin = createAdminClient();
   const { data, error } = await collectRows<EventRow>((start, end) => admin.from('maternal_sms_events')
-    .select('event_key,pregnant_mother_id,message,message_type,pregnant_mothers(contact_number)')
+    .select('event_key,pregnant_mother_id,message,message_type,pregnant_mothers(contact_number,full_name)')
     .eq('event_key', eventKey).order('pregnant_mother_id').range(start, end));
   if (error) throw new Error('SMS event storage is unavailable. Apply migration 033 before using event SMS.');
   if (!data?.length) throw new Error('No SMS event is available for this record. Historical records are not sent registration SMS.');

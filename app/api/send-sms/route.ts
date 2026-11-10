@@ -49,11 +49,11 @@ export async function POST(req: NextRequest) {
       : [];
 
     // Pair each number with its mother so the receipt is attributable.
-    let mothers: { id: string; contact_number: string | null }[] = [];
+    let mothers: { id: string; contact_number: string | null; full_name: string | null }[] = [];
     if (motherIds.length) {
       const { data } = await admin
         .from('pregnant_mothers')
-        .select('id, contact_number')
+        .select('id, contact_number, full_name')
         .in('id', motherIds);
       mothers = data ?? [];
     }
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       const match = mothers.find(
         (m) => toE164(m.contact_number) === phone,
       );
-      return { pregnantMotherId: match?.id ?? null, contactNumber: phone };
+      return { pregnantMotherId: match?.id ?? null, contactNumber: phone, fullName: match?.full_name ?? null };
     });
 
     const result = await sendSmsAndLog({

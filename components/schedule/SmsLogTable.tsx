@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
 import { friendlySmsError, DryRunBadge } from '@/components/schedule/smsStatusUi';
+import { useSmsDrafts } from '@/components/sms/useSmsDrafts';
 import { Send, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 export type SmsLogRow = {
@@ -64,9 +65,9 @@ const TYPE_LABELS: Record<SmsLogRow['message_type'], string> = {
 
 const QUICK_DEFAULTS: Record<FollowUpRow['messageType'], string> = {
   risk_alert:
-    'Important prenatal health reminder: please contact your BHW or nurse to review your high-risk care plan.',
+    'Pahinumdom [Ngalan]: palihug kontaka ang imong BHW o nurse para repasuhon ang imong high-risk care plan. Salamat!',
   missed_visit_follow_up:
-    'We noticed your prenatal visit was missed. Please contact the Barangay Health Center to arrange a follow-up schedule.',
+    'Pahinumdom [Ngalan]: wala ka nakatambong sa imong prenatal visit. Palihug kontaka ang Barangay Health Center para sa follow-up. Salamat!',
 };
 
 export default function SmsLogTable({
@@ -82,6 +83,9 @@ export default function SmsLogTable({
   const [type, setType] = useState<'all' | SmsLogRow['message_type']>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [quickMessage, setQuickMessage] = useState<Record<string, string>>({});
+  const { getDraft, saveDraft } = useSmsDrafts();
+  const draftFor = (item: FollowUpRow): string =>
+    quickMessage[item.id] ?? getDraft(item.messageType, QUICK_DEFAULTS[item.messageType]);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, { tone: 'ok' | 'error'; text: string }>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -140,7 +144,7 @@ export default function SmsLogTable({
 
   async function quickSend(item: FollowUpRow) {
     if (!item.contactNumber) return;
-    const message = (quickMessage[item.id] ?? QUICK_DEFAULTS[item.messageType]).trim();
+    const message = draftFor(item).trim();
     if (!message) {
       setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: 'Enter a message first.' } }));
       return;
@@ -279,11 +283,12 @@ export default function SmsLogTable({
                     <div className="flex items-center gap-2 flex-1 max-w-md">
                       <input
                         className="h-10 px-3.5 bg-white text-xs sm:text-sm font-medium rounded-2xl border border-green-200 focus:border-[var(--brand)] outline-none w-full shadow-xs"
-                        value={quickMessage[item.id] ?? QUICK_DEFAULTS[item.messageType]}
-                        onChange={(e) =>
-                          setQuickMessage((current) => ({ ...current, [item.id]: e.target.value }))
-                        }
-                        placeholder="Quick message text..."
+                        value={draftFor(item)}
+                        onChange={(e) => {
+                          setQuickMessage((current) => ({ ...current, [item.id]: e.target.value }));
+                          saveDraft(item.messageType, e.target.value);
+                        }}
+                        placeholder="Quick message text... Use [Ngalan] for the mother name."
                       />
                       <Button
                         size="sm"

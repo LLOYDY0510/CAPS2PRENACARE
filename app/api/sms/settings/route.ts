@@ -25,7 +25,7 @@ export async function GET() {
   if ('response' in access) return access.response;
   const encryptionKeyReady = hasGatewayEncryptionKey();
   if (!encryptionKeyReady) {
-    return NextResponse.json({ configured: false, encryptionKeyReady: false, error: 'The server encryption key is not configured.' }, { status: 503 });
+    return NextResponse.json({ configured: false, encryptionKeyReady: false, error: 'The server encryption key is not configured. Set SMS_GATEWAY_CONFIG_ENCRYPTION_KEY on the server (openssl rand -base64 32), then restart.' }, { status: 503 });
   }
   try {
     const saved = await readGatewayConfig();
@@ -49,7 +49,7 @@ export async function PUT(request: NextRequest) {
   const access = await activeBhw();
   if ('response' in access) return access.response;
   if (!sameOrigin(request)) return NextResponse.json({ error: 'Request origin could not be verified.' }, { status: 403 });
-  if (!hasGatewayEncryptionKey()) return NextResponse.json({ error: 'The server encryption key is not configured.' }, { status: 503 });
+  if (!hasGatewayEncryptionKey()) return NextResponse.json({ error: 'The server encryption key is not configured. Set SMS_GATEWAY_CONFIG_ENCRYPTION_KEY on the server (openssl rand -base64 32), then restart.' }, { status: 503 });
   const length = Number(request.headers.get('content-length') ?? 0);
   if (length > 8192) return NextResponse.json({ error: 'Settings request is too large.' }, { status: 413 });
   const rawBody = await request.text();

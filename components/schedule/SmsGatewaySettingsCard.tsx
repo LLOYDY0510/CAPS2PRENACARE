@@ -54,7 +54,7 @@ export default function SmsGatewaySettingsCard() {
       const payload = await fetchSettings();
       if (payload.encryptionKeyReady === false) {
         setStatus({ configured: false, encryptionKeyReady: false, authMode: null, deviceId: null, simNumber: null, dryRun: true, deviceHint: null, simHint: null, updatedAt: null });
-        setError(payload.error ?? 'The server encryption key is not configured.');
+        setError(payload.error ?? 'The server encryption key is not configured. Ask the admin to set SMS_GATEWAY_CONFIG_ENCRYPTION_KEY on the server, then restart.');
         return;
       }
       const next: GatewayStatus = payload;
@@ -74,7 +74,7 @@ export default function SmsGatewaySettingsCard() {
       if (!active) return;
       if (payload.encryptionKeyReady === false) {
         setStatus({ configured: false, encryptionKeyReady: false, authMode: null, deviceId: null, simNumber: null, dryRun: true, deviceHint: null, simHint: null, updatedAt: null });
-        setError(payload.error ?? 'The server encryption key is not configured.');
+        setError(payload.error ?? 'The server encryption key is not configured. Ask the admin to set SMS_GATEWAY_CONFIG_ENCRYPTION_KEY on the server, then restart.');
         return;
       }
       const next: GatewayStatus = payload;
@@ -202,6 +202,7 @@ export default function SmsGatewaySettingsCard() {
             <div><dt className="text-neutral-600">SMS sending mode</dt><dd className={`mt-0.5 font-semibold ${status.dryRun ? 'text-amber-800' : 'text-green-800'}`}>{status.dryRun ? 'Dry run — no SMS will be sent' : 'Live — SMS will be sent'}</dd></div>
           </dl> : <p className="mt-2 text-sm text-neutral-700">No Gateway configuration is saved yet.</p>}
           <p className="mt-3 text-xs leading-5 text-neutral-600">Credentials stay encrypted and are never returned. Leave a saved credential field empty to keep its current value.</p>
+          {status?.encryptionKeyReady === false && <p className="mt-2 text-xs leading-5 text-neutral-700">Setup: add a 32-byte base64 SMS_GATEWAY_CONFIG_ENCRYPTION_KEY to the server environment, restart the app, then return here. See docs/sms-gateway-setup.md.</p>}
         </section>
 
         <form className="space-y-5" onSubmit={saveSettings}>

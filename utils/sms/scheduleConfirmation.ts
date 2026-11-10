@@ -43,20 +43,24 @@ export async function dispatchScheduleConfirmation(scheduleId: string, actorId: 
   const eventKey = scheduleConfirmationEventKey(scheduleId);
   const { data: events, error: eventsError } = await admin
     .from('maternal_sms_events')
-    .select('pregnant_mother_id, message')
+    .select('pregnant_mother_id, message, pregnant_mothers(full_name)')
     .eq('event_key', eventKey);
   if (eventsError) {
     throw new ScheduleConfirmationError('SMS event storage is unavailable. Apply migration 035 before using schedule confirmations.', 503);
   }
-  const rows = (events ?? []) as { pregnant_mother_id: string; message: string }[];
+  const rows = (events ?? []) as { pregnant_mother_id: string; message: string; pregnant_mothers: { full_name: string | null } | { full_name: string | null }[] | null }[];
   if (!rows.length) {
     throw new ScheduleConfirmationError('No confirmation SMS is available for this schedule. Confirmations are created only for newly saved schedules.', 409);
   }
   if (row.trimester == null || row.visit_number == null) {
     throw new ScheduleConfirmationError('The schedule details changed after this confirmation was prepared. No SMS was sent.', 409);
   }
-  const expected = scheduleConfirmationMessage(row.visit_date, row.trimester, row.visit_number);
-  if (rows.some((event) => event.message !== expected)) {
+  /* Confirmations are personalized per mother; each row must match its own text. */
+  const stale = rows.some((event) => {
+    const mother = Array.isArray(event.pregnant_mothers) ? event.pregnant_mothers[0] : event.pregnant_mothers;
+    return event.message !== scheduleConfirmationMessage(row.visit_date, row.trimester as string, row.visit_number as number, mother?.full_name ?? null);
+  });
+  if (stale) {
     throw new ScheduleConfirmationError('The schedule details changed after this confirmation was prepared. No SMS was sent.', 409);
   }
 
