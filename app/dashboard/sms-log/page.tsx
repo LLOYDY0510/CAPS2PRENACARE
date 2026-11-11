@@ -68,7 +68,7 @@ export default async function SmsLogPage() {
     new Set([...logRows.flatMap((log) => (log.recipient_mother_ids ?? []) as string[]), ...(receipts??[]).map(receipt=>receipt.pregnant_mother_id).filter((id):id is string=>!!id)]),
   );
   const { data: recipientMothers, error: recipientsError } = recipientIds.length
-    ? await collectInRows(recipientIds,(batch,start,end)=>supabase.from('pregnant_mothers').select('id, full_name, contact_number').in('id', batch).order('id').range(start,end))
+    ? await collectInRows(recipientIds,(batch,start,end)=>supabase.from('pregnant_mothers').select('id, full_name, contact_number, serial_no').in('id', batch).order('id').range(start,end))
     : { data: [], error: null };
   const mothersById = new Map((recipientMothers ?? []).map((mother) => [mother.id, mother]));
 
@@ -87,13 +87,20 @@ export default async function SmsLogPage() {
 
   const { data: highRiskMothers } = await supabase
     .from('pregnant_mothers')
-    .select('id, full_name, contact_number, risk_level')
+    .select('id, full_name, contact_number, serial_no, risk_level')
     .eq('risk_level', 'high');
   (highRiskMothers ?? []).forEach((mother) => mothersById.set(mother.id, mother));
 
   const rows: SmsLogRow[] = logRows.map((log) => {
     const sender = log.sent_by ? senderById.get(log.sent_by) : null;
     const logReceipts = receiptsByLog.get(log.id) ?? [];
+    const linkedMotherIds = [
+      ...((log.recipient_mother_ids ?? []) as string[]),
+      ...logReceipts.map((receipt) => receipt.pregnant_mother_id).filter((id): id is string => !!id),
+    ];
+    const serials = Array.from(
+      new Set(linkedMotherIds.map((id) => mothersById.get(id)?.serial_no).filter((s): s is string => !!s)),
+    );
     return {
       id: log.id,
       recipient_count: log.recipient_count,
@@ -103,6 +110,7 @@ export default async function SmsLogPage() {
           .join(', ') ||
         (log.recipient_numbers ?? []).join(', ') ||
         '—',
+      serials,
       message: log.message,
       message_type: (log.message_type ?? 'general') as SmsLogRow['message_type'],
       status: log.status as 'success' | 'failed',

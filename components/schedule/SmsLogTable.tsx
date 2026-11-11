@@ -19,6 +19,7 @@ export type SmsLogRow = {
   id: string;
   recipient_count: number;
   recipients: string;
+  serials: string[];
   message: string;
   message_type:
     | 'general'
@@ -79,6 +80,17 @@ export function selectFollowUpsForType(items: FollowUpRow[], type: 'all' | SmsLo
   return items.filter((item) => type === 'all' || item.messageType === type);
 }
 
+/* Everything the log search matches: message, sender, names, serials, numbers, receipt ids. */
+export function smsLogHaystack(log: SmsLogRow): string {
+  return [
+    log.message,
+    log.sender ?? '',
+    log.recipients,
+    ...(log.serials ?? []),
+    ...log.receipts.map((r) => `${r.motherName ?? ''} ${r.contactNumber} ${r.providerMessageId ?? ''}`),
+  ].join(' ');
+}
+
 export default function SmsLogTable({
   logs,
   followUps,
@@ -123,15 +135,7 @@ export default function SmsLogTable({
       if (status !== 'all' && log.status !== status) return false;
       if (type !== 'all' && log.message_type !== type) return false;
       if (!q) return true;
-      const haystack = [
-        log.message,
-        log.sender ?? '',
-        log.recipients,
-        ...log.receipts.map((r) => `${r.motherName ?? ''} ${r.contactNumber} ${r.providerMessageId ?? ''}`),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return matchesSearch(q, haystack);
+      return matchesSearch(q, smsLogHaystack(log));
     });
   }, [logs, search, status, type]);
 
@@ -312,7 +316,7 @@ export default function SmsLogTable({
       <div className="bg-white rounded-[24px] border border-neutral-100 shadow-lg shadow-neutral-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           <div className="flex-1 min-w-[220px]">
-            <SearchBar value={search} onChange={(val) => { setSearch(val); setCurrentPage(1); }} placeholder="Search message, sender, or number..." />
+            <SearchBar value={search} onChange={(val) => { setSearch(val); setCurrentPage(1); }} placeholder="Search message, sender, name, serial, or number..." />
           </div>
 
           <div className="w-36">
