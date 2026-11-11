@@ -9,6 +9,7 @@ import { useConfirmation } from '@/components/ui/useConfirmation';
 type GatewayStatus = {
   configured: boolean;
   encryptionKeyReady: boolean;
+  undecryptable?: boolean;
   authMode: 'token' | 'credentials' | null;
   deviceId: string | null;
   simNumber: string | null;
@@ -63,6 +64,9 @@ export default function SmsGatewaySettingsCard() {
       setDeviceId(next.deviceId ?? '');
       setSimNumber(next.simNumber ?? '');
       setDirty(false);
+      if (next.undecryptable) {
+        setError('The saved settings cannot be decrypted with the current server key. Enter all details again and save to replace them, or clear them.');
+      }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'SMS Gateway settings could not be loaded.');
     }
@@ -83,6 +87,9 @@ export default function SmsGatewaySettingsCard() {
       setDeviceId(next.deviceId ?? '');
       setSimNumber(next.simNumber ?? '');
       setDirty(false);
+      if (next.undecryptable) {
+        setError('The saved settings cannot be decrypted with the current server key. Enter all details again and save to replace them, or clear them.');
+      }
     }).catch(failure => {
       if (active) setError(failure instanceof Error ? failure.message : 'SMS Gateway settings could not be loaded.');
     }).finally(() => { if (active) setLoading(false); });
@@ -176,7 +183,7 @@ export default function SmsGatewaySettingsCard() {
         <div className="flex flex-wrap items-center gap-3">
           <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold ${status?.configured ? 'border-green-200 bg-green-50 text-green-900' : 'border-neutral-300 bg-neutral-50 text-neutral-700'}`}>
             <span className={`h-2 w-2 rounded-full ${status?.configured ? 'bg-green-700' : 'bg-neutral-400'}`} aria-hidden="true"/>
-            {loading ? 'Checking settings' : status?.configured ? 'Configured' : 'Not configured'}
+            {loading ? 'Checking settings' : status?.configured ? 'Configured' : status?.undecryptable ? 'Needs attention' : 'Not configured'}
           </div>
           <Button type="button" disabled={loading} leftIcon={<Settings2 size={17}/>} onClick={() => { setError(''); setSuccess(''); setWarning(''); setTestError(''); setTestResult(''); setIsOpen(true); }}>Configure SMS</Button>
         </div>
@@ -247,7 +254,7 @@ export default function SmsGatewaySettingsCard() {
 
             <div className="flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-4">
               <Button type="submit" disabled={busy || loading || testBusy} isLoading={busy} leftIcon={!busy ? <Save size={17}/> : undefined}>{busy ? 'Saving settings' : 'Save settings'}</Button>
-              {status?.configured && <Button type="button" variant="danger" disabled={busy || loading || testBusy} isLoading={busy} leftIcon={<Trash2 size={16}/>} onClick={() => void clearSettings()}>Clear configuration</Button>}
+              {(status?.configured || status?.undecryptable) && <Button type="button" variant="danger" disabled={busy || loading || testBusy} isLoading={busy} leftIcon={<Trash2 size={16}/>} onClick={() => void clearSettings()}>Clear configuration</Button>}
             </div>
           </fieldset>
         </form>

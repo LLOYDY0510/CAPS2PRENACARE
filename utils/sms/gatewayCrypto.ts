@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const AAD = Buffer.from('prenatrack:sms-gateway-settings:v1');
+const DECRYPT_FAILED_MESSAGE = 'Saved SMS Gateway settings cannot be decrypted. Check the server encryption key.';
 
 export type SmsGatewayConfig = {
   authMode: 'token' | 'credentials';
@@ -62,8 +63,13 @@ export function decryptGatewayConfig(envelope: string, key = gatewayEncryptionKe
       (value.authMode === 'credentials' && (typeof value.username !== 'string' || typeof value.password !== 'string'))) throw new Error();
     return value;
   } catch {
-    throw new Error('Saved SMS Gateway settings cannot be decrypted. Check the server encryption key.');
+    throw new Error(DECRYPT_FAILED_MESSAGE);
   }
+}
+
+/* True when a stored row exists but the current key cannot open it. */
+export function isGatewayDecryptError(error: unknown): boolean {
+  return error instanceof Error && error.message === DECRYPT_FAILED_MESSAGE;
 }
 
 export function maskGatewayIdentifier(value: string | null | undefined): string | null {

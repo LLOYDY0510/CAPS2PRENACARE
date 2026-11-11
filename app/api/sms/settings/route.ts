@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiPermission } from '@/utils/auth/api';
 import { recordActivity } from '@/utils/audit/server';
 import { clearGatewayConfig, readGatewayConfig, writeGatewayConfig } from '@/utils/sms/gatewayConfig';
-import { hasGatewayEncryptionKey, maskGatewayIdentifier } from '@/utils/sms/gatewayCrypto';
+import { hasGatewayEncryptionKey, isGatewayDecryptError, maskGatewayIdentifier, type SmsGatewayConfig } from '@/utils/sms/gatewayCrypto';
 import { mergeGatewayConfig } from '@/utils/sms/gatewayPolicy';
 import { isSmsDryRun } from '@/utils/sms/semaphore';
 
@@ -40,7 +40,22 @@ export async function GET() {
       dryRun: isSmsDryRun(),
       updatedAt: saved?.updatedAt ?? null,
     });
-  } catch {
+  } catch (failure) {
+    /* A rotated key must not brick the form: the row can be overwritten. */
+    if (isGatewayDecryptError(failure)) {
+      return NextResponse.json({
+        configured: false,
+        encryptionKeyReady: true,
+        undecryptable: true,
+        authMode: null,
+        deviceId: null,
+        simNumber: null,
+        deviceHint: null,
+        simHint: null,
+        dryRun: isSmsDryRun(),
+        updatedAt: null,
+      });
+    }
     return NextResponse.json({ error: 'Saved SMS Gateway settings are unavailable. Check the server encryption key.' }, { status: 503 });
   }
 }
@@ -58,7 +73,13 @@ export async function PUT(request: NextRequest) {
   try { body = JSON.parse(rawBody); } catch { body = null; }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Invalid settings request.' }, { status: 400 });
   try {
-    const current = (await readGatewayConfig())?.config ?? null;
+    let current: SmsGatewayConfig | null = null;
+    try {
+      current = (await readGatewayConfig())?.config ?? null;
+    } catch (readFailure) {
+      /* Undecryptable rows are replaced, never preserved. */
+      if (!isGatewayDecryptError(readFailure)) throw readFailure;
+    }
     const config = mergeGatewayConfig(body, current);
     await writeGatewayConfig(config, access.auth.user.id);
     let auditWarning: string | null = null;
