@@ -35,17 +35,20 @@ function fillTemplate(template: string, visitDate: string, name?: string | null)
 export function prenatalReminderMessage(visitDate: string, timeLabel?: string | null, name?: string | null): string {
   const when = timeLabel?.trim() ? ` (${timeLabel.trim()})` : '';
   return fillTemplate(
-    `Pahinumdom ${SMS_NAME_TOKEN}: ugma (${SMS_DATE_TOKEN})${when} ang imong prenatal checkup sa Barangay Health Center. Palihug adto sa sakto nga oras. Salamat!`,
+    `Maayong adlaw, ${SMS_NAME_TOKEN}! Ang Barangay Sankanan Health Center kini. Pahinumdom lang nga ang imong sunod nga prenatal check-up kay sa ${SMS_DATE_TOKEN}${when}. Ayaw kalimot sa pag-adto sa health center sa maong petsa aron masusi ang imong kahimtang ug ang kahimtang sa imong baby. Amping kanunay!`,
     visitDate, name,
   );
 }
 
+/* Same-day visits use the same official text; the date carries the meaning. */
 export function prenatalReminderMessageToday(visitDate: string, timeLabel?: string | null, name?: string | null): string {
-  const when = timeLabel?.trim() ? ` (${timeLabel.trim()})` : '';
-  return fillTemplate(
-    `Pahinumdom ${SMS_NAME_TOKEN}: karong adlawa (${SMS_DATE_TOKEN})${when} ang imong prenatal checkup sa Barangay Health Center. Palihug adto sa sakto nga oras. Salamat!`,
-    visitDate, name,
-  );
+  return prenatalReminderMessage(visitDate, timeLabel, name);
+}
+
+/* Official general announcement. No date token in this copy. */
+export function generalMessage(name?: string | null): string {
+  const who = name?.trim() || SMS_NAME_TOKEN;
+  return `Maayong adlaw, ${who}! Ang Barangay Sankanan Health Center kini. Adunay pahinumdom kami kanimo nga ampingan kanunay ang imong panglawas ug ayaw kalimot sa regular nga pagpacheck-up. Kung adunay mga pangutana o kabalaka, mahimo kang moduol sa among health center. Salamat!`;
 }
 
 const VISIT_ORDINALS = ['1st', '2nd', '3rd'];
@@ -61,9 +64,15 @@ export function scheduleConfirmationMessage(visitDate: string, trimester: string
 
 export function missedVisitMessage(visitDate: string, name?: string | null): string {
   return fillTemplate(
-    `Pahinumdom ${SMS_NAME_TOKEN}: wala ka nakatambong sa prenatal visit niadtong ${SMS_DATE_TOKEN}. Palihug kontaka ang Barangay Health Center para sa follow-up. Salamat!`,
+    `Maayong adlaw, ${SMS_NAME_TOKEN}! Ang Barangay Sankanan Health Center kini. Among namatikdan nga wala ka nakaadto sa imong gitakdang prenatal check-up niadtong ${SMS_DATE_TOKEN}. Gihangyo ka namo nga moanha sa among health center sulod sa oras sa among serbisyo aron makapahimo sa imong prenatal check-up. Importante ang imong kahimsog ug ang kahimsog sa imong baby. Salamat!`,
     visitDate, name,
   );
+}
+
+/* Official risk alert. No date token in this copy. */
+export function riskAlertMessage(name?: string | null): string {
+  const who = name?.trim() || SMS_NAME_TOKEN;
+  return `Maayong adlaw, ${who}! Ang Barangay Sankanan Health Center kini. Base sa imong kataposang pagsusi, gikinahanglan nga mobalik ka sa health center aron masusi pag-usab ang imong kahimtang. Palihug pakigkita sa among midwife sa labing dali nga panahon alang sa dugang nga pagsusi ug tambag. Amping kanunay!`;
 }
 
 /* Registration SMS with the auto-generated serial. Queue trigger mirrors this in SQL. */

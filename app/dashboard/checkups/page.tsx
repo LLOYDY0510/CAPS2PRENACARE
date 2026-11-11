@@ -9,7 +9,7 @@ import { ClipboardCheck } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default async function PrenatalCheckupsPage() {
-  const { supabase, profile, role } = await requireRoles(['bhw']);
+  const { supabase, profile, role } = await requireRoles(['admin', 'bhw']);
 
   let recordsQuery = supabase
     .from('pregnant_mothers')

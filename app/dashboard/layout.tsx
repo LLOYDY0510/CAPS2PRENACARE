@@ -8,7 +8,7 @@ const MENUS: Record<string, [string,string][]> = {
   patient: [['Dashboard',''],['Prenatal Schedule','my-schedule'],['Medical Record','my-records'],['My Information','my-info']],
   nurse: [['Dashboard',''],['Risk Indicators','risk-indicators'],['Health & Nutrition Tips','nutrition-tips']],
   bhw: [['Dashboard',''],['BHW for Zones','bhw'],['Pregnant Records','pregnant'],['Risk Map','risk-map'],['Prenatal Checkups','checkups'],['SMS & Broadcast Dispatch','sms-log'],['Reports','reports']],
-  admin: [['Dashboard',''],['Pregnant Records','pregnant'],['User Management','users'],['Prenatal Schedule','schedule'],['Activity Logs','activity-logs']],
+  admin: [['Dashboard',''],['Pregnant Records','pregnant'],['BHW for Zones','bhw'],['Risk Map','risk-map'],['Prenatal Checkups','checkups'],['Prenatal Schedule','schedule'],['Reports','reports'],['User Management','users'],['Activity Logs','activity-logs']],
 };
 export default async function DashboardLayout({children,modal}: {children: React.ReactNode;modal:React.ReactNode}) {
   const {user,profile} = await getCurrentProfile();

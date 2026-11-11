@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiPermission } from '@/utils/auth/api';
 import { sendSmsAndLog, type SmsMessageType } from '@/utils/sms/sendSms';
 import { toE164 } from '@/utils/sms/phone';
+import { validDate } from '@/utils/calendar';
 
 const MESSAGE_TYPES: SmsMessageType[] = [
   'general',
@@ -21,6 +22,8 @@ export async function POST(req: NextRequest) {
     const { user, profile, supabase } = auth;
     const body = await req.json();
     const { numbers, message, pregnantMotherIds, messageType = 'care_message' } = body ?? {};
+    /* Resolves [Petsa] per send; ignored when absent or malformed so it never blocks a send. */
+    const visitDate = typeof body?.visitDate === 'string' && validDate(body.visitDate) ? body.visitDate : null;
 
     if (!MESSAGE_TYPES.includes(messageType)) {
       return NextResponse.json({ error: 'Invalid message type.' }, { status: 400 });
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
       const match = mothers.find(
         (m) => toE164(m.contact_number) === phone,
       );
-      return { pregnantMotherId: match?.id ?? null, contactNumber: phone, fullName: match?.full_name ?? null };
+      return { pregnantMotherId: match?.id ?? null, contactNumber: phone, fullName: match?.full_name ?? null, visitDate };
     });
 
     const result = await sendSmsAndLog({

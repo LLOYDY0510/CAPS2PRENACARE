@@ -80,7 +80,7 @@ export default async function SmsLogPage() {
 
   const { data: followUps } = await supabase
     .from('prenatal_follow_ups')
-    .select('id, pregnant_mother_id, reason, status, sms_status, created_at')
+    .select('id, pregnant_mother_id, reason, status, sms_status, created_at, prenatal_schedules(visit_date)')
     .in('status', ['pending', 'contacted', 'unreachable'])
     .order('created_at', { ascending: false });
   const followUpMotherIds = new Set((followUps ?? []).map((item) => item.pregnant_mother_id as string));
@@ -131,17 +131,23 @@ export default async function SmsLogPage() {
     reason: string;
     status: string;
     messageType: 'missed_visit_follow_up' | 'risk_alert';
+    visitDate: string | null;
   };
 
-  const followUpRows: FollowUpDisplay[] = (followUps ?? []).map((item) => ({
-    id: item.id,
-    motherId: item.pregnant_mother_id as string,
-    motherName: mothersById.get(item.pregnant_mother_id as string)?.full_name ?? 'Pregnant mother',
-    contactNumber: mothersById.get(item.pregnant_mother_id as string)?.contact_number ?? null,
-    reason: item.reason,
-    status: item.status,
-    messageType: 'missed_visit_follow_up' as const,
-  }));
+  const followUpRows: FollowUpDisplay[] = (followUps ?? []).map((item) => {
+    const schedule = item.prenatal_schedules as { visit_date?: string | null } | { visit_date?: string | null }[] | null;
+    const visitDate = (Array.isArray(schedule) ? schedule[0]?.visit_date : schedule?.visit_date) ?? null;
+    return {
+      id: item.id,
+      motherId: item.pregnant_mother_id as string,
+      motherName: mothersById.get(item.pregnant_mother_id as string)?.full_name ?? 'Pregnant mother',
+      contactNumber: mothersById.get(item.pregnant_mother_id as string)?.contact_number ?? null,
+      reason: item.reason,
+      status: item.status,
+      messageType: 'missed_visit_follow_up' as const,
+      visitDate,
+    };
+  });
 
   (highRiskMothers ?? [])
     .filter((mother) => mother.contact_number && !followUpMotherIds.has(mother.id))
@@ -154,6 +160,7 @@ export default async function SmsLogPage() {
         reason: 'High-risk case needs follow-up',
         status: 'pending',
         messageType: 'risk_alert' as const,
+        visitDate: null,
       }),
     );
 

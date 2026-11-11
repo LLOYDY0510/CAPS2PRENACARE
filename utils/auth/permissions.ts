@@ -13,7 +13,7 @@ export const ROLE_PERMISSIONS = {
     canSendSMS: false,
     canManageHealthTips: false,
     canManageRiskIndicators: false,
-    canViewReports: false,
+    canViewReports: true,
     canManageReferrals: false,
     canManageSchedules: true,
     canManageCheckups: false,

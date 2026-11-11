@@ -9,8 +9,10 @@ import { Select } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
 import { formatE164, toE164 } from '@/utils/sms/phone';
+import { SMS_DATE_TOKEN, missedVisitMessage, riskAlertMessage } from '@/utils/sms/templates';
 import { friendlySmsError, DryRunBadge } from '@/components/schedule/smsStatusUi';
 import { useSmsDrafts } from '@/components/sms/useSmsDrafts';
+import { useConfirmation } from '@/components/ui/useConfirmation';
 import { Send, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 export type SmsLogRow = {
@@ -49,6 +51,7 @@ type FollowUpRow = {
   reason: string;
   status: string;
   messageType: 'missed_visit_follow_up' | 'risk_alert';
+  visitDate: string | null;
 };
 
 const PAGE_SIZE = 10;
@@ -64,11 +67,17 @@ const TYPE_LABELS: Record<SmsLogRow['message_type'], string> = {
 };
 
 const QUICK_DEFAULTS: Record<FollowUpRow['messageType'], string> = {
-  risk_alert:
-    'Pahinumdom [Ngalan]: palihug kontaka ang imong BHW o nurse para repasuhon ang imong high-risk care plan. Salamat!',
-  missed_visit_follow_up:
-    'Pahinumdom [Ngalan]: wala ka nakatambong sa imong prenatal visit. Palihug kontaka ang Barangay Health Center para sa follow-up. Salamat!',
+  risk_alert: riskAlertMessage(),
+  missed_visit_follow_up: missedVisitMessage(SMS_DATE_TOKEN),
 };
+
+/* Filter offers the four operational types; historical tip/care logs stay under All. */
+export const FILTER_TYPES: ('all' | SmsLogRow['message_type'])[] = ['all', 'general', 'prenatal_reminder', 'missed_visit_follow_up', 'risk_alert'];
+
+/* Follow-ups obey the type filter so Send All visibly matches its targets. */
+export function selectFollowUpsForType(items: FollowUpRow[], type: 'all' | SmsLogRow['message_type']): FollowUpRow[] {
+  return items.filter((item) => type === 'all' || item.messageType === type);
+}
 
 export default function SmsLogTable({
   logs,
@@ -86,6 +95,9 @@ export default function SmsLogTable({
   const { getDraft, saveDraft } = useSmsDrafts();
   const draftFor = (item: FollowUpRow): string =>
     quickMessage[item.id] ?? getDraft(item.messageType, QUICK_DEFAULTS[item.messageType]);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchNotice, setBatchNotice] = useState('');
+  const { confirm, confirmation } = useConfirmation();
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, { tone: 'ok' | 'error'; text: string }>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -133,6 +145,11 @@ export default function SmsLogTable({
 
   const hasFilters = !!search || status !== 'all' || type !== 'all';
 
+  const visibleFollowUps = useMemo(
+    () => selectFollowUpsForType(followUps, type),
+    [followUps, type],
+  );
+
   function toggleExpanded(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -142,8 +159,63 @@ export default function SmsLogTable({
     });
   }
 
+  async function postQuickSms(item: FollowUpRow, message: string) {
+    const response = await fetch('/api/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        numbers: [item.contactNumber],
+        pregnantMotherIds: [item.motherId],
+        message,
+        messageType: item.messageType,
+        ...(item.visitDate ? { visitDate: item.visitDate } : {}),
+      }),
+    });
+    const payload = await response.json();
+    if (typeof payload.dryRun === 'boolean') setDryRun(payload.dryRun);
+    return { ok: response.ok, payload };
+  }
+
+  function routeErrorText(payload: { batchError?: unknown; friendlyError?: unknown; error?: unknown }): string {
+    return (
+      friendlySmsError(
+        typeof payload.batchError === 'string' ? payload.batchError : null,
+        typeof payload.friendlyError === 'string' ? payload.friendlyError : null,
+      ) ??
+      (typeof payload.error === 'string' ? payload.error : null) ??
+      'The message was not sent.'
+    );
+  }
+
+  function outcomeNote(
+    item: FollowUpRow,
+    payload: { sent?: unknown[]; skipped?: unknown[]; failed?: unknown[]; batchError?: unknown; friendlyError?: unknown; dryRun?: unknown },
+  ): { tone: 'ok' | 'error'; text: string; sent: number; skipped: number; failed: number } {
+    const sent = payload.sent?.length ?? 0;
+    const skipped = payload.skipped?.length ?? 0;
+    const failed = payload.failed?.length ?? 0;
+    return {
+      tone: failed > 0 || payload.batchError ? 'error' : sent > 0 ? 'ok' : 'error',
+      text: [
+        payload.dryRun ? 'DRY RUN — no SMS left the server' : null,
+        sent > 0 && item.contactNumber ? `Sent to ${formatE164(toE164(item.contactNumber))}` : null,
+        skipped > 0 ? 'skipped (already sent today)' : null,
+        failed > 0 ? 'failed' : null,
+        friendlySmsError(
+          typeof payload.batchError === 'string' ? payload.batchError : null,
+          typeof payload.friendlyError === 'string' ? payload.friendlyError : null,
+        ),
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      sent,
+      skipped,
+      failed,
+    };
+  }
+
   async function quickSend(item: FollowUpRow) {
-    if (!item.contactNumber) return;
+    if (batchBusy || !item.contactNumber) return;
     const message = draftFor(item).trim();
     if (!message) {
       setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: 'Enter a message first.' } }));
@@ -153,51 +225,13 @@ export default function SmsLogTable({
     setSendingId(item.id);
     setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'ok', text: 'Sending…' } }));
     try {
-      const response = await fetch('/api/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          numbers: [item.contactNumber],
-          pregnantMotherIds: [item.motherId],
-          message,
-          messageType: item.messageType,
-        }),
-      });
-      const payload = await response.json();
-      if (typeof payload.dryRun === 'boolean') setDryRun(payload.dryRun);
-
-      if (!response.ok) {
-        setFeedback((prev) => ({
-          ...prev,
-          [item.id]: {
-            tone: 'error',
-            text:
-              friendlySmsError(payload.batchError, payload.friendlyError) ??
-              payload.error ??
-              'The message was not sent.',
-          },
-        }));
+      const { ok, payload } = await postQuickSms(item, message);
+      if (!ok) {
+        setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: routeErrorText(payload) } }));
         return;
       }
-
-      const sent = payload.sent?.length ?? 0;
-      const skipped = payload.skipped?.length ?? 0;
-      const failed = payload.failed?.length ?? 0;
-      setFeedback((prev) => ({
-        ...prev,
-        [item.id]: {
-          tone: failed > 0 || payload.batchError ? 'error' : sent > 0 ? 'ok' : 'error',
-          text: [
-            payload.dryRun ? 'DRY RUN — no SMS left the server' : null,
-            sent > 0 ? `Sent to ${formatE164(toE164(item.contactNumber))}` : null,
-            skipped > 0 ? 'skipped (already sent today)' : null,
-            failed > 0 ? 'failed' : null,
-            friendlySmsError(payload.batchError, payload.friendlyError),
-          ]
-            .filter(Boolean)
-            .join(' · '),
-        },
-      }));
+      const note = outcomeNote(item, payload);
+      setFeedback((prev) => ({ ...prev, [item.id]: { tone: note.tone, text: note.text } }));
       // Refresh server-rendered log rows without wiping client feedback/badge.
       router.refresh();
     } catch {
@@ -210,8 +244,70 @@ export default function SmsLogTable({
     }
   }
 
+  async function sendAll() {
+    const targets = visibleFollowUps;
+    if (batchBusy || sendingId !== null || targets.length === 0) return;
+    const approved = await confirm({
+      title: `Send ${targets.length} message${targets.length === 1 ? '' : 's'}?`,
+      description: 'Each follow-up below gets its own current draft text. Items without a number or message are skipped.',
+      confirmText: 'Send All',
+    });
+    if (!approved) return;
+    setBatchBusy(true);
+    setBatchNotice('');
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+    try {
+      for (let index = 0; index < targets.length; index++) {
+        const item = targets[index];
+        setBatchNotice(`Sending ${index + 1} of ${targets.length}…`);
+        if (!item.contactNumber) {
+          setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: 'No contact number — skipped.' } }));
+          skipped += 1;
+          continue;
+        }
+        const message = draftFor(item).trim();
+        if (!message) {
+          setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: 'Enter a message first.' } }));
+          skipped += 1;
+          continue;
+        }
+        setSendingId(item.id);
+        try {
+          const { ok, payload } = await postQuickSms(item, message);
+          if (!ok) {
+            setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: routeErrorText(payload) } }));
+            failed += 1;
+            continue;
+          }
+          const note = outcomeNote(item, payload);
+          setFeedback((prev) => ({ ...prev, [item.id]: { tone: note.tone, text: note.text } }));
+          sent += note.sent;
+          skipped += note.skipped;
+          failed += note.failed;
+        } catch {
+          setFeedback((prev) => ({ ...prev, [item.id]: { tone: 'error', text: 'Network error — nothing was sent.' } }));
+          failed += 1;
+        } finally {
+          setSendingId(null);
+        }
+      }
+      setBatchNotice(
+        [`Done: ${sent} sent`, skipped > 0 ? `${skipped} skipped` : null, failed > 0 ? `${failed} failed` : null]
+          .filter(Boolean)
+          .join(', ') + '.',
+      );
+      router.refresh();
+    } finally {
+      setBatchBusy(false);
+      setSendingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {confirmation}
       {/* Controls Card */}
       <div className="bg-white rounded-[24px] border border-neutral-100 shadow-lg shadow-neutral-200/40 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
@@ -235,10 +331,10 @@ export default function SmsLogTable({
             <Select
               value={type}
               onChange={(e) => { setType(e.target.value as typeof type); setCurrentPage(1); }}
-              options={[
-                { value: 'all', label: 'All Types' },
-                ...Object.entries(TYPE_LABELS).map(([val, lbl]) => ({ value: val, label: lbl })),
-              ]}
+              options={FILTER_TYPES.map((val) => ({
+                value: val,
+                label: val === 'all' ? 'All Types' : TYPE_LABELS[val],
+              }))}
             />
           </div>
 
@@ -262,13 +358,28 @@ export default function SmsLogTable({
               <h2 className="text-base font-bold text-neutral-900">Follow-up Action Needed</h2>
               <p className="text-xs text-neutral-500 font-medium mt-0.5">Missed checkups and high-risk cases needing contact</p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200/60">
-              {followUps.length} Pending
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200/60">
+                {visibleFollowUps.length} Pending
+              </span>
+              <Button
+                size="sm"
+                disabled={batchBusy || sendingId !== null || visibleFollowUps.length === 0}
+                isLoading={batchBusy}
+                onClick={() => void sendAll()}
+                leftIcon={<Send size={14} />}
+              >
+                {batchBusy ? 'Sending' : `Send All${visibleFollowUps.length > 0 ? ` (${visibleFollowUps.length})` : ''}`}
+              </Button>
+            </div>
           </div>
+          {batchNotice && <p role="status" className="text-xs font-semibold text-neutral-700">{batchNotice}</p>}
 
+          {visibleFollowUps.length === 0 ? (
+            <p className="text-xs font-medium text-neutral-500">No follow-ups match the selected type.</p>
+          ) : (
           <div className="space-y-3">
-            {followUps.map((item) => {
+            {visibleFollowUps.map((item) => {
               const note = feedback[item.id];
               return (
                 <div key={item.id} className="p-4 rounded-2xl bg-green-50/40 border border-green-100/80 space-y-3">
@@ -292,7 +403,7 @@ export default function SmsLogTable({
                       />
                       <Button
                         size="sm"
-                        disabled={!item.contactNumber}
+                        disabled={!item.contactNumber || batchBusy}
                         isLoading={sendingId === item.id}
                         onClick={() => quickSend(item)}
                         leftIcon={<Send size={14} />}
@@ -310,6 +421,7 @@ export default function SmsLogTable({
               );
             })}
           </div>
+          )}
         </div>
       )}
 
