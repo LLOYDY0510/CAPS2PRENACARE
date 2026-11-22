@@ -14,14 +14,14 @@ export default function RiskBadge({
 }) {
   if (riskLevel === 'high') {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200 ${className}`}>
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200 ${className}`}>
         High Risk
       </span>
     );
   }
   if (riskLevel === 'medium') {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200 ${className}`}>
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 ${className}`}>
         Medium Risk
       </span>
     );

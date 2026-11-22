@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { collectRows } from '@/utils/supabase/collectRows';
 import { collectInRows } from '@/utils/supabase/collectInRows';
 import { sendSmsAndLog, buildDedupeKey } from './sendSms';
+import { composeHighRiskAdvice } from './highRiskAdvice';
 import { toE164 } from './phone';
 import type { SmsEventSummary } from './eventFeedback';
 
@@ -53,6 +54,31 @@ function summarize(event: Awaited<ReturnType<typeof readEvent>>): SmsEventSummar
 
 export async function getSmsEventSummary(eventKey: string): Promise<SmsEventSummary> {
   return summarize(await readEvent(eventKey));
+}
+
+type IndicatorLinkRow = {
+  risk_indicators: { label: string; indicator_type: string; advice_message: string | null } | { label: string; indicator_type: string; advice_message: string | null }[] | null;
+};
+
+// Queue and send the high-risk advice SMS for a new registration. Returns
+// null when the mother has no recorded indicators to advise on.
+export async function dispatchRegistrationAdvice(motherId: string, actorId: string): Promise<SmsEventSummary | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.from('pregnant_mother_indicators')
+    .select('risk_indicators(label,indicator_type,advice_message)').eq('pregnant_mother_id', motherId);
+  if (error) throw new Error('High-risk indicators could not be loaded for the advice SMS.');
+  const indicators = ((data ?? []) as IndicatorLinkRow[]).map(row => {
+    const ref = Array.isArray(row.risk_indicators) ? row.risk_indicators[0] : row.risk_indicators;
+    return { label: ref?.label ?? '', indicator_type: ref?.indicator_type ?? 'checklist', advice_message: ref?.advice_message ?? null };
+  });
+  const message = composeHighRiskAdvice(indicators);
+  if (!message) return null;
+  const eventKey = `registration-advice:${motherId}`;
+  const { error: queueError } = await admin.from('maternal_sms_events')
+    .upsert({ event_key: eventKey, pregnant_mother_id: motherId, message, message_type: 'care_message', created_by: actorId },
+      { onConflict: 'event_key,pregnant_mother_id', ignoreDuplicates: true });
+  if (queueError) throw new Error('The advice SMS could not be queued.');
+  return dispatchSmsEvent(eventKey, actorId);
 }
 
 // Bound provider work per request; durable events can be resumed after interruption.
