@@ -1,4 +1,4 @@
-import { dispatchSmsEvent } from '@/utils/sms/events';
+import { dispatchSmsEvent, dispatchRegistrationAdvice } from '@/utils/sms/events';
 
 import {NextRequest,NextResponse} from 'next/server';
 import {requireApiPermission} from '@/utils/auth/api';
@@ -26,6 +26,24 @@ export async function POST(request:NextRequest){
     let sms;
     try { sms = await dispatchSmsEvent(`registration:${savedMother.id}`, auth.user.id); }
     catch { sms = { total: 1, submitted: 0, failed: 0, invalid: 0, blocked: 0, pending: 1, detail: 'Mother registered; SMS processing is unavailable. Check SMS status before retrying.' }; }
+    if (savedMother.risk_level === 'high') {
+      try {
+        const advice = await dispatchRegistrationAdvice(savedMother.id, auth.user.id);
+        if (advice) {
+          sms = {
+            total: sms.total + advice.total, submitted: sms.submitted + advice.submitted,
+            failed: sms.failed + advice.failed, invalid: sms.invalid + advice.invalid,
+            blocked: sms.blocked + advice.blocked, pending: sms.pending + advice.pending,
+            dryRun: sms.dryRun ?? advice.dryRun,
+            detail: [sms.detail, advice.detail].filter(Boolean).join(' ') || undefined,
+          };
+        } else {
+          sms = { ...sms, detail: [sms.detail, 'High-risk advice is unavailable for this record.'].filter(Boolean).join(' ') };
+        }
+      } catch {
+        sms = { ...sms, detail: [sms.detail, 'Mother registered; the high-risk advice SMS could not be sent.'].filter(Boolean).join(' ') };
+      }
+    }
     return NextResponse.json({data:savedMother,sms});
   }catch{return NextResponse.json({error:'Registration could not be completed. Your form is preserved; please try again.'},{status:500});}
 }

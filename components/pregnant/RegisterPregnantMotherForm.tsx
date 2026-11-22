@@ -64,6 +64,7 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
   const [showForm, setShowForm] = useState(Boolean(initialRecord));
   const [reviewAssessment,setReviewAssessment]=useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [eddManual, setEddManual] = useState(() => Boolean(initialRecord?.edd));
 
   useEffect(()=>{if(error)errorSummary.current?.focus();},[error,showForm]);
   useEffect(() => {
@@ -93,13 +94,12 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
   function updateField(field: string, value: string) {
     onDirtyChange(true);
     setError('');
+    if (field === 'edd') setEddManual(true);
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-
-      if (field === 'lmp') {
+      if (field === 'lmp' && !eddManual) {
         next.edd = value ? (eddFromLmp(value) ?? '') : '';
       }
-
       return next;
     });
   }
@@ -361,8 +361,8 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
               label="EDC (Expected Date)"
               type="date"
               value={form.edd} error={invalidField==='edd'?error:undefined}
-              readOnly
-              helperText="Auto-computed from LMP"
+              onChange={(e) => updateField('edd', e.target.value)}
+              helperText={eddManual ? 'Manually set; changing LMP will not overwrite it' : 'Auto-filled from LMP; you can edit it'}
             />
             <Select
               label="Gravida (G)"

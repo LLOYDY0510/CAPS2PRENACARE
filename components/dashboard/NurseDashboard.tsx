@@ -16,32 +16,35 @@ type MotherIndicatorRow = {
 export default async function NurseDashboard() {
   const supabase = await createClient();
 
-  const { data: records, error: recordsError } = await collectRows((start, end) => supabase
-    .from('pregnant_mothers')
-    .select(
-      'id, serial_no, first_name, middle_name, last_name, full_name, age, purok, risk_level, lmp, contact_number, blood_pressure, gravida_para'
-    )
-    .order('serial_no', { ascending: true }).order('id').range(start, end));
-
-  const { data: indicators, error: indicatorsError } = await collectRows((start, end) => supabase
-    .from('risk_indicators')
-    .select('id, label, indicator_type, threshold_value, advice_message, active')
-    .eq('active', true)
-    .order('created_at', { ascending: true }).order('id').range(start, end));
-
-  const { data: motherIndicators, error: linksError } = await collectRows((start, end) => supabase
-    .from('pregnant_mother_indicators')
-    .select(`
-      pregnant_mother_id,
-      indicator_id,
-      risk_indicators (
-        id,
-        label,
-        indicator_type,
-        threshold_value,
-        advice_message
+  const [mothers, active, links] = await Promise.all([
+    collectRows((start, end) => supabase
+      .from('pregnant_mothers')
+      .select(
+        'id, serial_no, first_name, middle_name, last_name, full_name, age, purok, risk_level, lmp, contact_number, blood_pressure, gravida_para'
       )
-    `).order('pregnant_mother_id').order('indicator_id').range(start, end));
+      .order('serial_no', { ascending: true }).order('id').range(start, end)),
+    collectRows((start, end) => supabase
+      .from('risk_indicators')
+      .select('id, label, indicator_type, threshold_value, advice_message, active')
+      .eq('active', true)
+      .order('created_at', { ascending: true }).order('id').range(start, end)),
+    collectRows((start, end) => supabase
+      .from('pregnant_mother_indicators')
+      .select(`
+        pregnant_mother_id,
+        indicator_id,
+        risk_indicators (
+          id,
+          label,
+          indicator_type,
+          threshold_value,
+          advice_message
+        )
+      `).order('pregnant_mother_id').order('indicator_id').range(start, end)),
+  ]);
+  const { data: records, error: recordsError } = mothers;
+  const { data: indicators, error: indicatorsError } = active;
+  const { data: motherIndicators, error: linksError } = links;
 
   const loadError = recordsError ?? indicatorsError ?? linksError;
   if (loadError) {
