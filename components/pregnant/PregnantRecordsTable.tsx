@@ -95,7 +95,7 @@ export default function PregnantRecordsTable({
           <SearchBar
             value={search}
             onChange={(val) => handleFilterChange(() => setSearch(val))}
-            placeholder="Search by name or serial no..."
+            placeholder="Search by name, serial no, zone, or risk..."
           />
         </div>
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { normalizeSearch, matchesSearch } from '@/utils/tables/search';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import SectionHeading from '@/components/ui/SectionHeading';
-import { Copy, Send, Check, ArrowRight, HeartPulse } from 'lucide-react';
+import SearchBar from '@/components/ui/SearchBar';
+import Button from '@/components/ui/Button';
+import { adviceRowMatches, riskMotherMatches } from '@/utils/tips/riskAdviceFilter';
+import { Copy, Send, Check, ArrowRight, HeartPulse, RotateCcw } from 'lucide-react';
 
 export type MatchedIndicatorDetail = {
   id: string;
@@ -71,35 +72,39 @@ export default function RiskTipsSection({
 
   }
 
-  const filteredMothers = mothers.filter((m) => {
-    const q = normalizeSearch(search);
-    if (!matchesSearch(q, m.fullName, m.serialNo, m.purok, `zone ${m.purok??''}`)) return false;
-
-    if (selectedIndicator !== 'all') {
-      if (!m.matchedIndicators.some((ind) => ind.id === selectedIndicator || ind.label === selectedIndicator))
-        return false;
-    }
-
-    if (selectedUrgency !== 'all') {
-      if (!m.matchedIndicators.some((ind) => ind.urgency === selectedUrgency))
-        return false;
-    }
-
-    return true;
-  });
+  // Each mother carries only the advice rows visible under the active filters.
+  const filteredMothers = mothers
+    .filter((mother) => riskMotherMatches(mother, search, selectedIndicator, selectedUrgency))
+    .map((mother) => ({
+      ...mother,
+      matchedIndicators: mother.matchedIndicators.filter((indicator) =>
+        adviceRowMatches(indicator, selectedIndicator, selectedUrgency),
+      ),
+    }));
+  const hasFilters = search !== '' || selectedIndicator !== 'all' || selectedUrgency !== 'all';
 
   const visiblePage = Math.min(page, Math.max(1, Math.ceil(filteredMothers.length / 25)));
   return <section className="card p-6">
     <SectionHeading title="Automatic Risk Tips & Clinical Advice" description="Review assessment-based guidance before sharing with a patient" icon={HeartPulse}/>
     {sendError&&<p role="alert" className="error-message">{sendError}</p>}
-    <div className="flex flex-wrap gap-3 mb-4">
-      <input aria-label="Filter patient rows" className="form-input" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="Filter patients"/>
+    <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex-1 min-w-[220px]">
+        <SearchBar value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Filter patients"/>
+      </div>
       <select aria-label="Indicator" value={selectedIndicator} onChange={e=>{setSelectedIndicator(e.target.value);setPage(1);}}><option value="all">All indicators</option>{availableIndicators.map(i=><option key={i.id} value={i.id}>{i.label}</option>)}</select>
       <select aria-label="Urgency" value={selectedUrgency} onChange={e=>{setSelectedUrgency(e.target.value);setPage(1);}}><option value="all">All urgency levels</option><option value="high">High priority</option><option value="moderate">Moderate</option></select>
+      {hasFilters && (
+        <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setSelectedIndicator('all'); setSelectedUrgency('all'); setPage(1); }} leftIcon={<RotateCcw size={14} />}>
+          Clear
+        </Button>
+      )}
+      <span className="text-xs font-bold text-neutral-500 whitespace-nowrap">
+        {filteredMothers.length} of {mothers.length} patients
+      </span>
     </div>
     <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Patient</th><th>Serial No.</th><th>Zone/Purok</th><th>Assessment/Indicator</th><th>Advice</th><th>Clinical Action</th><th>Actions</th></tr></thead><tbody>
     {filteredMothers.slice((visiblePage-1)*25,visiblePage*25).flatMap(mother=>mother.matchedIndicators.map(item=><tr key={mother.id+'-'+item.id}><td>{mother.fullName}</td><td>{mother.serialNo??'—'}</td><td>{mother.purok??'—'}</td><td>{item.label}</td><td className="min-w-64 whitespace-pre-wrap">{item.tipAdvice}</td><td className="min-w-48">{item.clinicalAction}</td><td><div className="flex flex-col gap-2"><button className="btn-secondary" onClick={()=>handleCopy(item.tipAdvice,mother.id+'-'+item.id)}><Copy size={15} aria-hidden="true"/>{copiedId===mother.id+'-'+item.id?'Copied':'Copy'}</button>{canSend&&<button className="btn-primary" disabled={sendingId!==null} onClick={()=>handleSend(mother,item)}><Send size={15} aria-hidden="true"/>{sendingId===mother.id+'-'+item.id?'Sending…':sentId===mother.id+'-'+item.id?'Sent':'Send advice'}</button>}</div></td></tr>))}
-    {!filteredMothers.length&&<tr><td colSpan={7}>No patients match the selected indicators.</td></tr>}
+    {!filteredMothers.length&&<tr><td colSpan={7}>No patients match the current filters.</td></tr>}
     </tbody></table></div><nav aria-label="Advice pages" className="flex gap-4 mt-4"><button disabled={visiblePage===1} onClick={()=>setPage(visiblePage-1)}>Previous</button><span>Page {visiblePage}</span><button disabled={visiblePage*25>=filteredMothers.length} onClick={()=>setPage(visiblePage+1)}>Next</button></nav></section>;
 }
 
