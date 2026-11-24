@@ -78,12 +78,19 @@ export default async function SmsLogPage() {
     : { data: [], error: null };
   const senderById = new Map((senders ?? []).map((s) => [s.id, s]));
 
-  const { data: followUps } = await supabase
+  const { data: followUps, error: followUpsError } = await supabase
     .from('prenatal_follow_ups')
     .select('id, pregnant_mother_id, reason, status, sms_status, created_at, prenatal_schedules(visit_date)')
     .in('status', ['pending', 'contacted', 'unreachable'])
     .order('created_at', { ascending: false });
   const followUpMotherIds = new Set((followUps ?? []).map((item) => item.pregnant_mother_id as string));
+
+  const { data: followUpMothers, error: followUpMothersError } = followUpMotherIds.size
+    ? await collectInRows([...followUpMotherIds], (batch, start, end) => supabase
+        .from('pregnant_mothers').select('id, full_name, contact_number, serial_no')
+        .in('id', batch).order('id').range(start, end))
+    : { data: [], error: null };
+  (followUpMothers ?? []).forEach((mother) => mothersById.set(mother.id, mother));
 
   const { data: highRiskMothers } = await supabase
     .from('pregnant_mothers')
@@ -111,6 +118,7 @@ export default async function SmsLogPage() {
         (log.recipient_numbers ?? []).join(', ') ||
         '—',
       serials,
+      recipientNumbers: log.recipient_numbers ?? [],
       message: log.message,
       message_type: (log.message_type ?? 'general') as SmsLogRow['message_type'],
       status: log.status as 'success' | 'failed',
@@ -135,6 +143,7 @@ export default async function SmsLogPage() {
     id: string;
     motherId: string;
     motherName: string;
+    serialNo: string | null;
     contactNumber: string | null;
     reason: string;
     status: string;
@@ -149,6 +158,7 @@ export default async function SmsLogPage() {
       id: item.id,
       motherId: item.pregnant_mother_id as string,
       motherName: mothersById.get(item.pregnant_mother_id as string)?.full_name ?? 'Pregnant mother',
+      serialNo: mothersById.get(item.pregnant_mother_id as string)?.serial_no ?? null,
       contactNumber: mothersById.get(item.pregnant_mother_id as string)?.contact_number ?? null,
       reason: item.reason,
       status: item.status,
@@ -164,6 +174,7 @@ export default async function SmsLogPage() {
         id: `risk-${mother.id}`,
         motherId: mother.id,
         motherName: mother.full_name ?? 'Pregnant mother',
+        serialNo: mother.serial_no ?? null,
         contactNumber: mother.contact_number,
         reason: 'High-risk case needs follow-up',
         status: 'pending',
@@ -182,7 +193,7 @@ export default async function SmsLogPage() {
       />
 
       <SmsGatewaySettingsCard />
-      {(logsError||receiptsError||recipientsError||sendersError)&&<p role="alert" className="error-message">The complete SMS history could not be loaded. Refresh and try again.</p>}
+      {(logsError||receiptsError||recipientsError||sendersError||followUpsError||followUpMothersError)&&<p role="alert" className="error-message">The complete SMS history could not be loaded. Refresh and try again.</p>}
       <SmsLogTable logs={rows} followUps={followUpRows} />
     </div>
   );

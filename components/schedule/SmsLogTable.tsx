@@ -20,6 +20,7 @@ export type SmsLogRow = {
   recipient_count: number;
   recipients: string;
   serials: string[];
+  recipientNumbers?: string[];
   message: string;
   message_type:
     | 'general'
@@ -48,6 +49,7 @@ type FollowUpRow = {
   id: string;
   motherId: string;
   motherName: string;
+  serialNo?: string | null;
   contactNumber: string | null;
   reason: string;
   status: string;
@@ -75,9 +77,12 @@ const QUICK_DEFAULTS: Record<FollowUpRow['messageType'], string> = {
 /* Filter offers the four operational types; historical tip/care logs stay under All. */
 export const FILTER_TYPES: ('all' | SmsLogRow['message_type'])[] = ['all', 'general', 'prenatal_reminder', 'missed_visit_follow_up', 'risk_alert'];
 
-/* Follow-ups obey the type filter so Send All visibly matches its targets. */
-export function selectFollowUpsForType(items: FollowUpRow[], type: 'all' | SmsLogRow['message_type']): FollowUpRow[] {
-  return items.filter((item) => type === 'all' || item.messageType === type);
+/* Search and type filters define both displayed follow-ups and Send All targets. */
+export function selectFollowUpsForType(items: FollowUpRow[], type: 'all' | SmsLogRow['message_type'], query = ''): FollowUpRow[] {
+  return items.filter((item) =>
+    (type === 'all' || item.messageType === type) &&
+    matchesSearch(query, item.motherName, item.serialNo, item.contactNumber, item.reason, TYPE_LABELS[item.messageType]),
+  );
 }
 
 /* Everything the log search matches: message, sender, names, serials, numbers, receipt ids. */
@@ -87,6 +92,7 @@ export function smsLogHaystack(log: SmsLogRow): string {
     log.sender ?? '',
     log.recipients,
     ...(log.serials ?? []),
+    ...(log.recipientNumbers ?? []),
     ...log.receipts.map((r) => `${r.motherName ?? ''} ${r.contactNumber} ${r.providerMessageId ?? ''}`),
   ].join(' ');
 }
@@ -150,8 +156,8 @@ export default function SmsLogTable({
   const hasFilters = !!search || status !== 'all' || type !== 'all';
 
   const visibleFollowUps = useMemo(
-    () => selectFollowUpsForType(followUps, type),
-    [followUps, type],
+    () => selectFollowUpsForType(followUps, type, search),
+    [followUps, type, search],
   );
 
   function toggleExpanded(id: string) {
@@ -380,7 +386,7 @@ export default function SmsLogTable({
           {batchNotice && <p role="status" className="text-xs font-semibold text-neutral-700">{batchNotice}</p>}
 
           {visibleFollowUps.length === 0 ? (
-            <p className="text-xs font-medium text-neutral-500">No follow-ups match the selected type.</p>
+            <p className="text-xs font-medium text-neutral-500">No follow-ups match the current search and type filters.</p>
           ) : (
           <div className="space-y-3">
             {visibleFollowUps.map((item) => {
