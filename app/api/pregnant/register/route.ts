@@ -1,4 +1,5 @@
 import { dispatchSmsEvent, dispatchRegistrationAdvice } from '@/utils/sms/events';
+import { sendCurrentMonthTips } from '@/utils/tips/autoTipDispatch';
 
 import {NextRequest,NextResponse} from 'next/server';
 import {requireApiPermission} from '@/utils/auth/api';
@@ -43,6 +44,18 @@ export async function POST(request:NextRequest){
       } catch {
         sms = { ...sms, detail: [sms.detail, 'Mother registered; the high-risk advice SMS could not be sent.'].filter(Boolean).join(' ') };
       }
+    }
+    try {
+      const tips = await sendCurrentMonthTips(savedMother.id, auth.user.id);
+      sms = {
+        total: sms.total + tips.sms.total, submitted: sms.submitted + tips.sms.submitted,
+        failed: sms.failed + tips.sms.failed, invalid: sms.invalid + tips.sms.invalid,
+        blocked: sms.blocked + tips.sms.blocked, pending: sms.pending + tips.sms.pending,
+        dryRun: sms.dryRun,
+        detail: [sms.detail, tips.skipped.length ? `Monthly tip deferred (${tips.skipped.join(', ')}).` : null].filter(Boolean).join(' ') || undefined,
+      };
+    } catch {
+      sms = { ...sms, detail: [sms.detail, 'Mother registered; the monthly tip SMS could not be queued.'].filter(Boolean).join(' ') };
     }
     return NextResponse.json({data:savedMother,sms});
   }catch{return NextResponse.json({error:'Registration could not be completed. Your form is preserved; please try again.'},{status:500});}

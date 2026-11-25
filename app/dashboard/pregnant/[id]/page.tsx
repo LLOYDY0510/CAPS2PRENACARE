@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 import { EDIT_ROLES, requireRoles } from '@/utils/auth/roles';
 import type { UserRole } from '@/types';
 import { User } from 'lucide-react';
+import { eddOverrideLabel } from '@/utils/eddReasons';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +114,7 @@ export default async function ViewPregnantMotherPage({
             <InfoRow label="Contact Number" value={record.contact_number} />
             <InfoRow label="LMP (Last Menstrual Period)" value={record.lmp} />
             <InfoRow label="EDC (Expected Date)" value={record.edd} />
+            {record.edd_override_reason ? <InfoRow label="EDC change reason" value={eddOverrideLabel(record.edd_override_reason)} /> : null}
             <InfoRow label="Gravida-Para" value={record.gravida_para} />
             <InfoRow label="Blood Pressure" value={record.blood_pressure} />
           <InfoRow label="Height" value={record.height_cm ? `${record.height_cm} cm` : null} />

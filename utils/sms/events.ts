@@ -82,7 +82,7 @@ export async function dispatchRegistrationAdvice(motherId: string, actorId: stri
 }
 
 // Bound provider work per request; durable events can be resumed after interruption.
-export async function dispatchSmsEvent(eventKey: string, actorId: string): Promise<SmsEventSummary> {
+export async function dispatchSmsEvent(eventKey: string, actorId: string | null): Promise<SmsEventSummary> {
   const event = await readEvent(eventKey);
   const pending = event.rows.filter(row => !event.claims.has(dispatchKey(row)) && toE164(eventTarget(row).contactNumber));
   const eligible = pending.length ? pending : event.rows.filter(row => {
