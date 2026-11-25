@@ -2,6 +2,8 @@ import { collectRows } from '@/utils/supabase/collectRows';
 import { collectInRows } from '@/utils/supabase/collectInRows';
 import { getSmsEventSummary } from '@/utils/sms/events';
 import MonthlyTipsManager from '@/components/tips/MonthlyTipsManager';
+import TipsContentLibrary from '@/components/tips/TipsContentLibrary';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { requireHealthTipsManagement } from '@/utils/auth/middleware';
 import PageHeader from '@/components/ui/PageHeader';
 import { Salad } from 'lucide-react';
@@ -21,6 +23,12 @@ export default async function NutritionTipsPage() {
     .select('id, month, risk_level, title, content')
     .order('month', { ascending: true })
     .order('risk_level', { ascending: true });
+
+  // Advice library is service-only by RLS, so the server reads it for the nurse view.
+  const { data: adviceRows } = await collectRows((start, end) => createAdminClient()
+    .from('indicator_monthly_advice')
+    .select('indicator_label, month, content')
+    .order('month', { ascending: true }).order('indicator_label').range(start, end));
 
   const { data: broadcasts } = await collectRows((start,end)=>supabase
     .from('tip_broadcasts')
@@ -46,6 +54,11 @@ export default async function NutritionTipsPage() {
         subtitle="Manage gestational month guidance, review clinical broadcasts, and send in-app notices and SMS"
         icon={Salad}
         badge="Maternal Care"
+      />
+
+      <TipsContentLibrary
+        advice={adviceRows ?? []}
+        lowTips={(monthlyTips ?? []).filter((tip) => tip.risk_level === 'low').map((tip) => ({ month: tip.month, content: tip.content }))}
       />
 
       <MonthlyTipsManager

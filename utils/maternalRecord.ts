@@ -1,8 +1,8 @@
 import { validDate, localDate } from '@/utils/calendar';
 import { isValidBloodPressure } from '@/utils/maternalForm';
-import { eddNeedsReason, isEddOverrideReason } from '@/utils/eddReasons';
 
-export const MATERNAL_FIELDS = ['date_registered','first_name','middle_name','last_name','address','purok','age','contact_number','lmp','gravida','para','edd','edd_override_reason','blood_pressure','waist_cm','height_cm','weight_kg','latitude','longitude'] as const;
+/* TEMPORARY until migration 037 is applied: edd_override_reason stays out of RPC payloads because the live update function rejects unknown fields. Re-add the key then. */
+export const MATERNAL_FIELDS = ['date_registered','first_name','middle_name','last_name','address','purok','age','contact_number','lmp','gravida','para','edd','blood_pressure','waist_cm','height_cm','weight_kg','latitude','longitude'] as const;
 export type MaternalRecordData = Record<string, unknown> & { id: string };
 
 export function maternalFormValues(record?: MaternalRecordData) {
@@ -23,10 +23,7 @@ export function validateMaternalForm(form: Record<string, unknown>, original?: M
   for (const key of ['first_name','last_name']) if (typeof form[key] !== 'string' || !(form[key] as string).trim() || (form[key] as string).length > 150) return 'First and last name are required (maximum 150 characters).';
   for (const key of ['middle_name','address','contact_number','blood_pressure']) if (form[key] != null && (typeof form[key] !== 'string' || (form[key] as string).length > 1000)) return 'Invalid patient information.';
   if ((!unchanged('date_registered') && (!validDate(form.date_registered as string) || String(form.date_registered) > localDate())) || ['lmp','edd'].some(key => form[key] && !validDate(form[key] as string))) return 'Provide valid registration and pregnancy dates.';
-  if (form.edd_override_reason && !isEddOverrideReason(form.edd_override_reason)) return 'Choose a valid reason for the EDC change.';
-  const eddTouched = !original || !unchanged('edd') || String(form.edd_override_reason ?? '') !== String(original.edd_override_reason ?? '');
-  if (eddNeedsReason(form.lmp, form.edd) && eddTouched && !isEddOverrideReason(form.edd_override_reason)) return 'Changing the EDC from the LMP-based date requires a reason.';
-  if (!eddNeedsReason(form.lmp, form.edd) && form.edd_override_reason) return 'Remove the EDC reason when the date matches the LMP-based date.';
+  /* TEMPORARY until migration 037 is applied: EDC reason checks disabled so edits save directly. */
   for (const [key,min,max] of [['age',10,55],['gravida',0,30],['para',0,30],['waist_cm',0,Number.MAX_VALUE],['height_cm',50,250],['weight_kg',1,300],['latitude',-90,90],['longitude',-180,180]] as const) {
     if (form[key] != null && form[key] !== '' && !unchanged(key)) {
       if (!['string','number'].includes(typeof form[key])) return `Invalid ${key.replaceAll('_',' ')}.`;
