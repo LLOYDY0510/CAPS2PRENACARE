@@ -2,6 +2,7 @@
 
 import {maternalFormValues,validateMaternalForm,maternalErrorField,type MaternalRecordData} from '@/utils/maternalRecord';
 import {normalizeZone} from '@/utils/maternalRegistration';
+import {EDD_OVERRIDE_REASONS,eddNeedsReason} from '@/utils/eddReasons';
 import type {Profile} from '@/types';
 
 import { useState, useEffect, useRef } from 'react';
@@ -64,7 +65,7 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
   const [showForm, setShowForm] = useState(Boolean(initialRecord));
   const [reviewAssessment,setReviewAssessment]=useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
-  const [eddManual, setEddManual] = useState(() => Boolean(initialRecord?.edd));
+  const [eddOverride, setEddOverride] = useState(() => initialRecord != null && eddNeedsReason(initialRecord.lmp, initialRecord.edd));
 
   useEffect(()=>{if(error)errorSummary.current?.focus();},[error,showForm]);
   useEffect(() => {
@@ -94,14 +95,28 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
   function updateField(field: string, value: string) {
     onDirtyChange(true);
     setError('');
-    if (field === 'edd') setEddManual(true);
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      if (field === 'lmp' && !eddManual) {
+      if (field === 'lmp' && !eddOverride) {
         next.edd = value ? (eddFromLmp(value) ?? '') : '';
+      }
+      if ((field === 'lmp' || field === 'edd') && !eddNeedsReason(next.lmp, next.edd)) {
+        next.edd_override_reason = '';
       }
       return next;
     });
+    if ((field === 'lmp' || field === 'edd') && !eddNeedsReason(field === 'lmp' ? value : form.lmp, field === 'edd' ? value : form.edd)) {
+      setEddOverride(false);
+    }
+  }
+
+  function setOverride(on: boolean) {
+    onDirtyChange(true);
+    setError('');
+    setEddOverride(on);
+    if (!on) {
+      setForm((prev) => ({ ...prev, edd: prev.lmp ? (eddFromLmp(prev.lmp) ?? '') : '', edd_override_reason: '' }));
+    }
   }
 
   function toggleIndicator(id: string) {
@@ -362,7 +377,8 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
               type="date"
               value={form.edd} error={invalidField==='edd'?error:undefined}
               onChange={(e) => updateField('edd', e.target.value)}
-              helperText={eddManual ? 'Manually set; changing LMP will not overwrite it' : 'Auto-filled from LMP; you can edit it'}
+              disabled={!eddOverride}
+              helperText={(() => { const computed = form.lmp ? eddFromLmp(form.lmp) : null; return eddOverride ? `Overridden (LMP-based: ${computed ?? '—'})` : computed ? `Auto from LMP: ${computed}` : 'Enter LMP to auto-fill'; })()}
             />
             <Select
               label="Gravida (G)"
@@ -384,6 +400,29 @@ export default function RegisterPregnantMotherForm({onCancel,onDirtyChange,onBus
                 ...PARA_OPTIONS.map((i) => ({ value: String(i), label: `P${i}` })),
               ]}
             />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm font-medium text-neutral-700">
+              <input type="checkbox" checked={eddOverride} onChange={(e) => setOverride(e.target.checked)} className="w-4 h-4 rounded border-neutral-300" />
+              Override EDC (requires a reason)
+            </label>
+            {eddOverride && (
+              <div className="flex-1 min-w-[240px]">
+                <Select
+                  label="Reason for EDC change"
+                  value={form.edd_override_reason} error={invalidField==='edd_override_reason'?error:undefined}
+                  onChange={(e) => updateField('edd_override_reason', e.target.value)}
+                  options={[
+                    { value: '', label: 'Select reason...' },
+                    ...EDD_OVERRIDE_REASONS.map((reason) => ({ value: reason.code, label: reason.label })),
+                  ]}
+                />
+              </div>
+            )}
+            {initialRecord && String(initialRecord.edd ?? '') === form.edd && eddNeedsReason(form.lmp, form.edd) && !form.edd_override_reason && (
+              <p className="text-xs text-neutral-500 font-medium">Previously set without a recorded reason; it stays valid unless you change the date.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
