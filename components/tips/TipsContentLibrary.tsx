@@ -9,13 +9,26 @@ import { HeartPulse, Leaf, Pencil, Save } from 'lucide-react';
 
 export type AdviceCell = { indicator_label: string; month: number; content: string };
 export type LowTip = { month: number; content: string };
+export type TipReference = { position: number; citation: string };
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export default function TipsContentLibrary({ advice, lowTips }: { advice: AdviceCell[]; lowTips: LowTip[] }) {
+export default function TipsContentLibrary({
+  advice,
+  lowTips,
+  references,
+  refsManaged,
+}: {
+  advice: AdviceCell[];
+  lowTips: LowTip[];
+  references: TipReference[];
+  refsManaged: boolean;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [editingRef, setEditingRef] = useState<number | null>(null);
+  const [refDraft, setRefDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,6 +43,30 @@ export default function TipsContentLibrary({ advice, lowTips }: { advice: Advice
   const cellFor = (label: string, month: number) =>
     advice.find((cell) => cell.indicator_label === label && cell.month === month)?.content ?? null;
   const lowFor = (month: number) => lowTips.find((tip) => tip.month === month)?.content ?? null;
+  const shownRefs: TipReference[] = references.length
+    ? references
+    : HIGH_RISK_REFERENCES.map((citation, index) => ({ position: index + 1, citation }));
+
+  async function saveRef(position: number) {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch('/api/tips/references', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position, citation: refDraft }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? 'Save failed.');
+      setEditingRef(null);
+      router.refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Save failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveCell(label: string, month: number) {
     if (busy) return;
@@ -119,8 +156,43 @@ export default function TipsContentLibrary({ advice, lowTips }: { advice: Advice
         )}
         <p className="font-bold text-sm text-neutral-800 mt-6 mb-2">References:</p>
         <div className="rounded-2xl border border-neutral-200 p-4">
-          <ol className="list-decimal pl-5 space-y-1 text-sm text-neutral-700">
-            {HIGH_RISK_REFERENCES.map((ref) => <li key={ref}>{ref}</li>)}
+          <ol className="space-y-2 text-sm text-neutral-700 list-none pl-0">
+            {shownRefs.map((ref) => (
+              <li key={ref.position}>
+                {editingRef === ref.position ? (
+                  <div className="space-y-2">
+                    <textarea
+                      aria-label={`Reference ${ref.position}`}
+                      className="form-textarea w-full"
+                      rows={2}
+                      value={refDraft}
+                      onChange={(e) => setRefDraft(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button className="btn-primary" disabled={busy} onClick={() => saveRef(ref.position)}>
+                        <Save size={15} aria-hidden="true" />{busy ? 'Saving…' : 'Save'}
+                      </button>
+                      <button className="btn-secondary" disabled={busy} onClick={() => setEditingRef(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <span>{ref.citation}</span>
+                    {refsManaged && (
+                      <button
+                        className="action-link shrink-0"
+                        aria-label={`Edit reference ${ref.position}`}
+                        onClick={() => { setEditingRef(ref.position); setRefDraft(ref.citation); setError(''); }}
+                      >
+                        <Pencil size={15} aria-hidden="true" />Edit
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
           </ol>
         </div>
       </section>

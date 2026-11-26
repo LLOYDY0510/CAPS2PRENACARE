@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { createMaternalNotification } from '@/utils/notifications';
 import { dispatchSmsEvent } from '@/utils/sms/events';
 import { localDate } from '@/utils/calendar';
+import { HIGH_RISK_REFERENCES, LOW_RISK_REFERENCES } from '@/utils/tips/references';
 import {
   adviceSlug,
   autoTipEventKey,
@@ -96,6 +97,18 @@ export async function sendCurrentMonthTips(motherId: string, actorId: string | n
     jobs.push({ slug: 'lowrisk', content: template.content as string });
   }
 
+  let citeHigh: string[] = [...HIGH_RISK_REFERENCES];
+  let citeLow: string[] = [...LOW_RISK_REFERENCES];
+  try {
+    const { data: refs } = await admin.from('tip_references').select('citation').order('position');
+    if (refs?.length) {
+      citeHigh = refs.map((row) => row.citation as string);
+      citeLow = refs.slice(0, 2).map((row) => row.citation as string);
+    }
+  } catch {
+    /* Pre-migration fallback to built-in citations. */
+  }
+
   const sms: AutoTipTotals = { ...ZERO };
   let notices = 0;
   for (const job of jobs) {
@@ -116,7 +129,7 @@ export async function sendCurrentMonthTips(motherId: string, actorId: string | n
       eventKey,
       category: 'health_tip',
       title: tipTitle(month, high),
-      message: tipNoticeText(job.content, high),
+      message: tipNoticeText(job.content, high, high ? citeHigh : citeLow),
     });
     if (notice) notices++;
     const summary = await dispatchSmsEvent(eventKey, actorId);
