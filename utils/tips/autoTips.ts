@@ -79,9 +79,9 @@ export function tipSmsText(content: string, highRisk: boolean): string {
   return `${content} (${highRisk ? HIGH_RISK_SMS_REF : LOW_RISK_SMS_REF})`;
 }
 
-export function tipNoticeText(content: string, highRisk: boolean): string {
-  const refs = highRisk ? HIGH_RISK_REFERENCES : LOW_RISK_REFERENCES;
-  return `${content}\n\nReferences:\n${refs.join('\n')}`;
+export function tipNoticeText(content: string, highRisk: boolean, refs?: string[]): string {
+  const list = refs ?? (highRisk ? HIGH_RISK_REFERENCES : LOW_RISK_REFERENCES);
+  return `${content}\n\nReferences:\n${list.join('\n')}`;
 }
 
 export function tipTitle(month: number, highRisk: boolean): string {
